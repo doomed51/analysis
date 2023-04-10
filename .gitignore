@@ -142,3 +142,6 @@ access_token.yml
 *.db
 *.csv
 *.xls*
+
+# ignore scrap files 
+scrap*.py
