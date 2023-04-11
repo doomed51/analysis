@@ -14,4 +14,4 @@ How to run:
 
 Sample Output - Seasonal Analysis: 
 
-[img]https://imgur.com/KjOwr33.jpg[/img]
+(https://imgur.com/KjOwr33.jpg)
