@@ -131,9 +131,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Output folders
-output/
-
 #token file
 token.txt
 access_token.yml
