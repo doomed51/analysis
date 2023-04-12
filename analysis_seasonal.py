@@ -8,28 +8,25 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-import localDb_interface as db
+import interface_localDB as db
 
 from matplotlib.dates import date2num
 
 """
 Plots seasonal returns in a 3x3 grid
 """
-def plotSeasonalReturns(seasonalReturns, intervals, symbols, titles):
+def plotSeasonalReturns_intraday(seasonalReturns, intervals, symbols, titles):
     # create a grid of symbols & intervals to draw the plots into 
     # col x rows : interval x symbol 
-    title = 'Seasonal Returns for %s' % symbols[0]
+    title = 'Intra-day Seasonal Returns for %s' % symbols[0]
     numCols = 3
-    """if symbols:
-        numRows = math.ceil(len(symbols)/numCols)
-    else:"""
     numRows = 3
 
+    # setup figure and axes
     fig, axes = plt.subplots(nrows=numRows, ncols=numCols, figsize=(numCols*6, numRows*4))
 
+    # set title for figure
     fig.suptitle(title)
-
-    sns.set()
 
     # bar plot for ALL history: seasonalReturns[0]
     sns.barplot(x=seasonalReturns[0].index, y='pctChange_std', data=seasonalReturns[0], ax=axes[0,0], color='grey', alpha=0.5)
@@ -67,13 +64,13 @@ def plotSeasonalReturns(seasonalReturns, intervals, symbols, titles):
     axes[1,2].set_title(titles[5]) # set title for subplot
     axes[1,2].set_xlabel('') # hide x axis title
 
-    sns.heatmap(seasonalReturns[6].pivot_table(index='time', columns='date', values='pctChange'), ax=axes[2,0])
+    sns.heatmap(seasonalReturns[6].pivot_table(index='Time', columns='Date', values='pctChange'), ax=axes[2,0])
     axes[2,0].set_title(titles[6])
 
-    sns.heatmap(seasonalReturns[7].pivot_table(index='time', columns='date', values='pctChange'), ax=axes[2,1])
+    sns.heatmap(seasonalReturns[7].pivot_table(index='Time', columns='Date', values='pctChange'), ax=axes[2,1])
     axes[2,1].set_title(titles[7])
 
-    sns.heatmap(seasonalReturns[8].pivot_table(index='time', columns='date', values='pctChange'), ax=axes[2,2])
+    sns.heatmap(seasonalReturns[8].pivot_table(index='Time', columns='Date', values='pctChange'), ax=axes[2,2])
     axes[2,2].set_title(titles[8])
 
     # tilt x axis labels 45 degrees
@@ -83,6 +80,80 @@ def plotSeasonalReturns(seasonalReturns, intervals, symbols, titles):
     axes[1,0].set_xticklabels(axes[0,0].get_xticklabels(), rotation=45)
     axes[1,1].set_xticklabels(axes[0,0].get_xticklabels(), rotation=45)
     axes[1,2].set_xticklabels(axes[0,0].get_xticklabels(), rotation=45)
+
+
+""" 
+Plots seasonal returns as per the following: 
+    - weekly using 1day interval
+    - monthly using 1day interval
+    - intraday using 5min interval
+
+    Inputs:
+        - Symbol (str)
+"""
+def plotSeasonalReturns_overview(symbol, restrictTradingHours=False):
+    # get px history from db
+    pxHistory_1day = db.getPriceHistory(symbol, '1day')
+    pxHistory_5mins = db.getPriceHistory(symbol, '5mins')
+
+    # get pctChange for 1day and 5mins
+    pxHistory_1day['pctChange'] = pxHistory_1day['close'].pct_change()
+    pxHistory_5mins['pctChange'] = pxHistory_5mins['close'].pct_change()
+
+    # restrict trading hours to 9:30am to 4pm
+    if restrictTradingHours:
+        #pxHistory_5mins = pxHistory_5mins[(pxHistory_5mins['Time'] >= '09:30:00') & (pxHistory_5mins['Time'] <= '16:00:00')]
+        pxHistory_5mins = pxHistory_5mins.between_time('9:30', '16:00')
+    
+    # get seasonal aggregates for plotting 
+    seasonalAggregate_1day = getSeasonalAggregate(pxHistory_1day, '1day', symbol)
+    seasonalAggregate_5mins = getSeasonalAggregate(pxHistory_5mins, '5mins', symbol)
+    seasonalAggregate_weekByDay = getSeasonalAggregate(pxHistory_5mins, 'weekByDay', symbol)
+
+    ## construct figure and plots 
+
+    # set up figure and axes with a 1x3 grid
+    fig, axes = plt.subplots(1, 3, figsize=(22, 6))
+
+    # add title to figure
+    fig.suptitle('Overview of Seasonal Returns for %s (%s years of data)'%(symbol, round(len(pxHistory_1day)/252, 1)))
+    
+
+    # on axes[0,0] barplot of seasonalAggregate_1day mean, and std dev with a secondary axis for mean
+    sns.barplot(x=seasonalAggregate_1day.index, y='pctChange_std', data=seasonalAggregate_1day, ax=axes[0], color='grey', alpha=0.5)
+    sns.barplot(x=seasonalAggregate_1day.index, y='pctChange_mean', data=seasonalAggregate_1day, ax=axes[0].twinx(), color='red')
+    axes[0].set_title('Monthly Seasonality') # set title for subplot
+    axes[0].set_xlabel('Month')
+
+    # on axes[1] barplot of seasonalAggregate_5mins mean, and std dev with a secondary axis for mean
+    sns.barplot(x=seasonalAggregate_5mins.index, y='pctChange_std', data=seasonalAggregate_5mins, ax=axes[1], color='grey', alpha=0.5)
+    sns.barplot(x=seasonalAggregate_5mins.index, y='pctChange_mean', data=seasonalAggregate_5mins, ax=axes[1].twinx(), color='red')
+    axes[1].set_title('Intra-Day Seasonality') # set title for subplot
+    # tilt x axis labels 45 degrees
+    axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=45)
+    # show every second x tick label
+    axes[1].set_xticks(axes[1].get_xticks()[::3])
+
+    ## add vertical line at with x valus of 10:00:00, 11:30, 1:00, 2:00, 3:00
+    if restrictTradingHours:
+        axes[1].axvline(x=6, color='black', linestyle='--')
+        axes[1].axvline(x=23, color='black', linestyle='--')
+        axes[1].axvline(x=40, color='black', linestyle='--')
+        axes[1].axvline(x=53, color='black', linestyle='--')
+        axes[1].axvline(x=66, color='black', linestyle='--')
+    else:
+        axes[1].axvline(x=32, color='black', linestyle='--')
+        axes[1].axvline(x=52, color='black', linestyle='--')
+        axes[1].axvline(x=82, color='black', linestyle='--')
+        axes[1].axvline(x=102, color='black', linestyle='--')
+    
+    # on axes[2] barplot of seasonalAggregate_weekByDay mean, and std dev with a secondary axis for mean
+    sns.barplot(x=seasonalAggregate_weekByDay.index, y='pctChange_std', data=seasonalAggregate_weekByDay, ax=axes[2], color='grey', alpha=0.5)
+    sns.barplot(x=seasonalAggregate_weekByDay.index, y='pctChange_mean', data=seasonalAggregate_weekByDay, ax=axes[2].twinx(), color='red')
+    axes[2].set_title('Weekly Seasonality') # set title for subplot
+
+    fig.tight_layout()
+
 
 """
 Returns seasonal aggregate of passed in pxhistory df
@@ -95,12 +166,15 @@ def getSeasonalAggregate(pxHistory, interval, symbol, numdays=0):
     
     # aggregate by time and compute mean and std dev of %change
     if interval in ['1min', '5mins', '15mins', '30mins', '1hour']:
-        pxHistory_aggregated = pxHistory.groupby('time').agg({'pctChange':['mean', 'std']})
+        pxHistory_aggregated = pxHistory.groupby('Time').agg({'pctChange':['mean', 'std']})
+        # drop the first row as it is NaN
+        pxHistory_aggregated = pxHistory_aggregated.iloc[1:]
 
     elif interval in ['1day', '1week', '1month']:
-        #pxHistory_aggregated = pxHistory.groupby('Date').agg({'pctChange':['mean', 'std']})
-        # group by day of month and compute mean and std dev of %change
         pxHistory_aggregated = pxHistory.groupby(pxHistory.index.day).agg({'pctChange':['mean', 'std']})
+    
+    elif interval in ('weekByDay'):
+        pxHistory_aggregated = pxHistory.groupby(pxHistory.index.dayofweek).agg({'pctChange':['mean', 'std']})
     
     else:
         print('aggreagation not supported for interval: '+interval)
@@ -120,17 +194,19 @@ Runs seasonal analysis on intra-day data for a given symbol and interval
     plots different subsets of data: all, last 30 days, last 60 days, last 90 days 
 """
 def seasonalAnalysis_intraday(symbol, interval, target='close', restrictTradingHours=False):
+    ## gracefully exit with error if interval not in 1min, 5mins, 15mins, 30mins, 1hour
+    if interval not in ['1min', '5mins', '15mins', '30mins', '1hour']:
+        print('ERROR: interval not supported for intraday analysis')
+        exit()
+    
     pxHistory = db.getPriceHistory(symbol, interval)
 
     # calculate %change on target=close for each row
     pxHistory['pctChange'] = pxHistory[target].pct_change()
 
-    # explicitly sort by date
-    pxHistory.sort_values(by='Date', inplace=True)
-
-    if interval not in ['1day']:
-        pxHistory['date'] = pxHistory.index.date
-        pxHistory['time'] = pxHistory.index.time
+    #if interval not in ['1day']:
+    #    pxHistory['date'] = pxHistory.index.date
+    #    pxHistory['time'] = pxHistory.index.time
        
     if restrictTradingHours:
             # remove rows outside of trading hours
@@ -143,31 +219,26 @@ def seasonalAnalysis_intraday(symbol, interval, target='close', restrictTradingH
     pxHistory_aggregated = getSeasonalAggregate(pxHistory, interval, symbol)
 
     # select only aggregated data of last 60 days
-    pxHistory60 = pxHistory[pxHistory['date'] > (pxHistory['date'].max() - pd.Timedelta(days=60))]
+    pxHistory60 = pxHistory[pxHistory['Date'] > (pxHistory['Date'].max() - pd.Timedelta(days=60))]
     pxhistory60_aggregated = getSeasonalAggregate(pxHistory60, interval, symbol)
 
     # select last 30 days of data from pxhistory 
-    pxHistory30 = pxHistory[pxHistory['date'] > (pxHistory['date'].max() - pd.Timedelta(days=30))]
+    pxHistory30 = pxHistory[pxHistory['Date'] > (pxHistory['Date'].max() - pd.Timedelta(days=30))]
     pxhistory30_aggregated = getSeasonalAggregate(pxHistory30, interval, symbol)
 
     # select last 90 days of data from pxhistory 
-    pxHistory90 = pxHistory[pxHistory['date'] > (pxHistory['date'].max() - pd.Timedelta(days=90))]
+    pxHistory90 = pxHistory[pxHistory['Date'] > (pxHistory['Date'].max() - pd.Timedelta(days=90))]
     pxhistory90_aggregated = getSeasonalAggregate(pxHistory90, interval, symbol)
 
     # select aggregated data for last 30, prev 30, 
     # and prev prev 30 days of data from pxhistory
-    pxHistory302 = pxHistory[(pxHistory['date'] < (pxHistory30['date'].min())) & (pxHistory['date'] > (pxHistory30['date'].min() - pd.Timedelta(days=31)))]
-    pxHistory303 = pxHistory[(pxHistory['date'] < pxHistory302['date'].min()) & (pxHistory['date'] > pxHistory302['date'].min() - pd.Timedelta(days=31))]
+    pxHistory302 = pxHistory[(pxHistory['Date'] < (pxHistory30['Date'].min())) & (pxHistory['Date'] > (pxHistory30['Date'].min() - pd.Timedelta(days=31)))]
+    pxHistory303 = pxHistory[(pxHistory['Date'] < pxHistory302['Date'].min()) & (pxHistory['Date'] > pxHistory302['Date'].min() - pd.Timedelta(days=31))]
     pxhistory302_aggregated = getSeasonalAggregate(pxHistory302, interval, symbol)
     pxhistory303_aggregated = getSeasonalAggregate(pxHistory303, interval, symbol)
 
-    # increment row for every new 'catgory' of analysis, or every 3rd plot 
-
-    # count business days between pxhistory.index.min() and pxhistory.index.max()
-    numBusinessDays = len(pd.bdate_range(pxHistory.index.min(), pxHistory.index.max()))
-
     ## plot the results 
-    plotSeasonalReturns(
+    plotSeasonalReturns_intraday(
     [
         pxHistory_aggregated, pxhistory60_aggregated, pxhistory90_aggregated, 
         pxhistory30_aggregated, pxhistory302_aggregated, pxhistory303_aggregated, pxHistory30, pxHistory302, pxHistory303],
@@ -199,7 +270,9 @@ target = 'close' # open, high, low, close, volume
 restrictTradingHours = True # if true -> only analyze data between 9:30am and 4pm
 
 seasonalAnalysis_intraday(symbol, interval, target, restrictTradingHours)
+plotSeasonalReturns_overview(symbol, restrictTradingHours=True)
+
 plt.subplots_adjust(hspace=0.3, wspace=0.4, left=0.05, right=0.95, top=0.95, bottom=0.09)
-plt.xticks(rotation=45)
+plt.tight_layout()
 plt.show()
 
