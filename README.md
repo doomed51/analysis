@@ -12,6 +12,6 @@ How to run:
 2. Run analysis_*.py script  
 
 
-Sample Output - Seasonal Analysis: 
+Sample Output - Seasonal Intraday plots: 
 
-(https://imgur.com/KjOwr33.jpg)
+(screenshots/analysis_seasonal-intraday.JPG)
