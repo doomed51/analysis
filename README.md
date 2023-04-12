@@ -13,6 +13,4 @@ How to run:
 
 
 Sample Output - Seasonal Intraday plots: 
-
-()
-[![solarized dualmode](https://github.com/doomed51/analysis/blob/main/screenshots/analysis_seasonal-intraday.JPG)](#features)
+(https://github.com/doomed51/analysis/blob/main/screenshots/analysis_seasonal-intraday.JPG)]
