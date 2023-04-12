@@ -14,5 +14,5 @@ How to run:
 
 Sample Output - Seasonal Intraday plots: 
 
-(analysis_seasonal-intraday.JPG)
-[![solarized dualmode](https://github.com/altercation/solarized/raw/master/img/solarized-yinyang.png)](#features)
+()
+[![solarized dualmode](analysis_seasonal-intraday.JPG)](#features)
