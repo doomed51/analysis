@@ -13,4 +13,4 @@ How to run:
 
 
 Sample Output - Seasonal Intraday plots: 
-[](https://github.com/doomed51/analysis/blob/main/screenshots/analysis_seasonal-intraday.JPG)]
+[](https://github.com/doomed51/analysis/blob/main/screenshots/analysis_seasonal-intraday.JPG)](#features)
