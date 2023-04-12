@@ -173,8 +173,14 @@ def getPriceHistory(symbol, interval):
     pxHistory['Date'] = pd.to_datetime(pxHistory['Date'])
     #sort by date
     pxHistory.sort_values(by='Date', inplace=True)
-    #set date as index
     pxHistory.set_index('Date', inplace=True)
+
+    # if interval is in 1day, 1wk, 1mo reset index
+    if interval in ['1min', '5mins', '15mins', '30mins', '1hour']:
+        pxHistory['Date'] = pxHistory.index.date
+        pxHistory['Time'] = pxHistory.index.time
+        # change index label to 'datetime'
+        pxHistory.index.name = 'datetime'
     
     return pxHistory
 
