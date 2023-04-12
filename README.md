@@ -14,4 +14,4 @@ How to run:
 
 Sample Output - Seasonal Intraday plots: 
 
-(screenshots/analysis_seasonal-intraday.JPG)
+(analysis_seasonal-intraday.JPG)
