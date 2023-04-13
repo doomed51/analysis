@@ -1,5 +1,8 @@
 """
-plots seasonal analysis for a given symbol and interval combo
+plots various seasonal analyses for a given symbol
+
+    - plotSeasonalReturns_intraday: 3x3 grid of barplots for analyzing intraday seasonal returns
+    - plotSeasonalReturns_overview: 1x3 grid of barplots for a quick overview of seasonality in a symbol 
 """
 import matplotlib
 import math
@@ -16,7 +19,7 @@ from matplotlib.dates import date2num
 """
 Plots seasonal returns in a 3x3 grid
 """
-def plotSeasonalReturns_intraday(seasonalReturns, intervals, symbols, titles):
+def plotSeasonalReturns_intraday(seasonalReturns, intervals, symbols, titles, target = 'close'):
     # create a grid of symbols & intervals to draw the plots into 
     # col x rows : interval x symbol 
     title = 'Intraday Seasonal Returns for %s' % symbols[0]
@@ -76,12 +79,12 @@ def plotSeasonalReturns_intraday(seasonalReturns, intervals, symbols, titles):
     axes[2,2].set_title(titles[8])
 
     # tilt x axis labels 45 degrees
-    axes[0,0].set_xticklabels(axes[0,0].get_xticklabels(), rotation=45, fontsize=8)
-    axes[0,1].set_xticklabels(axes[0,0].get_xticklabels(), rotation=45, fontsize=8)
-    axes[0,2].set_xticklabels(axes[0,0].get_xticklabels(), rotation=45, fontsize=8)
-    axes[1,0].set_xticklabels(axes[0,0].get_xticklabels(), rotation=45, fontsize=8)
-    axes[1,1].set_xticklabels(axes[0,0].get_xticklabels(), rotation=45, fontsize=8)
-    axes[1,2].set_xticklabels(axes[0,0].get_xticklabels(), rotation=45, fontsize=8)
+    axes[0,0].set_xticklabels(axes[0,0].get_xticklabels(), rotation=90, fontsize=8)
+    axes[0,1].set_xticklabels(axes[0,0].get_xticklabels(), rotation=90, fontsize=8)
+    axes[0,2].set_xticklabels(axes[0,0].get_xticklabels(), rotation=90, fontsize=8)
+    axes[1,0].set_xticklabels(axes[0,0].get_xticklabels(), rotation=90, fontsize=8)
+    axes[1,1].set_xticklabels(axes[0,0].get_xticklabels(), rotation=90, fontsize=8)
+    axes[1,2].set_xticklabels(axes[0,0].get_xticklabels(), rotation=90, fontsize=8)
 
     axes[0,0].set_xticks(axes[0,0].get_xticks()[::3])
     axes[0,1].set_xticks(axes[0,1].get_xticks()[::3])
@@ -103,14 +106,14 @@ Plots seasonal returns as per the following:
     Inputs:
         - Symbol (str)
 """
-def plotSeasonalReturns_overview(symbol, restrictTradingHours=False):
+def seasonalAnalysis_overview(symbol, restrictTradingHours=False, target='close'):
     # get px history from db
     pxHistory_1day = db.getPriceHistory(symbol, '1day')
     pxHistory_5mins = db.getPriceHistory(symbol, '5mins')
 
     # get pctChange for 1day and 5mins
-    pxHistory_1day['pctChange'] = pxHistory_1day['close'].pct_change()
-    pxHistory_5mins['pctChange'] = pxHistory_5mins['close'].pct_change()
+    pxHistory_1day['pctChange'] = pxHistory_1day[target].pct_change()
+    pxHistory_5mins['pctChange'] = pxHistory_5mins[target].pct_change()
 
     # restrict trading hours to 9:30am to 4pm
     if restrictTradingHours:
@@ -125,12 +128,14 @@ def plotSeasonalReturns_overview(symbol, restrictTradingHours=False):
     ## construct figure and plots 
 
     # set up figure and axes with a 1x3 grid
-    fig, axes = plt.subplots(1, 3, figsize=(22, 6))
+    fig, axes = plt.subplots(1, 3, figsize=(17, 5))
 
     # add title to figure
     fig.suptitle('Overview of Seasonal Returns for %s (%s years of data)'%(symbol, round(len(pxHistory_1day)/252, 1)))
     
-
+    #
+    # plot monthly seasonality
+    #
     # on axes[0,0] barplot of seasonalAggregate_1day mean, and std dev with a secondary axis for mean
     sns.barplot(x=seasonalAggregate_1day.index, y='pctChange_std', data=seasonalAggregate_1day, ax=axes[0], color='grey', alpha=0.5)
     sns.barplot(x=seasonalAggregate_1day.index, y='pctChange_mean', data=seasonalAggregate_1day, ax=axes[0].twinx(), color='red')
@@ -139,6 +144,9 @@ def plotSeasonalReturns_overview(symbol, restrictTradingHours=False):
     # show every second x tick label
     axes[0].set_xticks(axes[0].get_xticks()[::2])
 
+    #
+    # plot intra day seasonality 
+    #
     # on axes[1] barplot of seasonalAggregate_5mins mean, and std dev with a secondary axis for mean
     sns.barplot(x=seasonalAggregate_5mins.index, y='pctChange_std', data=seasonalAggregate_5mins, ax=axes[1], color='grey', alpha=0.5)
     sns.barplot(x=seasonalAggregate_5mins.index, y='pctChange_mean', data=seasonalAggregate_5mins, ax=axes[1].twinx(), color='red')
@@ -166,12 +174,18 @@ def plotSeasonalReturns_overview(symbol, restrictTradingHours=False):
         axes[1].axvline(x=82, color='black', linestyle='--')
         axes[1].axvline(x=102, color='black', linestyle='--')
     
+    #
+    # plot weekly seasonality
+    #
     # on axes[2] barplot of seasonalAggregate_weekByDay mean, and std dev with a secondary axis for mean
     sns.barplot(x=seasonalAggregate_weekByDay.index, y='pctChange_std', data=seasonalAggregate_weekByDay, ax=axes[2], color='grey', alpha=0.5)
     sns.barplot(x=seasonalAggregate_weekByDay.index, y='pctChange_mean', data=seasonalAggregate_weekByDay, ax=axes[2].twinx(), color='red')
     axes[2].set_title('Weekly Seasonality') # set title for subplot
     # hide xaxis label
     axes[2].set_xlabel('Day of Week')
+
+    # set xaxis tick labels to day of the week
+    axes[2].set_xticklabels(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'])
 
     plt.subplots_adjust(hspace=0.3, wspace=0.4, left=0.05, right=0.95, top=0.95, bottom=0.09)
 
@@ -208,7 +222,6 @@ def getSeasonalAggregate(pxHistory, interval, symbol, numdays=0):
     pxHistory_aggregated['interval'] = interval
 
     return pxHistory_aggregated
-
 
 """
 Runs seasonal analysis on intra-day data for a given symbol and interval
@@ -282,8 +295,6 @@ def seasonalAnalysis_intraday(symbol, interval, target='close', restrictTradingH
               'From %s to %s'%(pxHistory302.index.min().date(), pxHistory302.index.max().date()),
                'From %s to %s'%(pxHistory303.index.min().date(), pxHistory303.index.max().date()) ])
 
-
-
 ## get timeseries data from db
 symbol = 'spy'
 # set symbol to cli arg if provided
@@ -294,10 +305,7 @@ target = 'close' # open, high, low, close, volume
 restrictTradingHours = True # if true -> only analyze data between 9:30am and 4pm
 
 seasonalAnalysis_intraday(symbol, interval, target, restrictTradingHours)
-plotSeasonalReturns_overview(symbol, restrictTradingHours=True)
-
-#plt.subplots_adjust(hspace=0.3, wspace=0.4, left=0.05, right=0.95, top=0.95, bottom=0.09)
-#plt.tight_layout()
+seasonalAnalysis_overview(symbol, restrictTradingHours, target)
 
 plt.show()
 
