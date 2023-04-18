@@ -1,5 +1,8 @@
 """
-This module returns VIX term structure as a dataframe, and contains helper functions to simplify preparing term structure data for analysis. 
+This module consists of two functions that return VIX term structure, and contango values between contracts.
+    - getRawVixTermStructure(): returns the raw vix term structure data
+    - getVixTermStructurePctContango(): returns the percent change between n and n+1 month futures, and optionally adds columns for contango between the 4th and 7th month futures, and contango between the current and longest term future
+
 """
 import pandas as pd
 
