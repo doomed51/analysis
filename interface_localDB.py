@@ -12,19 +12,9 @@ import sqlite3
 import pandas as pd
 
 """ Global vars """
-dbname_stocks = 'historicalData_stock.db' ## vanilla stock data location 
-dbname_index = 'historicalData_index.db' ## index data location
+dbname_index = '\workbench\historicalData\\venv\saveHistoricalData\historicalData_index.db'
 
 index_list = ['VIX', 'VIX3M', 'VVIX'] # global reference list of index symbols, this is some janky ass shit .... 
-
-## lookup table for interval labels 
-intervalMappings = pd.DataFrame(
-    {
-        'label': ['5m', '15m', '30m', '1h', '1d', '1m'],
-        'stock': ['FiveMinutes', 'FifteenMinutes', 'HalfHour', 'OneHour', 'OneDay', 'OneMonth'],
-        'index':['5mins', '15mins', '30mins', '1hour', '1day', '1month']
-    }
-)
 
 """
 Establishes a connection to the appropriate DB based on type of symbol passed in. 
@@ -41,7 +31,7 @@ constructs the appropriate tablename to call local DB
 Params
 ===========
 symbol - [str]
-interval - [str] (must match with intervalMappings global var)
+interval - [str] 
 
 """
 def _constructTableName(symbol, interval):
@@ -73,7 +63,7 @@ def _removeDuplicates(tablename):
     cursor.execute(sql_selectMinId)
 
 """
-Utility to update the symbol record lookup table
+sub to update the symbol record lookup table
 This should be called when local db records are updated 
 This should not be run before security history is added to the db 
 
@@ -162,13 +152,16 @@ interval - [str]
 lookback - [str] optional 
 
 """
-def getPriceHistory(symbol, interval):
+def getPriceHistory(symbol, interval, withpctChange=False):
     tableName = _constructTableName(symbol, interval)
     conn = _connectToDb()
     sqlStatement = 'SELECT * FROM '+tableName
     pxHistory = pd.read_sql(sqlStatement, conn)
     conn.close()
     pxHistory.rename(columns={'date':'Date'}, inplace=True)
+    # only retain the first 19 chars in the Date column
+    pxHistory['Date'] = pxHistory['Date'].str[:19]
+    
     #convert date column to datetime
     pxHistory['Date'] = pd.to_datetime(pxHistory['Date'])
     #sort by date
@@ -182,19 +175,10 @@ def getPriceHistory(symbol, interval):
         # change index label to 'datetime'
         pxHistory.index.name = 'datetime'
     
+    if withpctChange:
+        pxHistory['close_pctChange'] = pxHistory['close'].pct_change()
+    
     return pxHistory
-
-"""
-establishes a connection to the appropriate DB based on type of symbol passed in. 
-
-Returns sqlite connection object 
-
-Params
-========
-symbol - [str] 
-"""
-def _connectToDb():
-    return sqlite3.connect(dbname_index)
 
 """ 
 Returns the lookup table fo records history as df 
