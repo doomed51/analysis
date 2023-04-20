@@ -10,7 +10,7 @@ import pandas as pd
 vix_ts_raw = pd.read_csv('vix.csv')
 
 # convert date column to datetime
-vix_ts_raw['Date'] = pd.to_datetime(vix_ts_raw['Date'])
+vix_ts_raw['Date'] = pd.to_datetime(vix_ts_raw['Date'], format='mixed')
 
 # set date as index
 vix_ts_raw.set_index('Date', inplace=True)
@@ -31,9 +31,11 @@ Params:
         if True, adds a column to the dataframe that is the percent difference between the current and longest term future
 
 """
-def getVixTermStructurePctContango(fourToSeven = False, currentToLast = False):
+def getVixTermStructurePctContango(fourToSeven = False, currentToLast = False, averageContango = False):
     # create a new df with the percent change between n and n+1 month futures
     vix_ts_pctContango = vix_ts_raw.pct_change(axis='columns', periods=-1).drop(columns='8')*-1
+
+
 
     if fourToSeven:
         # add contango from the 4th to 7th month
@@ -44,6 +46,10 @@ def getVixTermStructurePctContango(fourToSeven = False, currentToLast = False):
         # add contango between current and longest term future
         vix_ts_raw['currentToLastContango'] = (vix_ts_raw['8'] - vix_ts_raw['0'])/vix_ts_raw['0']
         vix_ts_pctContango = vix_ts_pctContango.join(vix_ts_raw['currentToLastContango'], on='Date')
+    
+    if averageContango:
+        # add averageContango column 
+        vix_ts_pctContango['averageContango'] = vix_ts_pctContango.mean(axis=1)
 
     return vix_ts_pctContango
 
