@@ -6,26 +6,27 @@ import seaborn as sns
 import interface_localDB as db
 import termStructure_vix as vixts
 
-### CONFIG ### 
+### CONFIGS ### 
 vvix_topPercentile = 0.9
 vvix_bottomPercentile = 0.1
 vvix_percentileLookbackDays = 252 ## 1 year lookback = 252 trading days
 
+#####################################
 ## prepare vix term structure data 
+#####################################
 vix_ts_pctContango = vixts.getVixTermStructurePctContango(fourToSeven=True, currentToLast=True, averageContango=True)
-## add a column that is 'contango' if fourToSevenMoContango is positive, 'backwardation' if negative
-#vix_ts_pctContango['firstToLastTermStruct'] = vix_ts_pctContango['currentToLastContango'].apply(lambda x: 'contango' if x > 0 else 'backwardation')
+
 
 ## prepare price history data
 ###################################
-# VIX  ############################
+############# VIX  ################
 vix = db.getPriceHistory('VIX', '1day', withpctChange=True)
 
 ## make sure vix and vix_ts_pctContango start on the same date
 #vix = vix[vix.index >= vix_ts_pctContango.index.min()]
 
 ###################################
-# VVIX ############################
+############# VVIX ################
 vvix = db.getPriceHistory('VVIX', '1day')
 
 ##  make sure vvix and vix_ts_pctContango start on the same date 
@@ -34,7 +35,12 @@ vvix = db.getPriceHistory('VVIX', '1day')
 ## calculate percentile rank of VVIX
 vvix['percentileRank'] = vvix['close'].rolling(vvix_percentileLookbackDays).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
 
-############## Final cleanup ... ################
+vvix['percentileRank_90d'] = vvix['close'].rolling(90).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
+vvix['percentileRank_60d'] = vvix['close'].rolling(60).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
+
+#################################################
+############## FINAL CLEANUP ... ################
+#################################################
 # reset index to eliminate duplicate indices resulting from joins 
 vix_ts_pctContango.reset_index(inplace=True)
 # make sure vix and vix_ts_pctContango start on the same date
@@ -49,44 +55,69 @@ vvix = vvix[vvix.index.isin(vix.index) & vvix.index.isin(vix_ts_pctContango['Dat
 # from vix remove any dates that are not in vvix and vix_ts_pctContango
 vix = vix[vix.index.isin(vvix.index) & vix.index.isin(vix_ts_pctContango['Date'])]
 
-## plot the relationships between vix term structure and vix price history
-# arguments:
-#  vix_ts_pctContango: the vix term structure data
-#  vix: the vix price history data
-# then generates a 1x3 figure with the following subplots:
-#  1. scatter of fourToSevenMoContango vs. VIX close_pctChange
-#  2. scatter of avgContango vs. VIX close_pctChange
-#  3. scatter of vvix percentileRank vs. VIX close_pctChange
-# notes: 
-#  - vix pct change is shifted by 1 day so the scatters represent the
-#    relationship with  next day's return
+#####################################################
+################# PLOT FUNCTIONS ####################
+#####################################################
+
+""" plot the relationships between vix term structure and vix price history
+ arguments:
+  vix_ts_pctContango: the vix term structure data
+  vix: the vix price history data
+ generate a 1x3 figure with the following subplots:
+  1. scatter of fourToSevenMoContango vs. VIX close_pctChange
+  2. scatter of avgContango vs. VIX close_pctChange
+  3. scatter of vvix percentileRank vs. VIX close_pctChange
+ notes: 
+  - vix pct change is shifted by 1 day so the scatters represent the
+    relationship with next day's return
+"""
 def plotVixRelationships(vix_ts_pctContango, vix, vvix):
-   
-    fig2, ax2 = plt.subplots(1, 3, figsize=(15, 5))
+    fig2, ax2 = plt.subplots(2, 3, figsize=(15, 11))
     fig2.suptitle('Contango & VIX next day returns')
     
     # shift vix by 1 day for next day returns
     vix['close_pctChange'] = vix['close_pctChange'].shift(-1)
 
     # plot fourToSevenMoContango vs. VIX close_pctChange
-    sns.scatterplot(x=vix_ts_pctContango['fourToSevenMoContango'], y=vix['close_pctChange'], ax=ax2[0])
-    sns.regplot(x=vix_ts_pctContango['fourToSevenMoContango'], y=vix['close_pctChange'], ax=ax2[0], line_kws={'color': 'red'})
-    ax2[0].set_title('4-7 Mo Contango')
+    sns.scatterplot(x=vix_ts_pctContango['fourToSevenMoContango'], y=vix['close_pctChange'], ax=ax2[0,0])
+    sns.regplot(x=vix_ts_pctContango['fourToSevenMoContango'], y=vix['close_pctChange'], ax=ax2[0,0], line_kws={'color': 'red'})
+    ax2[0,0].set_title('4-7 Mo Contango')
 
     # plot avgContango vs. VIX close_pctChange
-    sns.scatterplot(x=vix_ts_pctContango['averageContango'], y=vix['close_pctChange'], ax=ax2[1])
-    sns.regplot(x=vix_ts_pctContango['averageContango'], y=vix['close_pctChange'], ax=ax2[1], line_kws={'color': 'red'})
-    ax2[1].set_title('Avg Contango')
+    sns.scatterplot(x=vix_ts_pctContango['averageContango'], y=vix['close_pctChange'], ax=ax2[0,1])
+    sns.regplot(x=vix_ts_pctContango['averageContango'], y=vix['close_pctChange'], ax=ax2[0,1], line_kws={'color': 'red'})
+    ax2[0,1].set_title('Avg Contango')
 
+    # plot currentToLastMoContango vs. VIX close_pctChange
+    sns.scatterplot(x=vix_ts_pctContango['currentToLastContango'], y=vix['close_pctChange'], ax=ax2[0,2])
+    sns.regplot(x=vix_ts_pctContango['currentToLastContango'], y=vix['close_pctChange'], ax=ax2[0,2], line_kws={'color': 'red'})
+    ax2[0,2].set_title('Current to Last Mo Contango')
+    print(vvix)
+    
     # plot vvix percentileRank vs. VIX close_pctChange
-    sns.scatterplot(x=vvix['percentileRank'], y=vix['close_pctChange'], ax=ax2[2])
-    sns.regplot(x=vvix['percentileRank'], y=vix['close_pctChange'], ax=ax2[2], line_kws={'color': 'red'})
-    ax2[2].set_title('VVIX Percentile Rank')
+    sns.scatterplot(x=vvix['percentileRank'], y=vix['close_pctChange'], ax=ax2[1,0])
+    sns.regplot(x=vvix['percentileRank'], y=vix['close_pctChange'], ax=ax2[1,0], line_kws={'color': 'red'})
+    ax2[1,0].set_title('VVIX Percentile Rank')
     # reverse x axis
-    ax2[2].invert_xaxis()
+    ax2[1,0].invert_xaxis()
+
+    # plot vvix percentileRank_30d vs. VIX close_pctChange
+    sns.scatterplot(x=vvix['percentileRank_60d'], y=vix['close_pctChange'], ax=ax2[1,1])
+    sns.regplot(x=vvix['percentileRank_60d'], y=vix['close_pctChange'], ax=ax2[1,1], line_kws={'color': 'red'})
+    ax2[1,1].set_title('VVIX Percentile Rank 60d')
+    # reverse x axis
+    ax2[1,1].invert_xaxis()
+
+    # plot vvix percentileRank_90d vs. VIX close_pctChange
+    sns.scatterplot(x=vvix['percentileRank_90d'], y=vix['close_pctChange'], ax=ax2[1,2])
+    sns.regplot(x=vvix['percentileRank_90d'], y=vix['close_pctChange'], ax=ax2[1,2], line_kws={'color': 'red'})
+    ax2[1,2].set_title('VVIX Percentile Rank 90d')
+    # reverse x axis
+    ax2[1,2].invert_xaxis()
+
 
 """
-Acts as a main view for day to day monitoring of VIX term structure changes. The following are displayed:
+view for day to day monitoring of VIX term structure changes. The following are displayed:
     - VIX: 4-7 month contango, and percentile rank of vvix
     - VIX: close 
     - VIX close pct change vs. vvix percentile rank scatter
@@ -128,7 +159,7 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
 
 
 ##################################################
-############### Plot Scatters, histograms, etc. 
+############### call plots  
 ##################################################
 
 # set seaborn style
@@ -136,7 +167,7 @@ sns.set()
 sns.set_style('darkgrid')
 
 plotVixRelationships(vix_ts_pctContango, vix, vvix)
-plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix)
+#plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix)
 
 plt.tight_layout()
 plt.show()
