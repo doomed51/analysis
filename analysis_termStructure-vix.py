@@ -156,6 +156,38 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     sns.regplot(x='percentileRank', y='close_pctChange', data=vvix, scatter=False, ax=ax[2], line_kws={'color': 'red'})
     ax[2].set_title('VVIX Percentile Rank vs VIX Close Pct Change')
 
+"""
+function that plots intra-month, and month over month seasonality of 4-7mo. contango
+ arguments:
+    - vix_ts_pctContango: dataframe of vix term structure data
+ plots the following:
+ - mean and sd of 4-7 month contango aggregated by day of month
+ - mean and sd of 4-7 month contango aggregated by month
+"""
+def plotVixTermStructureSeasonality(vix_ts_pctContango):
+    # new df that aggregates 4-7 month contango by day of month
+    vix_ts_pctContango_day = vix_ts_pctContango.groupby(vix_ts_pctContango['Date'].dt.day).agg({'fourToSevenMoContango': ['mean', 'std']})
+
+    # new df that aggregates 4-7 month contango by month
+    vix_ts_pctContango_month = vix_ts_pctContango.groupby(vix_ts_pctContango['Date'].dt.month).agg({'fourToSevenMoContango': ['mean', 'std']})
+
+    # using seaborn, create figure with 2 subplots
+    fig, ax = plt.subplots(2, 1, figsize=(15, 10))
+
+    # set title
+    fig.suptitle('VIX Term Structure Seasonality')
+
+    # barplot mean and sd of 4-7 month contango aggregated by day of month
+    sns.barplot(x=vix_ts_pctContango_day.index, y=vix_ts_pctContango_day['fourToSevenMoContango']['mean'], ax=ax[0], color='blue')
+    #sns.barplot(x=vix_ts_pctContango_day.index, y=vix_ts_pctContango_day['fourToSevenMoContango']['std'], ax=ax[0].twinx(), color='red')
+    ax[0].set_title('4th to 7th Month Contango by Day of Month')
+
+    # barplot mean and sd of 4-7 month contango aggregated by month
+    sns.barplot(x=vix_ts_pctContango_month.index, y=vix_ts_pctContango_month['fourToSevenMoContango']['std'], ax=ax[1], color='grey', alpha=0.5)
+    sns.barplot(x=vix_ts_pctContango_month.index, y=vix_ts_pctContango_month['fourToSevenMoContango']['mean'], ax=ax[1].twinx(), color='red')
+    ax[1].set_title('4th to 7th Month Contango by Month')
+    # set x-axis labels to month names
+    ax[1].set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 
 
 ##################################################
@@ -166,8 +198,9 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
 sns.set()
 sns.set_style('darkgrid')
 
-plotVixRelationships(vix_ts_pctContango, vix, vvix)
+#plotVixRelationships(vix_ts_pctContango, vix, vvix)
 #plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix)
+plotVixTermStructureSeasonality(vix_ts_pctContango)
 
 plt.tight_layout()
 plt.show()
