@@ -142,6 +142,34 @@ def saveHistoryToDB(history, conn, earliestTimestamp=''):
     #if earliestTimestamp:
     _updateLookup_symbolRecords(conn, tableName, earliestTimestamp=earliestTimestamp)
 
+""" ensures proper format of data retrieved from db """
+def _formatpxHistory(pxHistory):
+        
+    ##### Remove any errant timezone info:
+    # get the rows that have timezone info in the date column
+    # remove the timezone info from the date column
+    # update pxhistory with the formatted date column
+    pxHistory_hasTimezone = pxHistory[pxHistory['date'].str.len() > 19]
+    if not pxHistory_hasTimezone.empty:
+        # remove the timezone info from the date column
+        pxHistory_hasTimezone.loc[:,'date'] = pxHistory_hasTimezone['date'].str[:19]
+        # update pxhistory with the formatted date column
+        pxHistory.update(pxHistory_hasTimezone)
+
+    # final formatting ... 
+    pxHistory['date'] = pd.to_datetime(pxHistory['date'], format='mixed')
+    pxHistory.sort_values(by='date', inplace=True) #sort by date
+    
+    # if interval is < 1 day, split the date and time column
+    if pxHistory['interval'][0] in ['1min', '5mins', '15mins', '30mins', '1hour']:
+        print('asdf')
+        #pxHistory[['Date', 'Time']] = pxHistory['Date'].str.split(' ', expand=True)
+        # set format for Date and Time columns
+        #pxHistory['Date'] = pd.to_datetime(pxHistory['Date'])
+        #print('max length of date column: ', pxHistory['Date'].len().max())
+        #exit()
+    return pxHistory
+
 """
 Returns dataframe of px from database 
 
@@ -152,32 +180,19 @@ interval - [str]
 lookback - [str] optional 
 
 """
-def getPriceHistory(symbol, interval, withpctChange=False):
+def getPriceHistory(symbol, interval, withpctChange=True):
     tableName = _constructTableName(symbol, interval)
     conn = _connectToDb()
     sqlStatement = 'SELECT * FROM '+tableName
     pxHistory = pd.read_sql(sqlStatement, conn)
     conn.close()
-    pxHistory.rename(columns={'date':'Date'}, inplace=True)
-    # only retain the first 19 chars in the Date column
-    pxHistory['Date'] = pxHistory['Date'].str[:19]
-    
-    #convert date column to datetime
-    pxHistory['Date'] = pd.to_datetime(pxHistory['Date'])
-    #sort by date
-    pxHistory.sort_values(by='Date', inplace=True)
-    pxHistory.set_index('Date', inplace=True)
-
-    # if interval is in 1day, 1wk, 1mo reset index
-    if interval in ['1min', '5mins', '15mins', '30mins', '1hour']:
-        pxHistory['Date'] = pxHistory.index.date
-        pxHistory['Time'] = pxHistory.index.time
-        # change index label to 'datetime'
-        pxHistory.index.name = 'datetime'
-    
+    if interval == '1day':
+        print(pxHistory)
+    pxHistory = _formatpxHistory(pxHistory)
     if withpctChange:
-        pxHistory['close_pctChange'] = pxHistory['close'].pct_change()
-    
+        pxHistory['pctChange'] = pxHistory['close'].pct_change()
+        ## drop the first row since it will have NaN for pctChange
+        pxHistory.drop(pxHistory.index[0], inplace=True)
     return pxHistory
 
 """ 
