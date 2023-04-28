@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import interface_localDB as db
+import datetime as dt
+
 
 from matplotlib.dates import date2num
 
@@ -31,7 +33,6 @@ def plotSeasonalReturns_intraday(seasonalReturns, intervals, symbols, titles, ta
 
     # set title for figure
     fig.suptitle(title)
-
     # bar plot for ALL history: i.e. seasonalReturns[0]
     sns.barplot(x=seasonalReturns[0].index, y='pctChange_std', data=seasonalReturns[0], ax=axes[0,0], color='grey', alpha=0.5)
     sns.barplot(x=seasonalReturns[0].index, y='pctChange_mean', data=seasonalReturns[0], ax=axes[0,0].twinx(), color='red')
@@ -69,13 +70,13 @@ def plotSeasonalReturns_intraday(seasonalReturns, intervals, symbols, titles, ta
     axes[1,2].set_title(titles[5]) # set title for subplot
     axes[1,2].set_xlabel('') # hide x axis title
 
-    sns.heatmap(seasonalReturns[6].pivot_table(index='Time', columns='Date', values='pctChange'), ax=axes[2,0])
+    sns.heatmap(seasonalReturns[6].pivot_table(index=seasonalReturns[6]['date'].dt.time, columns=seasonalReturns[6]['date'].dt.date, values='pctChange'), ax=axes[2,0])
     axes[2,0].set_title(titles[6])
 
-    sns.heatmap(seasonalReturns[7].pivot_table(index='Time', columns='Date', values='pctChange'), ax=axes[2,1])
+    sns.heatmap(seasonalReturns[7].pivot_table(index=seasonalReturns[7]['date'].dt.time, columns=seasonalReturns[7]['date'].dt.date, values='pctChange'), ax=axes[2,1])
     axes[2,1].set_title(titles[7])
 
-    sns.heatmap(seasonalReturns[8].pivot_table(index='Time', columns='Date', values='pctChange'), ax=axes[2,2])
+    sns.heatmap(seasonalReturns[8].pivot_table(index=seasonalReturns[8]['date'].dt.time, columns=seasonalReturns[8]['date'].dt.date, values='pctChange'), ax=axes[2,2])
     axes[2,2].set_title(titles[8])
 
     # tilt x axis labels 90 degrees
@@ -108,17 +109,17 @@ Plots seasonal returns as per the following:
 """
 def seasonalAnalysis_overview(symbol, restrictTradingHours=False, target='close'):
     # get px history from db
-    pxHistory_1day = db.getPriceHistory(symbol, '1day')
-    pxHistory_5mins = db.getPriceHistory(symbol, '5mins')
+    pxHistory_1day = db.getPriceHistory(symbol, '1day', withpctChange=True)
+    pxHistory_5mins = db.getPriceHistory(symbol, '5mins', withpctChange=True)
 
     # get pctChange for 1day and 5mins
-    pxHistory_1day['pctChange'] = pxHistory_1day[target].pct_change()
-    pxHistory_5mins['pctChange'] = pxHistory_5mins[target].pct_change()
+    #pxHistory_1day['pctChange'] = pxHistory_1day[target].pct_change()
+    #pxHistory_5mins['pctChange'] = pxHistory_5mins[target].pct_change()
 
     # restrict trading hours to 9:30am to 4pm
     if restrictTradingHours:
         #pxHistory_5mins = pxHistory_5mins[(pxHistory_5mins['Time'] >= '09:30:00') & (pxHistory_5mins['Time'] <= '16:00:00')]
-        pxHistory_5mins = pxHistory_5mins.between_time('9:30', '16:00')
+        pxHistory_5mins = pxHistory_5mins[(pxHistory_5mins['date'].dt.time >= dt.time(9, 30)) & (pxHistory_5mins['date'].dt.time <= dt.time(15, 55))]
     
     # get seasonal aggregates for plotting 
     seasonalAggregate_1day = getSeasonalAggregate(pxHistory_1day, '1day', symbol)
@@ -129,7 +130,7 @@ def seasonalAnalysis_overview(symbol, restrictTradingHours=False, target='close'
     ## construct figure and plots 
 
     # set up figure and axes with a 1x3 grid
-    fig, axes = plt.subplots(2, 3, figsize=(17, 5))
+    fig, axes = plt.subplots(2, 3, figsize=(17, 7))
 
     # add title to figure
     fig.suptitle('Overview of Seasonal Returns for %s (%s years of data)'%(symbol, round(len(pxHistory_1day)/252, 1)))
@@ -212,19 +213,49 @@ def getSeasonalAggregate(pxHistory, interval, symbol, numdays=0):
     
     # aggregate by time and compute mean and std dev of %change
     if interval in ['1min', '5mins', '15mins', '30mins', '1hour']:
-        pxHistory_aggregated = pxHistory.groupby('Time').agg({'pctChange':['mean', 'std']})
-        # drop the first row as it is NaN
-        pxHistory_aggregated = pxHistory_aggregated.iloc[1:]
+
+        pxHistory_aggregated = pxHistory.groupby(pxHistory['date'].dt.time).agg({'pctChange':['mean', 'std']})
+
 
     elif interval in ['1day', '1week', '1month']:
-        pxHistory_aggregated = pxHistory.groupby(pxHistory.index.day).agg({'pctChange':['mean', 'std']})
+        pxHistory_aggregated = pxHistory.groupby(pxHistory['date'].dt.day).agg({'pctChange':['mean', 'std']})
     
     elif interval in ('weekByDay'):
-        pxHistory_aggregated = pxHistory.groupby(pxHistory.index.dayofweek).agg({'pctChange':['mean', 'std']})
+        pxHistory_aggregated = pxHistory.groupby(pxHistory['date'].dt.dayofweek).agg({'pctChange':['mean', 'std']})
     
     elif interval in ('yearByMonth'):
-        pxHistory_aggregated = pxHistory.groupby(pxHistory.index.month).agg({'pctChange':['mean', 'std']})
+        #pxHistory_aggregated = pxHistory.groupby(pxHistory.index.month).agg({'pctChange':['mean', 'std']})
 
+        ## above calculation does not return the avg monthyly return over multiple years, 
+        ## but rather the average daily return for each month
+        ## i.e. avg(d, d+1, d+2...) vs. avg(pctchange(d30, d1))
+        ##
+        ## given that the pxHistry df is at the daily interval and has the following columns: datetime, open, high, low, close, volume, pctChange
+        ## Since we are using 1day interval data, we need to do the following to get the average monthly return: 
+        ##  0. remove all entries that are not the first or last day of the month from the pxHistory df
+        ##  1. create a new df that with columns year, month, pctChange where pctChange is the calculated as the 
+        #      difference between the last and the first day of each month in each year 
+        #  2. group by month and calculate the mean and std dev of pctChange
+        
+        # reset index so we can use the Date column to agg 
+        pxHistory.reset_index(inplace=True)
+        # group pxhistory by (year, month) and get the min and max Date in each group 
+        pxHistory_monthly = pxHistory.groupby([pxHistory['date'].dt.year, pxHistory['date'].dt.month]).agg({'date':['min', 'max']})
+        #rename index columns to year and month
+        pxHistory_monthly.index.names = ['year', 'month']
+
+        # flatten multi-index columns
+        pxHistory_monthly.columns = ['_'.join(col).strip() for col in pxHistory_monthly.columns.values]
+        # reset index
+        pxHistory_monthly.reset_index(inplace=True)
+
+        ## calc the percent change between the first and last trading day of each month:
+        ##  1. given pxHistoroy contains the close price for any given Date 
+        ##  2. Add a column to pxHistory_monthly that is the percent change of the close price between Date_min and Date_max
+        ##  3. group by month and calculate the mean and std dev of pctChange
+        pxHistory_monthly['pctChange'] = pxHistory_monthly.apply(lambda row: (pxHistory[(pxHistory['date'] == row['date_max'])]['close'].values[0] - pxHistory[(pxHistory['date'] == row['date_min'])]['close'].values[0])/pxHistory[(pxHistory['date'] == row['date_min'])]['close'].values[0], axis=1)
+
+        pxHistory_aggregated = pxHistory_monthly.groupby('month').agg({'pctChange':['mean', 'std']})
     else:
         print('aggreagation not supported for interval: '+interval)
 
@@ -249,39 +280,30 @@ def seasonalAnalysis_intraday(symbol, interval, target='close', restrictTradingH
     
     pxHistory = db.getPriceHistory(symbol, interval)
 
-    # calculate %change on target=close for each row
-    pxHistory['pctChange'] = pxHistory[target].pct_change()
-
-    #if interval not in ['1day']:
-    #    pxHistory['date'] = pxHistory.index.date
-    #    pxHistory['time'] = pxHistory.index.time
-       
     if restrictTradingHours:
-            # remove rows outside of trading hours
-            pxHistory = pxHistory.between_time('9:30', '16:00')
-    
-    #drop the first row of pxHistory as it has NaN for pctChange
-    pxHistory.drop(pxHistory.index[0], inplace=True)
-
+        # given that the Date column is a datetime object
+        # select only the rows with time between 9:30am and 4pm
+        pxHistory = pxHistory[(pxHistory['date'].dt.time >= dt.time(9, 30)) & (pxHistory['date'].dt.time <= dt.time(15, 55))]
+   
     # get mean and std for aggregated data
     pxHistory_aggregated = getSeasonalAggregate(pxHistory, interval, symbol)
 
     # select only aggregated data of last 60 days
-    pxHistory60 = pxHistory[pxHistory['Date'] > (pxHistory['Date'].max() - pd.Timedelta(days=60))]
+    pxHistory60 = pxHistory[pxHistory['date'] > (pxHistory['date'].max() - pd.Timedelta(days=60))]
     pxhistory60_aggregated = getSeasonalAggregate(pxHistory60, interval, symbol)
 
     # select last 30 days of data from pxhistory 
-    pxHistory30 = pxHistory[pxHistory['Date'] > (pxHistory['Date'].max() - pd.Timedelta(days=30))]
+    pxHistory30 = pxHistory[pxHistory['date'] > (pxHistory['date'].max() - pd.Timedelta(days=30))]
     pxhistory30_aggregated = getSeasonalAggregate(pxHistory30, interval, symbol)
 
     # select last 90 days of data from pxhistory 
-    pxHistory90 = pxHistory[pxHistory['Date'] > (pxHistory['Date'].max() - pd.Timedelta(days=90))]
+    pxHistory90 = pxHistory[pxHistory['date'] > (pxHistory['date'].max() - pd.Timedelta(days=90))]
     pxhistory90_aggregated = getSeasonalAggregate(pxHistory90, interval, symbol)
 
     # select aggregated data for last 30, prev 30, 
     # and prev prev 30 days of data from pxhistory
-    pxHistory302 = pxHistory[(pxHistory['Date'] < (pxHistory30['Date'].min())) & (pxHistory['Date'] > (pxHistory30['Date'].min() - pd.Timedelta(days=31)))]
-    pxHistory303 = pxHistory[(pxHistory['Date'] < pxHistory302['Date'].min()) & (pxHistory['Date'] > pxHistory302['Date'].min() - pd.Timedelta(days=31))]
+    pxHistory302 = pxHistory[(pxHistory['date'] < (pxHistory30['date'].min())) & (pxHistory['date'] > (pxHistory30['date'].min() - pd.Timedelta(days=31)))]
+    pxHistory303 = pxHistory[(pxHistory['date'] < pxHistory302['date'].min()) & (pxHistory['date'] > pxHistory302['date'].min() - pd.Timedelta(days=31))]
     pxhistory302_aggregated = getSeasonalAggregate(pxHistory302, interval, symbol)
     pxhistory303_aggregated = getSeasonalAggregate(pxHistory303, interval, symbol)
 
@@ -299,15 +321,15 @@ def seasonalAnalysis_intraday(symbol, interval, target='close', restrictTradingH
             symbol, symbol, symbol,
             symbol, symbol, symbol], 
             
-            ['Starting from %s'%(pxHistory.index.min().date()), 
+            ['Starting from %s'%(pxHistory['date'].min().date()), 
              'Last %s Days'%(len(pd.bdate_range(pxHistory60.index.min(), pxHistory60.index.max()))),
               'Last %s Days'%(len(pd.bdate_range(pxHistory90.index.min(), pxHistory90.index.max()))),
-             'From %s to %s'%(pxHistory30.index.min().date(), pxHistory30.index.max().date()), 
-             'From %s to %s'%(pxHistory302.index.min().date(), pxHistory302.index.max().date()), 
-             'From %s to %s'%(pxHistory303.index.min().date(), pxHistory303.index.max().date()),
-             'From %s to %s'%(pxHistory30.index.min().date(), pxHistory30.index.max().date()),
-              'From %s to %s'%(pxHistory302.index.min().date(), pxHistory302.index.max().date()),
-               'From %s to %s'%(pxHistory303.index.min().date(), pxHistory303.index.max().date()) ])
+             'From %s to %s'%(pxHistory30['date'].min().date(), pxHistory30['date'].max().date()), 
+             'From %s to %s'%(pxHistory302['date'].min().date(), pxHistory302['date'].max().date()), 
+             'From %s to %s'%(pxHistory303['date'].min().date(), pxHistory303['date'].max().date()),
+             'From %s to %s'%(pxHistory30['date'].min().date(), pxHistory30['date'].max().date()),
+              'From %s to %s'%(pxHistory302['date'].min().date(), pxHistory302['date'].max().date()),
+               'From %s to %s'%(pxHistory303['date'].min().date(), pxHistory303['date'].max().date()) ])
 
 ## get timeseries data from db
 symbol = 'spy'
