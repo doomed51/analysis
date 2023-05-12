@@ -213,9 +213,12 @@ def getSeasonalAggregate(pxHistory, interval, symbol, numdays=0):
     
     # aggregate by time and compute mean and std dev of %change
     if interval in ['1min', '5mins', '15mins', '30mins', '1hour']:
-
+        
         pxHistory_aggregated = pxHistory.groupby(pxHistory['date'].dt.time).agg({'pctChange':['mean', 'std']})
-
+        # drop the row where the time component of the date column = 9:30:00
+        pxHistory_aggregated = pxHistory_aggregated.drop(pd.to_datetime('9:30:00').time())
+        #print(pxHistory_aggregated)
+        #exit()
 
     elif interval in ['1day', '1week', '1month']:
         pxHistory_aggregated = pxHistory.groupby(pxHistory['date'].dt.day).agg({'pctChange':['mean', 'std']})
@@ -331,10 +334,20 @@ def seasonalAnalysis_intraday(symbol, interval, target='close', restrictTradingH
               'From %s to %s'%(pxHistory302['date'].min().date(), pxHistory302['date'].max().date()),
                'From %s to %s'%(pxHistory303['date'].min().date(), pxHistory303['date'].max().date()) ])
 
+## function that lists all the unique symbols in the db
+def listSymbols():
+    symbols = db.listSymbols()
+    print('Symbols in DB:')
+    print(symbols)
+
 ## get timeseries data from db
 symbol = 'spy'
 # set symbol to cli arg if provided
 if len(sys.argv) > 1:
+    ## if the argument is 'list' then list all the symbols in the db
+    if sys.argv[1] == 'list':
+        listSymbols()
+        exit()
     symbol = sys.argv[1]
 interval = '5mins'
 target = 'close' # open, high, low, close, volume
