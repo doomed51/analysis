@@ -14,7 +14,7 @@ import pandas as pd
 """ Global vars """
 dbname_index = '\workbench\historicalData\\venv\saveHistoricalData\historicalData_index.db'
 
-index_list = ['VIX', 'VIX3M', 'VVIX'] # global reference list of index symbols, this is some janky ass shit .... 
+index_list = ['VIX', 'VIX3M', 'VVIX','SPX'] # global reference list of index symbols, this is some janky ass shit .... 
 
 """
 Establishes a connection to the appropriate DB based on type of symbol passed in. 
@@ -160,14 +160,6 @@ def _formatpxHistory(pxHistory):
     pxHistory['date'] = pd.to_datetime(pxHistory['date'], format='mixed')
     pxHistory.sort_values(by='date', inplace=True) #sort by date
     
-    # if interval is < 1 day, split the date and time column
-    if pxHistory['interval'][0] in ['1min', '5mins', '15mins', '30mins', '1hour']:
-        print('asdf')
-        #pxHistory[['Date', 'Time']] = pxHistory['Date'].str.split(' ', expand=True)
-        # set format for Date and Time columns
-        #pxHistory['Date'] = pd.to_datetime(pxHistory['Date'])
-        #print('max length of date column: ', pxHistory['Date'].len().max())
-        #exit()
     return pxHistory
 
 """
@@ -186,13 +178,13 @@ def getPriceHistory(symbol, interval, withpctChange=True):
     sqlStatement = 'SELECT * FROM '+tableName
     pxHistory = pd.read_sql(sqlStatement, conn)
     conn.close()
-    if interval == '1day':
-        print(pxHistory)
-    pxHistory = _formatpxHistory(pxHistory)
+    
     if withpctChange:
         pxHistory['pctChange'] = pxHistory['close'].pct_change()
         ## drop the first row since it will have NaN for pctChange
         pxHistory.drop(pxHistory.index[0], inplace=True)
+    pxHistory = _formatpxHistory(pxHistory)
+    
     return pxHistory
 
 """ 
@@ -205,3 +197,12 @@ def getLookup_symbolRecords():
     # convert firstRecordDate column to datetime
     symbolRecords['firstRecordDate'] = pd.to_datetime(symbolRecords['firstRecordDate'])
     return symbolRecords
+
+"""
+lists the unique symbols in the lookup table
+"""
+def listSymbols():
+    conn = _connectToDb()
+    sqlStatement_selectRecordsTable = 'SELECT DISTINCT symbol FROM \'00-lookup_symbolRecords\''
+    symbols = pd.read_sql(sqlStatement_selectRecordsTable, conn)
+    return symbols
