@@ -215,8 +215,9 @@ def getSeasonalAggregate(pxHistory, interval, symbol, numdays=0):
     if interval in ['1min', '5mins', '15mins', '30mins', '1hour']:
         
         pxHistory_aggregated = pxHistory.groupby(pxHistory['date'].dt.time).agg({'pctChange':['mean', 'std']})
+        
         # drop the row where the time component of the date column = 9:30:00
-        pxHistory_aggregated = pxHistory_aggregated.drop(pd.to_datetime('9:30:00').time())
+        #pxHistory_aggregated = pxHistory_aggregated.drop(pd.to_datetime('9:30:00').time())
         #print(pxHistory_aggregated)
         #exit()
 
