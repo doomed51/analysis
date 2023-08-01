@@ -12,9 +12,24 @@ import sqlite3
 import pandas as pd
 
 """ Global vars """
-dbname_index = '\workbench\historicalData\\venv\saveHistoricalData\historicalData_index.db'
+dbname_index = 'historicalData_index.db'
 
-index_list = ['VIX', 'VIX3M', 'VVIX','SPX'] # global reference list of index symbols, this is some janky ass shit .... 
+index_list = ['VIX', 'VIX3M', 'VVIX','SPX', 'VIX1D'] # global reference list of index symbols, this is some janky ass shit .... 
+
+""" implements contextmanager for db connection """
+class sqlite_connection(object): 
+    
+    def __init__(self, db_name):
+        self.db_name = db_name
+        print(db_name)
+    
+    def __enter__(self):
+        self.conn = sqlite3.connect(self.db_name)
+        return self.conn
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.conn.commit()
+        self.conn.close()
 
 """
 Establishes a connection to the appropriate DB based on type of symbol passed in. 
@@ -22,8 +37,9 @@ Establishes a connection to the appropriate DB based on type of symbol passed in
 Returns sqlite connection object 
 
 """
-def _connectToDb():
-    return sqlite3.connect(dbname_index)
+def _connectToDb_deprecate(dbname = dbname_index):
+    # set dbname to \\workbench\\historicalData\\venv\\saveHistoricalData\\ + dbname
+    return sqlite3.connect(dbname)
 
 """
 constructs the appropriate tablename to call local DB 
@@ -111,6 +127,25 @@ def _updateLookup_symbolRecords(conn, tablename, earliestTimestamp, numMissingDa
         cursor = conn.cursor()
         cursor.execute(sql_update)
 
+""" ensures proper format of px history tables retrieved from db """
+def _formatpxHistory(pxHistory):
+        
+    ##### Remove any errant timezone info:
+    # get the rows that have timezone info in the date column
+    # remove the timezone info from the date column
+    # update pxhistory with the formatted date column
+    pxHistory_hasTimezone = pxHistory[pxHistory['date'].str.len() > 19]
+    if not pxHistory_hasTimezone.empty:
+        # remove the timezone info from the date column
+        pxHistory_hasTimezone.loc[:,'date'] = pxHistory_hasTimezone['date'].str[:19]
+        # update pxhistory with the formatted date column
+        pxHistory.update(pxHistory_hasTimezone)
+
+    # final formatting ... 
+    pxHistory['date'] = pd.to_datetime(pxHistory['date'], format='mixed')
+    pxHistory.sort_values(by='date', inplace=True) #sort by date
+    
+    return pxHistory
 
 """
 Save history to a sqlite3 database
@@ -142,26 +177,6 @@ def saveHistoryToDB(history, conn, earliestTimestamp=''):
     #if earliestTimestamp:
     _updateLookup_symbolRecords(conn, tableName, earliestTimestamp=earliestTimestamp)
 
-""" ensures proper format of data retrieved from db """
-def _formatpxHistory(pxHistory):
-        
-    ##### Remove any errant timezone info:
-    # get the rows that have timezone info in the date column
-    # remove the timezone info from the date column
-    # update pxhistory with the formatted date column
-    pxHistory_hasTimezone = pxHistory[pxHistory['date'].str.len() > 19]
-    if not pxHistory_hasTimezone.empty:
-        # remove the timezone info from the date column
-        pxHistory_hasTimezone.loc[:,'date'] = pxHistory_hasTimezone['date'].str[:19]
-        # update pxhistory with the formatted date column
-        pxHistory.update(pxHistory_hasTimezone)
-
-    # final formatting ... 
-    pxHistory['date'] = pd.to_datetime(pxHistory['date'], format='mixed')
-    pxHistory.sort_values(by='date', inplace=True) #sort by date
-    
-    return pxHistory
-
 """
 Returns dataframe of px from database 
 
@@ -172,9 +187,11 @@ interval - [str]
 lookback - [str] optional 
 
 """
-def getPriceHistory(symbol, interval, withpctChange=True):
-    tableName = _constructTableName(symbol, interval)
-    conn = _connectToDb()
+def getPriceHistory(conn, symbol, interval, withpctChange=True, lastTradeMonth=''):
+    if lastTradeMonth:
+        tableName = symbol+'_'+lastTradeMonth+'_'+interval
+    else:
+        tableName = _constructTableName(symbol, interval)
     sqlStatement = 'SELECT * FROM '+tableName
     pxHistory = pd.read_sql(sqlStatement, conn)
     conn.close()
@@ -201,8 +218,29 @@ def getLookup_symbolRecords():
 """
 lists the unique symbols in the lookup table
 """
-def listSymbols():
-    conn = _connectToDb()
+def listSymbols(conn):
     sqlStatement_selectRecordsTable = 'SELECT DISTINCT symbol FROM \'00-lookup_symbolRecords\''
     symbols = pd.read_sql(sqlStatement_selectRecordsTable, conn)
     return symbols
+
+"""
+    Returns value of a specified cell for the target futures contract
+    inputs:
+        symbol: str
+        interval: str
+        expiryMonth: str as YYYYMM
+        targetColumn: str, column we want from the db table 
+        targetDate: str as YYYY-MM-DD, date of the column we want
+    outputs:
+        value of the target cell
+"""
+def futures_getCellValue(conn, symbol, interval='1day', lastTradeMonth='202308', targetColumn='close', targetDate='2023-07-21'):
+    # construct tablename
+    tableName = symbol+'_'+str(lastTradeMonth)+'_'+interval
+    targetDate = '2023-07-21 00:00:00'
+    # run sql query to get cell value 
+    sqlStatement = 'SELECT '+targetColumn+' FROM '+tableName+' WHERE date = \''+targetDate+'\''
+
+    value = pd.read_sql(sqlStatement, conn)
+    # return val 
+    return value[targetColumn][0]
