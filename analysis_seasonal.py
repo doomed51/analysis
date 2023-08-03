@@ -18,6 +18,8 @@ import datetime as dt
 
 from matplotlib.dates import date2num
 
+dbname_stock = '/workbench/historicalData/venv/saveHistoricalData/historicalData_index.db'
+
 """
 Plots seasonal returns in a 3x3 grid
 """
@@ -109,8 +111,9 @@ Plots seasonal returns as per the following:
 """
 def seasonalAnalysis_overview(symbol, restrictTradingHours=False, target='close'):
     # get px history from db
-    pxHistory_1day = db.getPriceHistory(symbol, '1day', withpctChange=True)
-    pxHistory_5mins = db.getPriceHistory(symbol, '5mins', withpctChange=True)
+    with db.sqlite_connection(dbname_stock) as conn:
+        pxHistory_1day = db.getPriceHistory(conn, symbol, '1day', withpctChange=True)
+        pxHistory_5mins = db.getPriceHistory(conn, symbol, '5mins', withpctChange=True)
 
     # get pctChange for 1day and 5mins
     #pxHistory_1day['pctChange'] = pxHistory_1day[target].pct_change()
@@ -282,7 +285,8 @@ def seasonalAnalysis_intraday(symbol, interval, target='close', restrictTradingH
         print('ERROR: interval not supported for intraday analysis')
         exit()
     
-    pxHistory = db.getPriceHistory(symbol, interval)
+    with db.sqlite_connection(dbname_stock) as conn:
+        pxHistory = db.getPriceHistory(conn, symbol, interval)
 
     if restrictTradingHours:
         # given that the Date column is a datetime object
