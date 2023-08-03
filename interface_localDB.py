@@ -21,7 +21,6 @@ class sqlite_connection(object):
     
     def __init__(self, db_name):
         self.db_name = db_name
-        print(db_name)
     
     def __enter__(self):
         self.conn = sqlite3.connect(self.db_name)
@@ -194,7 +193,6 @@ def getPriceHistory(conn, symbol, interval, withpctChange=True, lastTradeMonth='
         tableName = _constructTableName(symbol, interval)
     sqlStatement = 'SELECT * FROM '+tableName
     pxHistory = pd.read_sql(sqlStatement, conn)
-    conn.close()
     
     if withpctChange:
         pxHistory['pctChange'] = pxHistory['close'].pct_change()
