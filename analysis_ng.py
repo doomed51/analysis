@@ -5,10 +5,12 @@ import interface_localDB as db
 import matplotlib.pyplot as plt
 import pandas as pd
 import utils as ut
+import utils_futures as ut_Futures
 
 from dateutil.relativedelta import relativedelta
 
 dbname_futures = "/workbench/historicalData/venv/saveHistoricalData/historicalData_futures.db"
+symbol = 'NG'
 
 """
     This function returns a dataframe with the term structure of NG futures
@@ -43,7 +45,6 @@ def getTermStructure(conn, symbol='NG', interval='1day', numMonths=12, targetDat
     #empty dataframe with columns period(dtype int), termStructure (dtype float)
     ts = pd.DataFrame(columns=['period', 'termStructure'])
     # set type of period to int
-    ts['period'] = ts['period'].astype(int)
     while (i<numMonths):
         # set the expiry month within the current iteration 
         expiryMonth = (datetime.datetime.strptime(expiryMonth, '%Y%m') + relativedelta(months=1)).strftime('%Y%m')
@@ -56,34 +57,62 @@ def getTermStructure(conn, symbol='NG', interval='1day', numMonths=12, targetDat
         #append to ts dataframe: i, TS
         ts = ts._append({'period': i, 'termStructure': TS}, ignore_index=True)
         i+=1
-    print(ts)
     return ts
 
-#conn = db._connectToDb_deprecate(dbname_futures)
-#print(conn)
+"""
+    plots term structure of passed in futures ts dataframe
+    input:
+        ts dataframe w/ columns:  [date, close_expiry1, close_expiry2, ...]
+        numDays: number of days to plot (default=5)
+"""
+def plotTermStructure(ts, numDays=5):
+    print(ts.dtypes)
+    # sort ts by date, and get the last 5 rows
+    ts['date'] = pd.to_datetime(ts['date'])
+    ts = ts.sort_values(by='date').tail(numDays)
+
+    # set axis values 
+    axis_x = ts.columns[2:]
+    axis_y = ts.iloc[:, 2:]
+
+    # plot each row 
+    for i in range(len(ts.tail(numDays))):
+        plt.plot(axis_x, axis_y.iloc[i, :])
+    
+    # add legend
+    plt.legend(ts['date'])
+    
+    # add title
+    plt.title('%s Term Structure'%symbol)
+
+"""
+    Plots %contango of term structure over various months as follows: 
+        1. retrieve %contango ts by calling getTermStructureContango(ts, startMonth, endMonth)
+        1.a. retrieve for months: 
+            - 1-3
+            - 4-6
+            - 7-9
+            - 9-11
+            - 1-9
+        2. plot all of these on the same plot 
+"""
+def plotTermStructureContango(ts, startMonth, endMonth):
+    # get %contango ts 
+    ts_contango = ut_Futures.getContango(ts, startMonth, endMonth)
+    
+    #plot the last column vs. date column, with a legend as the column name
+    plt.plot(ts_contango['date'], ts_contango.iloc[:, -1], label=ts_contango.columns[-1])
+
+    # add legend as the last column name
+    plt.legend(ts_contango.columns[-1])
+    
+    # add title
+    plt.title('%s Term Structure Contango'%ts['symbol'][0])
 
 with db.sqlite_connection(dbname_futures) as conn:
-    getTermStructure(conn, targetDate='20230721 00:00:00')
+    ts = ut_Futures.getRawTermstructure(conn, 'NG')
 
-exit()
-
-ng_202308 = db.getPriceHistory('NG', '1day', lastTradeMonth='202308').reset_index(drop=True)
-ng_202305 = db.getPriceHistory('NG', '1day', lastTradeMonth='202312').reset_index(drop=True)
-ng_202308 = ut.calcLogReturns(ng_202308, 'close')
-ng_202305 = ut.calcLogReturns(ng_202305, 'close')
-print(ng_202308)
-
-
-#plt.plot(ng_202308['date'], ng_202308['logReturn'])
-#plt.plot(ng_202305['date'], ng_202308['logReturn'], color='red')
-
-#plot bar plots of pct change and log return for 202308 with different colours
-plt.bar(ng_202308['date'], ng_202308['logReturn'], color='red')
-plt.bar(ng_202308['date'], ng_202308['pctChange'], color='blue')
-
-
-
-# set chart title to symbol - lastTradeMonth from the returned dataframe
-plt.title(ng_202308['symbol'][0]+' - '+ng_202308['lastTradeMonth'][0])
+plotTermStructure(ts)
+plotTermStructureContango(ts, 1, 3)
 
 plt.show()
