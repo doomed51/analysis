@@ -202,11 +202,15 @@ def getPriceHistory(conn, symbol, interval, withpctChange=True, lastTradeMonth='
     
     return pxHistory
 
+def getPriceHistoryWithTablename(conn, tablename):
+    sqlStatement = 'SELECT * FROM '+tablename
+    pxHistory = pd.read_sql(sqlStatement, conn)
+    pxHistory = _formatpxHistory(pxHistory)
+    return pxHistory
 """ 
 Returns the lookup table fo records history as df 
 """
-def getLookup_symbolRecords():
-    conn = _connectToDb()
+def getLookup_symbolRecords(conn):
     sqlStatement_selectRecordsTable = 'SELECT * FROM \'00-lookup_symbolRecords\''
     symbolRecords = pd.read_sql(sqlStatement_selectRecordsTable, conn)
     # convert firstRecordDate column to datetime
