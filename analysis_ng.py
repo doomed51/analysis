@@ -8,9 +8,11 @@ import utils as ut
 import utils_futures as ut_Futures
 
 from dateutil.relativedelta import relativedelta
+from matplotlib import dates
 
 dbname_futures = "/workbench/historicalData/venv/saveHistoricalData/historicalData_futures.db"
 symbol = 'NG'
+timezone = 'US/Eastern'
 
 """
     This function returns a dataframe with the term structure of NG futures
@@ -66,7 +68,7 @@ def getTermStructure(conn, symbol='NG', interval='1day', numMonths=12, targetDat
         numDays: number of days to plot (default=5)
 """
 def plotTermStructure(ts, numDays=5):
-    print(ts.dtypes)
+    
     # sort ts by date, and get the last 5 rows
     ts['date'] = pd.to_datetime(ts['date'])
     ts = ts.sort_values(by='date').tail(numDays)
@@ -85,6 +87,9 @@ def plotTermStructure(ts, numDays=5):
     # add title
     plt.title('%s Term Structure'%symbol)
 
+    # rotate x axis labels
+    plt.xticks(rotation=45)
+
 """
     Plots %contango of term structure over various months as follows: 
         1. retrieve %contango ts by calling getTermStructureContango(ts, startMonth, endMonth)
@@ -97,22 +102,53 @@ def plotTermStructure(ts, numDays=5):
         2. plot all of these on the same plot 
 """
 def plotTermStructureContango(ts, startMonth, endMonth):
+    
+    # plot 'date' and 'close_202309' columns
+    #plt.plot(ts['date'], ts['close_202309'])
+
     # get %contango ts 
     ts_contango = ut_Futures.getContango(ts, startMonth, endMonth)
     
-    #plot the last column vs. date column, with a legend as the column name
-    plt.plot(ts_contango['date'], ts_contango.iloc[:, -1], label=ts_contango.columns[-1])
+    #plot the last column vs. date column; adding a label 
+    plt.plot(ts_contango['date'], ts_contango.iloc[:, -1], label='%s'%(ts_contango.columns[-1]))
 
-    # add legend as the last column name
-    plt.legend(ts_contango.columns[-1])
+    ## add legend
+    plt.legend()
     
     # add title
-    plt.title('%s Term Structure Contango'%ts['symbol'][0])
+    plt.title('%s Term Structure Contango'%symbol)
 
 with db.sqlite_connection(dbname_futures) as conn:
     ts = ut_Futures.getRawTermstructure(conn, 'NG')
 
-plotTermStructure(ts)
-plotTermStructureContango(ts, 1, 3)
+""" 
+    Test use case: create a grid of 2x2 plots 
+    Inputs:
+        - n/a
+    Outputs: 
+        - 2x2 grid of plots
+"""
+def plotGrid_testCase():
+    row = 2
+    column = 2
+
+    index = 1
+    # create a 2x2 grid of plots
+    #fig, axs = 
+    plt.subplot(row, column, index)
+    plotTermStructure(ts)
+
+    index+=1
+    plt.subplot(row, column, index)
+    plotTermStructureContango(ts, 1, 9)
+    plotTermStructureContango(ts, 1, 11)    
+
+    plt.tight_layout()
+
+#plotTermStructure(ts)
+#plotTermStructureContango(ts, 1, 9)
+#plotTermStructureContango(ts, 1, 11)
+plotGrid_testCase()
+
 
 plt.show()
