@@ -48,8 +48,11 @@ def getRawTermstructure(conn, symbol, lookback=100, numMonths=12):
     ts = ts.dropna(axis=0, how='any').reset_index(drop=True)
 
     # convert date column to datetime
-    ts['date'] = pd.to_datetime(ts['date'])
-    
+    #ts['date'] = pd.to_datetime(ts['date'])
+
+    # make sure tzinfo is set to US/Eastern
+    #ts['date'] = ts['date'].dt.tz_localize('US/Eastern')
+
     return ts
 
 """
@@ -72,15 +75,6 @@ def getContango(ts, startMonth=1, endMonth=None):
     # calculated as ts.columns[endCol] - ts.columns[startCol]/ts.columns[startCol]
     ts[ts.columns[startCol] + '-' + ts.columns[endCol] + 'Contango'] = (ts[ts.columns[endCol]] - ts[ts.columns[startCol]])/ts[ts.columns[startCol]]
 
-    # get the current month column
-    #currentMonth = ts.columns[1]
 
-    # create a new dataframe with the date column from ts
-    #contango = ts[['date']]
-
-    # iterate through the columns of ts from startMonth to endMonth
-    #for i in range(startMonth, endMonth+1):
-        # create a new column in contango with the name of the column in ts
-    #    contango[ts.columns[i]] = ts[ts.columns[i]] - ts[currentMonth]
     
     return ts
