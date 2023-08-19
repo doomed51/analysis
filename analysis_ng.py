@@ -89,16 +89,11 @@ def plotTermStructure(ts, numDays=5):
 
     # rotate x axis labels
     plt.xticks(rotation=45)
+    plt.tight_layout()
 
 """
     Plots %contango of term structure over various months as follows: 
         1. retrieve %contango ts by calling getTermStructureContango(ts, startMonth, endMonth)
-        1.a. retrieve for months: 
-            - 1-3
-            - 4-6
-            - 7-9
-            - 9-11
-            - 1-9
         2. plot all of these on the same plot 
 """
 def plotTermStructureContango(ts, startMonth, endMonth):
@@ -117,6 +112,8 @@ def plotTermStructureContango(ts, startMonth, endMonth):
     
     # add title
     plt.title('%s Term Structure Contango'%symbol)
+    plt.tight_layout()
+    print(ts_contango)
 
 with db.sqlite_connection(dbname_futures) as conn:
     ts = ut_Futures.getRawTermstructure(conn, 'NG')
@@ -136,7 +133,7 @@ def plotGrid_testCase():
     # create a 2x2 grid of plots
     #fig, axs = 
     plt.subplot(row, column, index)
-    plotTermStructure(ts)
+    plotTermStructure(ts, 10)
 
     index+=1
     plt.subplot(row, column, index)
