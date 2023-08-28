@@ -231,18 +231,6 @@ def getSeasonalAggregate(pxHistory, interval, symbol, numdays=0):
         pxHistory_aggregated = pxHistory.groupby(pxHistory['date'].dt.dayofweek).agg({'pctChange':['mean', 'std']})
     
     elif interval in ('yearByMonth'):
-        #pxHistory_aggregated = pxHistory.groupby(pxHistory.index.month).agg({'pctChange':['mean', 'std']})
-
-        ## above calculation does not return the avg monthyly return over multiple years, 
-        ## but rather the average daily return for each month
-        ## i.e. avg(d, d+1, d+2...) vs. avg(pctchange(d30, d1))
-        ##
-        ## given that the pxHistry df is at the daily interval and has the following columns: datetime, open, high, low, close, volume, pctChange
-        ## Since we are using 1day interval data, we need to do the following to get the average monthly return: 
-        ##  0. remove all entries that are not the first or last day of the month from the pxHistory df
-        ##  1. create a new df that with columns year, month, pctChange where pctChange is the calculated as the 
-        #      difference between the last and the first day of each month in each year 
-        #  2. group by month and calculate the mean and std dev of pctChange
         
         # reset index so we can use the Date column to agg 
         pxHistory.reset_index(inplace=True)
@@ -341,7 +329,8 @@ def seasonalAnalysis_intraday(symbol, interval, target='close', restrictTradingH
 
 ## function that lists all the unique symbols in the db
 def listSymbols():
-    symbols = db.listSymbols()
+    with db.sqlite_connection(dbname_stock) as conn:
+        symbols = db.listSymbols(conn)
     print('Symbols in DB:')
     print(symbols)
 
@@ -354,7 +343,7 @@ if len(sys.argv) > 1:
         listSymbols()
         exit()
     symbol = sys.argv[1]
-interval = '5mins'
+interval = '30mins'
 target = 'close' # open, high, low, close, volume
 restrictTradingHours = True # if true -> only analyze data between 9:30am and 4pm
 

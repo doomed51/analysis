@@ -221,7 +221,7 @@ def getLookup_symbolRecords(conn):
 lists the unique symbols in the lookup table
 """
 def listSymbols(conn):
-    sqlStatement_selectRecordsTable = 'SELECT DISTINCT symbol FROM \'00-lookup_symbolRecords\''
+    sqlStatement_selectRecordsTable = 'SELECT DISTINCT symbol FROM \'00-lookup_symbolRecords\' ORDER BY symbol ASC'
     symbols = pd.read_sql(sqlStatement_selectRecordsTable, conn)
     return symbols
 
