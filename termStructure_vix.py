@@ -4,7 +4,7 @@ import seaborn as sns
 
 ## local libs
 import interface_localDB as db
-import termStructure_vix as vixts
+import utils_termStructure as vixts
 
 ### CONFIGS ### 
 db_stock = '/workbench/historicalData/venv/saveHistoricalData/historicalData_index.db'
