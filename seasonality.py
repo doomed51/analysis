@@ -8,13 +8,13 @@ import matplotlib
 import math
 import sys 
 
+import datetime as dt
+import interface_localDB as db
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
-import interface_localDB as db
-import datetime as dt
-
+import seaborn as sns
+import utils as ut
 
 from matplotlib.dates import date2num
 
@@ -115,13 +115,8 @@ def seasonalAnalysis_overview(symbol, restrictTradingHours=False, target='close'
         pxHistory_1day = db.getPriceHistory(conn, symbol, '1day', withpctChange=True)
         pxHistory_5mins = db.getPriceHistory(conn, symbol, '5mins', withpctChange=True)
 
-    # get pctChange for 1day and 5mins
-    #pxHistory_1day['pctChange'] = pxHistory_1day[target].pct_change()
-    #pxHistory_5mins['pctChange'] = pxHistory_5mins[target].pct_change()
-
     # restrict trading hours to 9:30am to 4pm
     if restrictTradingHours:
-        #pxHistory_5mins = pxHistory_5mins[(pxHistory_5mins['Time'] >= '09:30:00') & (pxHistory_5mins['Time'] <= '16:00:00')]
         pxHistory_5mins = pxHistory_5mins[(pxHistory_5mins['date'].dt.time >= dt.time(9, 30)) & (pxHistory_5mins['date'].dt.time <= dt.time(15, 55))]
     
     # get seasonal aggregates for plotting 
@@ -129,6 +124,10 @@ def seasonalAnalysis_overview(symbol, restrictTradingHours=False, target='close'
     seasonalAggregate_5mins = getSeasonalAggregate(pxHistory_5mins, '5mins', symbol)
     seasonalAggregate_weekByDay = getSeasonalAggregate(pxHistory_5mins, 'weekByDay', symbol)
     seasonalAggregate_yearByMonth = getSeasonalAggregate(pxHistory_1day, 'yearByMonth', symbol)
+
+    # get log returns for pxhistory 
+    logReturn = ut.calcLogReturns(pxHistory_1day, 'close')
+    seasonalAggregate_weekByDay_logReturns = ut.aggregate_by_month(logReturn, 'logReturn')
 
     ## construct figure and plots 
 
@@ -162,7 +161,6 @@ def seasonalAnalysis_overview(symbol, restrictTradingHours=False, target='close'
 
     # show every second x tick label
     axes[0,1].set_xticks(axes[0,1].get_xticks()[::8])
-
 
     ## add vertical line at with x valus of 10:00:00, 11:30, 1:00, 2:00, 3:00
     if restrictTradingHours:
@@ -202,7 +200,105 @@ def seasonalAnalysis_overview(symbol, restrictTradingHours=False, target='close'
     # set xaxis tick labels to month of the year
     axes[1,0].set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 
-    #plt.subplots_adjust(hspace=0.3, wspace=0.4, left=0.05, right=0.95, top=0.95, bottom=0.09)
+    ## 
+    # plot week by day aggregate logreturns
+    #
+    #
+    # add sd as grey barplot on a secondary axis 
+    sns.barplot(x=seasonalAggregate_weekByDay_logReturns.index, y='std', data=seasonalAggregate_weekByDay_logReturns, ax=axes[1,1], color='grey', alpha=0.5)
+
+    sns.barplot(x=seasonalAggregate_weekByDay_logReturns.index, y='mean', data=seasonalAggregate_weekByDay_logReturns, ax=axes[1,1].twinx(), color='red', alpha=1)
+    axes[1,1].set_title('Yearly Seasonality (Log Returns)') # set title for subplot
+    axes[1,1].set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+
+
+## this function plots a 3 x 3 grid of plots of log returns for various seasonalities 
+def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False):
+    # get px history from db
+    with db.sqlite_connection(dbname_stock) as conn:
+        pxHistory_1day = db.getPriceHistory(conn, symbol, '1day', withpctChange=True)
+        pxHistory_5mins = db.getPriceHistory(conn, symbol, '30mins', withpctChange=True)
+
+    ###############################################
+    # restrict trading hours to 9:30am to 4pm
+    ###############################################
+    if restrictTradingHours:
+        pxHistory_5mins = pxHistory_5mins[(pxHistory_5mins['date'].dt.time >= dt.time(9, 30)) & (pxHistory_5mins['date'].dt.time <= dt.time(15, 55))]
+    ###############################################
+    ###############################################
+
+    # get log returns for pxhistory
+    logReturn_1day = ut.calcLogReturns(pxHistory_1day, 'close')
+    logReturn_5mins = ut.calcLogReturns(pxHistory_5mins, 'close')
+    
+    # create figure, and axes
+    fig, axes = plt.subplots(2, 3, figsize=(19, 9))
+
+    ## ADD TITLE
+    fig.suptitle('Log Return Seasonality for %s (%s years of data)'%(symbol.upper(), round(len(pxHistory_1day)/252, 1)))
+
+    ### plot aggregate log returns for each month of the year
+    seasonalAggregate_yearByMonth_logReturns_1day = ut.aggregate_by_month(logReturn_1day, 'logReturn')
+
+    # plot seasonalAggregate_yearByMonth_logReturns_1day sd and mean, mean in red and alpha = 1, sd on secondary axis with alpha = 0.5
+
+    sns.barplot(x=seasonalAggregate_yearByMonth_logReturns_1day.index, y='std', data=seasonalAggregate_yearByMonth_logReturns_1day, ax=axes[0,0], color='grey', alpha=0.5)
+    sns.barplot(x=seasonalAggregate_yearByMonth_logReturns_1day.index, y='mean', data=seasonalAggregate_yearByMonth_logReturns_1day, ax=axes[0,0].twinx(), color='red', alpha=1)
+    axes[0,0].set_title('Yearly Seasonality') # set title for subplot
+    axes[0,0].set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+
+    ######
+    ## day of month 
+    ######
+    aggregate_day_of_month = ut.aggregate_by_dayOfMonth(logReturn_1day, 'logReturn')
+    # plot the mean and sd 
+    sns.barplot(x=aggregate_day_of_month.index, y='std', data=aggregate_day_of_month, ax=axes[0,1], color='grey', alpha=0.5)
+    sns.barplot(x=aggregate_day_of_month.index, y='mean', data=aggregate_day_of_month, ax=axes[0,1].twinx(), color='red', alpha=1)
+    axes[0,1].set_title('Day of Month Seasonality') # set title for subplot
+    axes[0,1].set_xlabel('Day of Month')
+    # show every second x tick label
+    axes[0,1].set_xticks(axes[0,1].get_xticks()[::2])
+
+    ######
+    ## day of week
+    ######
+    aggregate_day_of_week = ut.aggregate_by_dayOfWeek(logReturn_1day, 'logReturn')
+    # plot the mean and sd
+    sns.barplot(x=aggregate_day_of_week.index, y='std', data=aggregate_day_of_week, ax=axes[0,2], color='grey', alpha=0.5)
+    sns.barplot(x=aggregate_day_of_week.index, y='mean', data=aggregate_day_of_week, ax=axes[0,2].twinx(), color='red', alpha=1)
+    axes[0,2].set_title('Day of Week Seasonality') # set title for subplot
+    axes[0,2].set_xlabel('Day of Week')
+    # set xaxis tick labels to day of the week
+    axes[0,2].set_xticklabels(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'])
+
+    ## get aggregate by timestamp for 5min interval
+    aggregate_timestamp_5mins = ut.aggregate_by_timestamp(logReturn_5mins, 'logReturn')
+    
+    # plot the mean and sd
+    sns.barplot(x=aggregate_timestamp_5mins.index, y='std', data=aggregate_timestamp_5mins, ax=axes[1,0], color='grey', alpha=0.5)
+    sns.barplot(x=aggregate_timestamp_5mins.index, y='mean', data=aggregate_timestamp_5mins, ax=axes[1,0].twinx(), color='red', alpha=1)
+    axes[1,0].set_title('Intra-Day Seasonality') # set title for subplot
+    axes[1,0].set_xlabel('Time of Day')
+    # set xtick labels to 'timestamp' column of aggregate_timestamp_5mins
+    # tilt xticks 90 degrees
+    axes[1,0].set_xticklabels(aggregate_timestamp_5mins['timestamp'], rotation=90, fontsize=8)
+
+    # aggregate restricted hours only 
+    logReturn_5mins_restricted = logReturn_5mins[(logReturn_5mins['date'].dt.time >= dt.time(9, 30)) & (logReturn_5mins['date'].dt.time <= dt.time(15, 55))]
+    aggregate_logReturn_5mins_restricted = ut.aggregate_by_timestamp(logReturn_5mins_restricted, 'logReturn')
+    
+    # plot the mean and sd
+    sns.barplot(x=aggregate_logReturn_5mins_restricted.index, y='std', data=aggregate_logReturn_5mins_restricted, ax=axes[1,1], color='grey', alpha=0.5)
+    sns.barplot(x=aggregate_logReturn_5mins_restricted.index, y='mean', data=aggregate_logReturn_5mins_restricted, ax=axes[1,1].twinx(), color='red', alpha=1)
+    axes[1,1].set_title('Intra-Day Seasonality (Restricted Hours)') # set title for subplot
+    axes[1,1].set_xlabel('Time of Day')
+    # set xtick labels to 'timestamp' column of aggregate_timestamp_5mins
+    # tilt xticks 90 degrees
+    axes[1,1].set_xticklabels(aggregate_logReturn_5mins_restricted['timestamp'], rotation=90, fontsize=8)
+    ## now plot the same but drop timestamps not between 9:30 to 16:00 
+    #aggregate_timestamp_5mins_restrictedHours = aggregate_timestamp_5mins[(aggregate_timestamp_5mins['timestamp'] >= dt.time(9, 30)) & (aggregate_timestamp_5mins['timestamp'] <= dt.time(15, 55))]
+    #print(aggregate_timestamp_5mins_restrictedHours)
+
 
 
 """
@@ -267,7 +363,7 @@ def getSeasonalAggregate(pxHistory, interval, symbol, numdays=0):
 Runs seasonal analysis on intra-day data for a given symbol and interval
     plots different subsets of data: all, last 30 days, last 60 days, last 90 days 
 """
-def seasonalAnalysis_intraday(symbol, interval, target='close', restrictTradingHours=False):
+def seasonalAnalysis_intraday(symbol, interval, target='close'):
     ## gracefully exit with error if interval not in 1min, 5mins, 15mins, 30mins, 1hour
     if interval not in ['1min', '5mins', '15mins', '30mins', '1hour']:
         print('ERROR: interval not supported for intraday analysis')
@@ -347,8 +443,10 @@ interval = '30mins'
 target = 'close' # open, high, low, close, volume
 restrictTradingHours = True # if true -> only analyze data between 9:30am and 4pm
 
-seasonalAnalysis_intraday(symbol, interval, target, restrictTradingHours)
-seasonalAnalysis_overview(symbol, restrictTradingHours, target)
+#seasonalAnalysis_intraday(symbol, interval, target, restrictTradingHours)
+#seasonalAnalysis_overview(symbol, restrictTradingHours, target)
+
+logReturns_overview_of_seasonality(symbol)
 
 plt.tight_layout()
 plt.show()
