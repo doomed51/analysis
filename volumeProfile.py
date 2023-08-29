@@ -81,7 +81,7 @@ def plotVolumeSeasonality(symbolRecord):
     # sort by date
     symbolRecord = symbolRecord.sort_values(by='date')
 
-    symbolRecord_aggregated = ut.aggregate_volume_dayOfMonth(symbolRecord)
+    symbolRecord_aggregated = ut.aggregate_by_dayOfMonth(symbolRecord, 'volume')
     
     # plot barplot of aggregated mean and sd in different colours
     plt.bar(symbolRecord_aggregated['dayOfMonth'], symbolRecord_aggregated['mean']) 
