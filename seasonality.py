@@ -4,9 +4,10 @@ plots various seasonal analyses for a given symbol
     - plotSeasonalReturns_intraday: 3x3 grid of barplots for analyzing intraday seasonal returns
     - plotSeasonalReturns_overview: 1x3 grid of barplots for a quick overview of seasonality in a symbol 
 """
+import config
 import matplotlib
 import math
-import sys 
+import sys
 
 import datetime as dt
 import interface_localDB as db
@@ -18,7 +19,7 @@ import utils as ut
 
 from matplotlib.dates import date2num
 
-dbname_stock = '/workbench/historicalData/venv/saveHistoricalData/historicalData_index.db'
+dbname_stock = config.dbname_stock
 
 """
 Plots seasonal returns in a 3x3 grid
@@ -271,7 +272,9 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False):
     # set xaxis tick labels to day of the week
     axes[0,2].set_xticklabels(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'])
 
-    ## get aggregate by timestamp for 5min interval
+    ######
+    ## intra day
+    # get aggregate by timestamp for 5min interval
     aggregate_timestamp_5mins = ut.aggregate_by_timestamp(logReturn_5mins, 'logReturn')
     
     # plot the mean and sd
@@ -283,6 +286,8 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False):
     # tilt xticks 90 degrees
     axes[1,0].set_xticklabels(aggregate_timestamp_5mins['timestamp'], rotation=90, fontsize=8)
 
+    ######
+    # intra day restricted hours
     # aggregate restricted hours only 
     logReturn_5mins_restricted = logReturn_5mins[(logReturn_5mins['date'].dt.time >= dt.time(9, 30)) & (logReturn_5mins['date'].dt.time <= dt.time(15, 55))]
     aggregate_logReturn_5mins_restricted = ut.aggregate_by_timestamp(logReturn_5mins_restricted, 'logReturn')
@@ -295,11 +300,18 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False):
     # set xtick labels to 'timestamp' column of aggregate_timestamp_5mins
     # tilt xticks 90 degrees
     axes[1,1].set_xticklabels(aggregate_logReturn_5mins_restricted['timestamp'], rotation=90, fontsize=8)
-    ## now plot the same but drop timestamps not between 9:30 to 16:00 
-    #aggregate_timestamp_5mins_restrictedHours = aggregate_timestamp_5mins[(aggregate_timestamp_5mins['timestamp'] >= dt.time(9, 30)) & (aggregate_timestamp_5mins['timestamp'] <= dt.time(15, 55))]
-    #print(aggregate_timestamp_5mins_restrictedHours)
 
-
+    #######
+    # plot heatmap of intra day seasonality 
+    #######
+    # pivot table of logReturn_5mins
+    pivot_logReturn_5mins_restricted = logReturn_5mins_restricted.pivot_table(index=logReturn_5mins_restricted['date'].dt.time, columns=logReturn_5mins_restricted['date'].dt.date, values='logReturn')
+    # select only the last 30 days
+    pivot_logReturn_5mins_restricted = pivot_logReturn_5mins_restricted[pivot_logReturn_5mins_restricted.columns[-30:]]
+    # plot heatmap of pivot_logReturn_5mins
+    sns.heatmap(pivot_logReturn_5mins_restricted, ax=axes[1,2])
+    axes[1,2].set_title('Intra-Day log returns for last 30 days') # set title for subplot
+      
 
 """
 Returns seasonal aggregate of passed in pxhistory df
