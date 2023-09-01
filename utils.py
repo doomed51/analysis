@@ -1,24 +1,6 @@
 import math
 import pandas as pd 
 
-"""
-    This function calculates log returns on the passed in values 
-    inputs:
-        - history - dataframe of timeseries data 
-        - colName - name of the column to calculate log returns on
-    output:
-        - history with a log return column added
-"""
-def calcLogReturns(history, colName):
-    # calculate log returns as ln(today's close price / yesterday's close price)
-    history['logReturn'] = history[colName].apply(lambda x: math.log(x)) - history[colName].shift(1).apply(lambda x: math.log(x))
-    return history.reset_index(drop=True)
-
-"""
-    returns a string of the current date in YYYYMM format
-"""
-def futures_getExpiryDateString():
-    return pd.Timestamp.today().strftime('%Y%m')
 
 """
     Returns mean and sd of target column grouped by month
@@ -126,3 +108,42 @@ def aggregate_by_timestamp(history, targetCol):
     aggregate_by_timestamp = history.groupby('timestamp')[targetCol].agg(['mean', 'std']).reset_index()
 
     return aggregate_by_timestamp
+
+"""
+    This function calculates log returns on the passed in values 
+    inputs:
+        - history - dataframe of timeseries data 
+        - colName - name of the column to calculate log returns on
+    output:
+        - history with a log return column added
+"""
+def calcLogReturns(history, colName):
+    # calculate log returns as ln(today's close price / yesterday's close price)
+    history['logReturn'] = history[colName].apply(lambda x: math.log(x)) - history[colName].shift(1).apply(lambda x: math.log(x))
+    return history.reset_index(drop=True)
+
+"""
+    returns a string of the current date in YYYYMM format
+"""
+def futures_getExpiryDateString():
+    return pd.Timestamp.today().strftime('%Y%m')
+
+""" 
+    This function returns the last business day for the given year and month
+    inputs:
+        year: [int] year
+        month: [int] month
+"""
+def getLastBusinessDay(year, month):
+    # get last day of month
+    lastDayOfMonth = pd.Timestamp(year, month, 1) + pd.offsets.MonthEnd(0)
+
+    # if last day of month is a weekend, get the last business day
+    if lastDayOfMonth.dayofweek == 5:
+        lastBusinessDay = lastDayOfMonth - pd.offsets.Day(1)
+    elif lastDayOfMonth.dayofweek == 6:
+        lastBusinessDay = lastDayOfMonth - pd.offsets.Day(2)
+    else:
+        lastBusinessDay = lastDayOfMonth
+
+    return lastBusinessDay.strftime('%Y-%m-%d')
