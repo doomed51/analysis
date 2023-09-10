@@ -132,20 +132,30 @@ def _updateLookup_symbolRecords(conn, tablename, earliestTimestamp, numMissingDa
 
 """ ensures proper format of px history tables retrieved from db """
 def _formatpxHistory(pxHistory):
-        
+    pxHistory.reset_index(drop=True, inplace=True) # reset index
+
+    # if interval is 1day, make sure sure the date column only has 10chars 
+    if pxHistory['interval'][1] == '1day':
+        pxHistory['date'] = pxHistory['date'].str[:10]
+    
     ##### Remove any errant timezone info:
     # get the rows that have timezone info in the date column
     # remove the timezone info from the date column
     # update pxhistory with the formatted date column
-    pxHistory_hasTimezone = pxHistory[pxHistory['date'].str.len() > 19]
+    pxHistory_hasTimezone = pxHistory[pxHistory['date'].str.len() > 19].copy()
     if not pxHistory_hasTimezone.empty:
-        # remove the timezone info from the date column
-        pxHistory_hasTimezone.loc[:,'date'] = pxHistory_hasTimezone['date'].str[:19]
+        # remove the timezone info from the date column, while not triggering a settingwithcopy warning
+        pxHistory_hasTimezone.loc[:, 'date'] = pxHistory_hasTimezone['date'].str[:19]
+
         # update pxhistory with the formatted date column
         pxHistory.update(pxHistory_hasTimezone)
 
     # final formatting ... 
-    pxHistory['date'] = pd.to_datetime(pxHistory['date'], format='mixed')
+    if pxHistory['interval'][1] == '1day':
+        pxHistory['date'] = pd.to_datetime(pxHistory['date'], format='%Y-%m-%d')
+    else:
+        pxHistory['date'] = pd.to_datetime(pxHistory['date'], format='%Y-%m-%d %H:%M:%S')
+    
     pxHistory.sort_values(by='date', inplace=True) #sort by date
     
     return pxHistory
@@ -202,6 +212,7 @@ def getPriceHistory(conn, symbol, interval, withpctChange=True, lastTradeMonth='
         pxHistory['pctChange'] = pxHistory['close'].pct_change()
         ## drop the first row since it will have NaN for pctChange
         pxHistory.drop(pxHistory.index[0], inplace=True)
+
     pxHistory = _formatpxHistory(pxHistory)
 
     # caclulate log returns
