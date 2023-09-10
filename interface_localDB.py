@@ -9,8 +9,11 @@ This module simplifies interacting with the local database of historical ohlc da
 """
 
 import sqlite3
+import sys
+
 import pandas as pd
-import utils as utils
+sys.path.append('..')
+from utils import utils as ut
 
 """ Global vars """
 dbname_index = 'historicalData_index.db'
@@ -202,7 +205,7 @@ def getPriceHistory(conn, symbol, interval, withpctChange=True, lastTradeMonth='
     pxHistory = _formatpxHistory(pxHistory)
 
     # caclulate log returns
-    pxHistory = utils.calcLogReturns(pxHistory, 'close')
+    pxHistory = ut.calcLogReturns(pxHistory, 'close')
     
     return pxHistory
 
@@ -210,7 +213,7 @@ def getPriceHistoryWithTablename(conn, tablename):
     sqlStatement = 'SELECT * FROM '+tablename
     pxHistory = pd.read_sql(sqlStatement, conn)
     pxHistory = _formatpxHistory(pxHistory)
-    pxHistory = utils.calcLogReturns(pxHistory, 'close')
+    pxHistory = ut.calcLogReturns(pxHistory, 'close')
     return pxHistory
 """ 
 Returns the lookup table fo records history as df 
