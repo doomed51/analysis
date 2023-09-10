@@ -238,15 +238,26 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False):
     ## ADD TITLE
     fig.suptitle('Log Return Seasonality for %s (%s years of data)'%(symbol.upper(), round(len(pxHistory_1day)/252, 1)))
 
-    ### plot aggregate log returns for each month of the year
+    ######
+    ### monthly seasonality
+    ######
     seasonalAggregate_yearByMonth_logReturns_1day = ut.aggregate_by_month(logReturn_1day, 'logReturn')
 
     # plot seasonalAggregate_yearByMonth_logReturns_1day sd and mean, mean in red and alpha = 1, sd on secondary axis with alpha = 0.5
-
     sns.barplot(x=seasonalAggregate_yearByMonth_logReturns_1day.index, y='std', data=seasonalAggregate_yearByMonth_logReturns_1day, ax=axes[0,0], color='grey', alpha=0.5)
-    sns.barplot(x=seasonalAggregate_yearByMonth_logReturns_1day.index, y='mean', data=seasonalAggregate_yearByMonth_logReturns_1day, ax=axes[0,0].twinx(), color='red', alpha=1)
+    sns.barplot(x=seasonalAggregate_yearByMonth_logReturns_1day.index, y='mean', data=seasonalAggregate_yearByMonth_logReturns_1day, ax=axes[0,0].twinx(), color='red', alpha=0.75)
     axes[0,0].set_title('Yearly Seasonality') # set title for subplot
-    axes[0,0].set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+    axes[0,0].set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']) # x-axis labels 
+
+    # plot current year log returns 
+    logReturn_1day_currentYear = logReturn_1day[logReturn_1day['date'].dt.year == logReturn_1day['date'].dt.year.max()].reset_index(drop=True) # select only the dates in the current year from logReturn_1day
+    
+    # aggregate
+    seasonalAggregate_logReturnsForCurrentyear = ut.aggregate_by_month(logReturn_1day_currentYear, 'logReturn')
+    
+    # plot the current year mean as a lineplot on the same axis as historical mean 
+    sns.lineplot(x=seasonalAggregate_logReturnsForCurrentyear.index, y='mean', data=seasonalAggregate_logReturnsForCurrentyear, ax=axes[0,0].twinx(), color='green', alpha=1)
+
 
     ######
     ## day of month 
