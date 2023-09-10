@@ -146,4 +146,4 @@ def getLastBusinessDay(year, month):
     else:
         lastBusinessDay = lastDayOfMonth
 
-    return lastBusinessDay.strftime('%Y-%m-%d')
+    return lastBusinessDay.day
