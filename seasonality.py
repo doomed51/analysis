@@ -242,10 +242,11 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False):
     ### monthly seasonality
     ######
     seasonalAggregate_yearByMonth_logReturns_1day = ut.aggregate_by_month(logReturn_1day, 'logReturn')
-
+    ax1 = axes[0,0]
+    ax2 = ax1.twinx()
     # plot seasonalAggregate_yearByMonth_logReturns_1day sd and mean, mean in red and alpha = 1, sd on secondary axis with alpha = 0.5
-    sns.barplot(x=seasonalAggregate_yearByMonth_logReturns_1day.index, y='std', data=seasonalAggregate_yearByMonth_logReturns_1day, ax=axes[0,0], color='grey', alpha=0.5)
-    sns.barplot(x=seasonalAggregate_yearByMonth_logReturns_1day.index, y='mean', data=seasonalAggregate_yearByMonth_logReturns_1day, ax=axes[0,0].twinx(), color='red', alpha=0.75)
+    sns.barplot(x=seasonalAggregate_yearByMonth_logReturns_1day.index, y='std', data=seasonalAggregate_yearByMonth_logReturns_1day, ax=ax1, color='grey', alpha=0.5)
+    sns.barplot(x=seasonalAggregate_yearByMonth_logReturns_1day.index, y='mean', data=seasonalAggregate_yearByMonth_logReturns_1day, ax=ax2, color='red', alpha=0.75)
     axes[0,0].set_title('Yearly Seasonality') # set title for subplot
     axes[0,0].set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']) # x-axis labels 
 
@@ -256,7 +257,7 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False):
     seasonalAggregate_logReturnsForCurrentyear = ut.aggregate_by_month(logReturn_1day_currentYear, 'logReturn')
     
     # plot the current year mean as a lineplot on the same axis as historical mean 
-    sns.lineplot(x=seasonalAggregate_logReturnsForCurrentyear.index, y='mean', data=seasonalAggregate_logReturnsForCurrentyear, ax=axes[0,0].twinx(), color='green', alpha=1)
+    #sns.lineplot(x=seasonalAggregate_logReturnsForCurrentyear.index, y='mean', data=seasonalAggregate_logReturnsForCurrentyear, ax=ax2, color='green', alpha=1)
 
 
     ######
@@ -470,6 +471,7 @@ restrictTradingHours = True # if true -> only analyze data between 9:30am and 4p
 #seasonalAnalysis_overview(symbol, restrictTradingHours, target)
 
 logReturns_overview_of_seasonality(symbol)
+#plot_seasonality(symbol)
 
 plt.tight_layout()
 plt.show()
