@@ -1,7 +1,11 @@
+import sys
+sys.path.append('..')
+
 import argparse 
+import config
 
 import interface_localDB as db
-import utils as ut
+from utils import utils as ut
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -9,7 +13,7 @@ import matplotlib.pyplot as plt
 from rich import print
 
 ######## GLOBAL VARS
-dbname_stocks = '/workbench/historicalData/venv/saveHistoricalData/historicalData_index.db'
+dbname_stocks = config.dbname_stock
 #####################
 # Create the parser
 parser = argparse.ArgumentParser(description='My CLI Application')
