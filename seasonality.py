@@ -4,10 +4,10 @@ plots various seasonal analyses for a given symbol
     - plotSeasonalReturns_intraday: 3x3 grid of barplots for analyzing intraday seasonal returns
     - plotSeasonalReturns_overview: 1x3 grid of barplots for a quick overview of seasonality in a symbol 
 """
-import config
-import matplotlib
-import math
 import sys
+sys.path.append('..')
+
+import config
 
 import datetime as dt
 import interface_localDB as db
@@ -15,7 +15,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-import utils as ut
+from utils import utils as ut
 
 from matplotlib.dates import date2num
 
@@ -213,7 +213,7 @@ def seasonalAnalysis_overview(symbol, restrictTradingHours=False, target='close'
     axes[1,1].set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 
 
-## this function plots a 3 x 3 grid of plots of log returns for various seasonalities 
+## this function plots a 3 x 3 grid of plots of log returns seasonality for select timeframes  
 def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False):
     # get px history from db
     with db.sqlite_connection(dbname_stock) as conn:
