@@ -6,6 +6,8 @@ plots various seasonal analyses for a given symbol
 """
 import sys
 sys.path.append('..')
+from utils import utils_tabbedPlotsWindow as pw
+from utils import utils as ut
 
 import config
 
@@ -15,7 +17,6 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from utils import utils as ut
 
 from matplotlib.dates import date2num
 
@@ -214,7 +215,7 @@ def seasonalAnalysis_overview(symbol, restrictTradingHours=False, target='close'
 
 
 ## this function plots a 3 x 3 grid of plots of log returns seasonality for select timeframes  
-def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False):
+def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdlineplot=False):
     # get px history from db
     with db.sqlite_connection(dbname_stock) as conn:
         pxHistory_1day = db.getPriceHistory(conn, symbol, '1day', withpctChange=True)
@@ -242,8 +243,11 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False):
     ### monthly seasonality
     ######
     seasonalAggregate_yearByMonth_logReturns_1day = ut.aggregate_by_month(logReturn_1day, 'logReturn')
+
+    # explicitly set axes
     ax1 = axes[0,0]
     ax2 = ax1.twinx()
+
     # plot seasonalAggregate_yearByMonth_logReturns_1day sd and mean, mean in red and alpha = 1, sd on secondary axis with alpha = 0.5
     sns.barplot(x=seasonalAggregate_yearByMonth_logReturns_1day.index, y='std', data=seasonalAggregate_yearByMonth_logReturns_1day, ax=ax1, color='grey', alpha=0.5)
     sns.barplot(x=seasonalAggregate_yearByMonth_logReturns_1day.index, y='mean', data=seasonalAggregate_yearByMonth_logReturns_1day, ax=ax2, color='red', alpha=0.75)
@@ -251,26 +255,38 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False):
     axes[0,0].set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']) # x-axis labels 
 
     # plot current year log returns 
-    logReturn_1day_currentYear = logReturn_1day[logReturn_1day['date'].dt.year == logReturn_1day['date'].dt.year.max()].reset_index(drop=True) # select only the dates in the current year from logReturn_1day
-    
-    # aggregate
-    seasonalAggregate_logReturnsForCurrentyear = ut.aggregate_by_month(logReturn_1day_currentYear, 'logReturn')
-    
-    # plot the current year mean as a lineplot on the same axis as historical mean 
-    #sns.lineplot(x=seasonalAggregate_logReturnsForCurrentyear.index, y='mean', data=seasonalAggregate_logReturnsForCurrentyear, ax=ax2, color='green', alpha=1)
+    if ytdlineplot == True:
+        logReturn_1day_currentYear = logReturn_1day[logReturn_1day['date'].dt.year == logReturn_1day['date'].dt.year.max()].reset_index(drop=True) # select only the dates in the current year from logReturn_1day
+        
+        # aggregate
+        seasonalAggregate_logReturnsForCurrentyear = ut.aggregate_by_month(logReturn_1day_currentYear, 'logReturn')
+        
+        # plot the current year mean as a lineplot on the same axis as historical mean 
+        sns.lineplot(x=seasonalAggregate_logReturnsForCurrentyear.index, y='mean', data=seasonalAggregate_logReturnsForCurrentyear, ax=ax2, color='green', alpha=1)
 
 
     ######
     ## day of month 
     ######
     aggregate_day_of_month = ut.aggregate_by_dayOfMonth(logReturn_1day, 'logReturn')
+    # set axes
+    ax3 = axes[0,1]
+    ax4 = ax3.twinx()
     # plot the mean and sd 
-    sns.barplot(x=aggregate_day_of_month.index, y='std', data=aggregate_day_of_month, ax=axes[0,1], color='grey', alpha=0.5)
-    sns.barplot(x=aggregate_day_of_month.index, y='mean', data=aggregate_day_of_month, ax=axes[0,1].twinx(), color='red', alpha=1)
+    sns.barplot(x=aggregate_day_of_month.index, y='std', data=aggregate_day_of_month, ax=ax3, color='grey', alpha=0.5)
+    sns.barplot(x=aggregate_day_of_month.index, y='mean', data=aggregate_day_of_month, ax=ax4, color='red', alpha=1)
     axes[0,1].set_title('Day of Month Seasonality') # set title for subplot
     axes[0,1].set_xlabel('Day of Month')
     # show every second x tick label
     axes[0,1].set_xticks(axes[0,1].get_xticks()[::2])
+
+    # plot for current year if ytdlineplot == True
+    if ytdlineplot == True:
+        ## aggregate by day of month for current year
+        aggregate_day_of_month_currentYear = ut.aggregate_by_dayOfMonth(logReturn_1day_currentYear, 'logReturn')
+        # plot the mean as a lineplot on ax3
+        sns.lineplot(x=aggregate_day_of_month_currentYear.index, y='mean', data=aggregate_day_of_month_currentYear, ax=ax4, color='green', alpha=1)
+
 
     ######
     ## day of week
@@ -323,7 +339,8 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False):
     # plot heatmap of pivot_logReturn_5mins
     sns.heatmap(pivot_logReturn_5mins_restricted, ax=axes[1,2])
     axes[1,2].set_title('Intra-Day log returns for last 30 days') # set title for subplot
-      
+
+    return fig      
 
 """
 Returns seasonal aggregate of passed in pxhistory df
@@ -470,9 +487,18 @@ restrictTradingHours = True # if true -> only analyze data between 9:30am and 4p
 #seasonalAnalysis_intraday(symbol, interval, target, restrictTradingHours)
 #seasonalAnalysis_overview(symbol, restrictTradingHours, target)
 
-logReturns_overview_of_seasonality(symbol)
+overview_fig = logReturns_overview_of_seasonality(symbol)
+overview_ytd_fig = logReturns_overview_of_seasonality(symbol, ytdlineplot=True)
+fig2 = overview_fig
+plt.tight_layout()
+# tpw as new pw
+tpw = pw.plotWindow()
+tpw.addPlot('seasonality', overview_fig)
+tpw.addPlot('seasonality2', overview_ytd_fig)
+
+tpw.show()
 #plot_seasonality(symbol)
 
-plt.tight_layout()
-plt.show()
+#plt.tight_layout()
+#plt.show()
 
