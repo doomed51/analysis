@@ -1,16 +1,24 @@
+import sys
+sys.path.append('..')
+
+## local libs
+import interface_localDB as db
+
+from utils import utils as ut
+from utils import utils_termStructure as vixts
+from utils import utils_tabbedPlotsWindow as pltWindow
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-## local libs
-import interface_localDB as db
-import utils_termStructure as vixts
+
 
 ### CONFIGS ### 
 db_stock = '/workbench/historicalData/venv/saveHistoricalData/historicalData_index.db'
 vvix_topPercentile = 0.9
 vvix_bottomPercentile = 0.1
-vvix_percentileLookbackDays = 252 ## 1 year lookback = 252 trading days
+vvix_percentileLookbackDays = 252 ## 1 year lookback = 252 *trading* days
 
 #####################################
 ## prepare vix term structure data 
@@ -31,16 +39,16 @@ with db.sqlite_connection(db_stock) as conn:
 
 ###################################
 ############# VVIX ################
-    
-
-##  make sure vvix and vix_ts_pctContango start on the same date 
-#vvix = vvix[vvix.index >= vix_ts_pctContango.index.min() - pd.Timedelta(days=252)]
 
 ## calculate percentile rank of VVIX
 vvix['percentileRank'] = vvix['close'].rolling(vvix_percentileLookbackDays).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
 
 vvix['percentileRank_90d'] = vvix['close'].rolling(90).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
 vvix['percentileRank_60d'] = vvix['close'].rolling(60).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
+
+# add log return column
+vvix = ut.calcLogReturns(vvix, 'close')
+vix = ut.calcLogReturns(vix, 'close')
 
 """
     for passed in dataframes (main, reference) return main with only the dates in reference 
@@ -124,6 +132,8 @@ def plotVixRelationships(vix_ts_pctContango, vix, vvix):
     # reverse x axis
     ax2[1,2].invert_xaxis()
 
+    return fig2
+
 
 """
 view for day to day monitoring of VIX term structure changes. The following are displayed:
@@ -140,9 +150,12 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
 
     ###############################
     # plot fourtosevenMoContango, avgContanto, and percentile rank of vvix
-    sns.lineplot(x='date', y='fourToSevenMoContango', data=vix_ts_pctContango, ax=ax)
+    sns.lineplot(x='date', y='fourToSevenMoContango', data=vix_ts_pctContango, ax=ax, color='blue', label='4-7 Mo Contango')
     ## replace close with percentileRank for vvix 
-    sns.lineplot(x=vvix['date'], y='close', data=vvix, ax=ax.twinx(), drawstyle='steps-pre', color='red', alpha=0.3)
+    sns.lineplot(x=vvix['date'], y='close', data=vvix, ax=ax.twinx(), drawstyle='steps-pre', color='red', alpha=0.3, label='VVIX')
+
+    # add legend
+    ax.legend(['4-7 Mo Contango', 'VVIX'], loc='upper left')
 
     # plot avgcontango on the same axis as fourtosevenMoContango
     #sns.lineplot(x='date', y='averageContango', data=vix_ts_pctContango_last30, ax=ax[0])
@@ -150,13 +163,11 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     ###############################
     # Format plot
     ax.axhline(y=0, color='black', linestyle='-')
+
     ax.axhline(y=0.06, color='blue', linestyle='--', alpha=0.5)
     ax.set_title('4th to 7th Month Contango') 
     # set opacity of avgcontango to 0.5
     ax.lines[1].set_alpha(0.5)
-    
-    ## add a legend to the plot
-    ax.legend(['4-7 Mo Contango', 'VVIX'], loc='upper left')
         
     ##############################
     ## plot vix close
@@ -192,6 +203,8 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     #sns.regplot(x='percentileRank', y='pctChange', data=vvix, scatter=False, ax=ax[2], line_kws={'color': 'red'})
     #ax[2].set_title('VVIX Percentile Rank vs VIX Close Pct Change')
 
+    return fig
+
 """
 function that plots intra-month, and month over month seasonality of 4-7mo. contango
  arguments:
@@ -225,6 +238,29 @@ def plotVixTermStructureSeasonality(vix_ts_pctContango):
     # set x-axis labels to month names
     ax[1].set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 
+    return fig
+
+
+""" 
+    plots symvbol autocorrelation 
+"""
+def plotAutocorrelation(symbolHistory):
+    symbolHistory.reset_index(drop=True, inplace=True)
+    # create figure and axes, 2x2 grid
+    fig, ax = plt.subplots(2, 2, figsize=(15, 10))
+    fig.suptitle('%s Autocorrelation'%(symbolHistory['symbol'][0]))
+
+    # plot autocorrelation of vvix
+    pd.plotting.autocorrelation_plot(symbolHistory['close'], ax=ax[0,0])
+    # add title
+    ax[0,0].set_title('Autocorrelation: %s close px'%(symbolHistory['symbol'][0]))
+
+    # plot autocorrelation of vvix logreturn on the same axis
+    pd.plotting.autocorrelation_plot(symbolHistory['logReturn'], ax=ax[0,1])
+    # add title
+    ax[0,1].set_title('Autocorrelation: %s logReturn'%(symbolHistory['symbol'][0]))
+
+    return fig
 
 ##################################################
 ############### call plots  
@@ -238,8 +274,18 @@ sns.set_style('darkgrid')
 spx = _filterDates(spx, vix_ts_pctContango)
 
 #plotVixRelationships(vix_ts_pctContango, vix, vvix)
-plotVixTermStructureMonitor(vix_ts_pctContango, vix, spx)
 #plotVixTermStructureSeasonality(vix_ts_pctContango)
 
-plt.tight_layout()
-plt.show()
+volMonitorFigure = plotVixTermStructureMonitor(vix_ts_pctContango, vix, spx)
+
+# initialize plot window for tabbed plots
+tpw = pltWindow.plotWindow()
+
+# add plots
+tpw.addPlot('vol monitor', volMonitorFigure)
+tpw.addPlot('seasonality', plotVixTermStructureSeasonality(vix_ts_pctContango))
+tpw.addPlot('VVIX autocorrelation', plotAutocorrelation(vvix))
+tpw.addPlot('VIX autocorrelation', plotAutocorrelation(vix))
+
+# show window
+tpw.show()
