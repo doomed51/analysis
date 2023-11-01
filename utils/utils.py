@@ -114,12 +114,13 @@ def aggregate_by_timestamp(history, targetCol):
     inputs:
         - history - dataframe of timeseries data 
         - colName - name of the column to calculate log returns on
+        - lag - number of days to lag the log return calculation
     output:
         - history with a log return column added
 """
-def calcLogReturns(history, colName):
-    # calculate log returns as ln(today's close price / yesterday's close price)
-    history['logReturn'] = history[colName].apply(lambda x: math.log(x)) - history[colName].shift(1).apply(lambda x: math.log(x))
+def calcLogReturns(history, colName, lag=1):
+    # calculate log returns 
+    history['logReturn'] = history[colName].apply(lambda x: math.log(x)) - history[colName].shift(-lag).apply(lambda x: math.log(x))
     return history.reset_index(drop=True)
 
 """
