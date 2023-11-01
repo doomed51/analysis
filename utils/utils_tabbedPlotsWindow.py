@@ -31,7 +31,7 @@ class plotWindow():
         self.current_window = -1
         self.tabs = QTabWidget()
         self.MainWindow.setCentralWidget(self.tabs)
-        self.MainWindow.resize(1680, 1200)
+        self.MainWindow.resize(1680, 1350)
         self.MainWindow.show()
 
     def addPlot(self, title, figure):

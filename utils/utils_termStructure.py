@@ -11,7 +11,8 @@ import pandas as pd
 vix_ts_raw = pd.read_csv('vix.csv')
 
 # convert date column to datetime
-vix_ts_raw['date'] = pd.to_datetime(vix_ts_raw['date'], format='mixed')
+vix_ts_raw['date'] = pd.to_datetime(vix_ts_raw['date'])
+
 
 # set date as index
 vix_ts_raw.set_index('date', inplace=True)
@@ -52,6 +53,5 @@ def getVixTermStructurePctContango(fourToSeven = False, currentToLast = False, a
     
     ## sort by Date column
     vix_ts_pctContango.sort_values(by='date', inplace=True)
-    print(vix_ts_pctContango)
     return vix_ts_pctContango
 
