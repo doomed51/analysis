@@ -210,8 +210,6 @@ def getPriceHistory(conn, symbol, interval, withpctChange=True, lastTradeMonth='
     
     if withpctChange:
         pxHistory['pctChange'] = pxHistory['close'].pct_change()
-        ## drop the first row since it will have NaN for pctChange
-        pxHistory.drop(pxHistory.index[0], inplace=True)
 
     pxHistory = _formatpxHistory(pxHistory)
 
