@@ -307,12 +307,14 @@ def plotMomoCrossoverSignal(pxHistory, momoPeriod1, momoPeriod2, forwardReturnsP
 """
     plots distribution of momo for each momoPeeriod
 """
-def plotMomoDist(pxHistory, momPeriod=[3,6,12,24,48,96]):
+def plotMomoDist(pxHistory, momPeriod=[3,6,10,24,48,96]):
     # calc momo for each momPeriod
+    n=1
     for period in momPeriod:
         pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
-        pxHistory.rename(columns={'momo': 'momo%s'%(period)}, inplace=True)
+        pxHistory.rename(columns={'momo': 'momo%s'%(n)}, inplace=True)
         pxHistory.rename(columns={'lagmomo': 'lagmomo%s'%(period)}, inplace=True)
+        n+=1 
     
     # set percentiles to draw vertical lines at
     percentiles = [.05, .5, .95, .99]
@@ -323,53 +325,53 @@ def plotMomoDist(pxHistory, momPeriod=[3,6,12,24,48,96]):
     sns.set()
 
     # plot distribution of momo for each momoPeriod
-    sns.histplot(ax=ax[0,0], x=pxHistory['momo3'])
+    sns.histplot(ax=ax[0,0], x=pxHistory['momo1'])
     # add vertical lines at percentiles
     for percentile in percentiles:
-        ax[0,0].axvline(pxHistory['momo3'].quantile(percentile), color='red')
+        ax[0,0].axvline(pxHistory['momo1'].quantile(percentile), color='red')
         # draw the value on the plot 
-        ax[0,0].text(pxHistory['momo3'].quantile(percentile), 0, round(pxHistory['momo3'].quantile(percentile), 2), rotation=45, color='red')
-    sns.histplot(ax=ax[0,1], x=pxHistory['momo6'])
+        ax[0,0].text(pxHistory['momo1'].quantile(percentile), 0, round(pxHistory['momo1'].quantile(percentile), 2), rotation=45, color='red')
+    sns.histplot(ax=ax[0,1], x=pxHistory['momo2'])
     # add vertical lines at percentiles
     for percentile in percentiles:
-        ax[0,1].axvline(pxHistory['momo6'].quantile(percentile), color='red')
+        ax[0,1].axvline(pxHistory['momo2'].quantile(percentile), color='red')
         # draw the value on the plot
-        ax[0,1].text(pxHistory['momo6'].quantile(percentile), 0, round(pxHistory['momo6'].quantile(percentile), 2), rotation=45, color='red')
-    sns.histplot(ax=ax[0,2], x=pxHistory['momo12'])
+        ax[0,1].text(pxHistory['momo2'].quantile(percentile), 0, round(pxHistory['momo2'].quantile(percentile), 2), rotation=45, color='red')
+    sns.histplot(ax=ax[0,2], x=pxHistory['momo3'])
     # add vertical lines at percentiles
     for percentile in percentiles:
-        ax[0,2].axvline(pxHistory['momo12'].quantile(percentile), color='red')
+        ax[0,2].axvline(pxHistory['momo3'].quantile(percentile), color='red')
         # draw the value on the plot
-        ax[0,2].text(pxHistory['momo12'].quantile(percentile), 0, round(pxHistory['momo12'].quantile(percentile), 2), rotation=45, color='red')
+        ax[0,2].text(pxHistory['momo3'].quantile(percentile), 0, round(pxHistory['momo3'].quantile(percentile), 2), rotation=45, color='red')
 
-    sns.histplot(ax=ax[1,0], x=pxHistory['momo24'])
+    sns.histplot(ax=ax[1,0], x=pxHistory['momo4'])
     # add vertical lines at percentiles
     for percentile in percentiles:
-        ax[1,0].axvline(pxHistory['momo24'].quantile(percentile), color='red')
+        ax[1,0].axvline(pxHistory['momo4'].quantile(percentile), color='red')
         # draw the value on the plot
-        ax[1,0].text(pxHistory['momo24'].quantile(percentile), 0, round(pxHistory['momo24'].quantile(percentile), 2), rotation=45, color='red')
+        ax[1,0].text(pxHistory['momo4'].quantile(percentile), 0, round(pxHistory['momo4'].quantile(percentile), 2), rotation=45, color='red')
     
-    sns.histplot(ax=ax[1,1], x=pxHistory['momo48'])
+    sns.histplot(ax=ax[1,1], x=pxHistory['momo5'])
     # add vertical lines at percentiles
     for percentile in percentiles:
-        ax[1,1].axvline(pxHistory['momo48'].quantile(percentile), color='red')
+        ax[1,1].axvline(pxHistory['momo5'].quantile(percentile), color='red')
         # draw the value on the plot
-        ax[1,1].text(pxHistory['momo48'].quantile(percentile), 0, round(pxHistory['momo48'].quantile(percentile), 2), rotation=45, color='red')
+        ax[1,1].text(pxHistory['momo5'].quantile(percentile), 0, round(pxHistory['momo5'].quantile(percentile), 2), rotation=45, color='red')
     
-    sns.histplot(ax=ax[1,2], x=pxHistory['momo96'])
+    sns.histplot(ax=ax[1,2], x=pxHistory['momo6'])
     # add vertical lines at percentiles
     for percentile in percentiles:
-        ax[1,2].axvline(pxHistory['momo96'].quantile(percentile), color='red')
+        ax[1,2].axvline(pxHistory['momo6'].quantile(percentile), color='red')
         # draw the value on the plot
-        ax[1,2].text(pxHistory['momo96'].quantile(percentile), 0, round(pxHistory['momo96'].quantile(percentile), 2), rotation=45, color='red')
+        ax[1,2].text(pxHistory['momo6'].quantile(percentile), 0, round(pxHistory['momo6'].quantile(percentile), 2), rotation=45, color='red')
 
     # set titles
-    ax[0,0].set_title('momo3')
-    ax[0,1].set_title('momo6')
-    ax[0,2].set_title('momo12')
-    ax[1,0].set_title('momo24')
-    ax[1,1].set_title('momo48')
-    ax[1,2].set_title('momo96')
+    ax[0,0].set_title('momo%s'%(momPeriod[0]))
+    ax[0,1].set_title('momo%s'%(momPeriod[1]))
+    ax[0,2].set_title('momo%s'%(momPeriod[2]))
+    ax[1,0].set_title('momo%s'%(momPeriod[3]))
+    ax[1,1].set_title('momo%s'%(momPeriod[4]))
+    ax[1,2].set_title('momo%s'%(momPeriod[5]))
 
     return fig
 
@@ -406,6 +408,9 @@ def plotCrossAssetMomoScatter(targetPxHistory, signalPxHistory, momoPeriod, forw
     # plot momo vs. fwdReturns for each fwdReturnsPeriod
     sns.set_theme(style="darkgrid")
     fig, ax = plt.subplots(2,7, figsize=(20, 10))
+
+    # set figure title 
+    fig.suptitle('shortmomo-%s, longmomo-%s vs. fwdReturns%s'%(momoPeriod, longMomo, forwardReturnsPeriods))
 
     # plot momo vs. fwdReturns for each fwdReturnsPeriod
     sns.scatterplot(ax=ax[0,0], data=targetPxHistory, x='shortMomo', y='fwdReturns1')
@@ -537,11 +542,78 @@ def plotMomoandpx(pxHistory, momoPeriod1, momoPeriod2, momoPercentile=0.1, perce
     ax[0,2].set_ylabel('close')
 
     return fig
-    
 
+"""
+    This functions returns a figure with scatters of momo percentile vs. fwd returns for each fwdReturnsPeriod and a given momo period 
+"""
+def plotMomoPercentileScatter(pxHistory, momoPeriod, forwardReturnsPeriods=[1,3,6,12,24,48,96]):
+    # calc momo for each momoPeriod
+    pxHistory = momentum.calcMomoFactor(pxHistory, lag=momoPeriod)
 
-# load vvix and vix 5min bars
-with db.sqlite_connection(config.dbname_stock) as conn:
+    # add column 'momoPercentile' to pxHistory
+    pxHistory['momoPercentile'] = pxHistory['momo'].rank(pct=True)
+
+    # add forward returns for each fwdReturnsPeriod
+    n=1
+    for period in forwardReturnsPeriods:
+        pxHistory['fwdReturns%s'%(period)] = pxHistory['close'].pct_change(period).shift(-period)
+        n+=1
+
+    # select only the records with momoPercentile > 0.9
+    pxHistory = pxHistory[pxHistory['momoPercentile'] > 0.95]
+
+    # create 2x4 grid 
+    sns.set_theme(style="darkgrid")
+    fig, ax = plt.subplots(2,4, figsize=(20, 10), sharex=True, sharey=True)
+
+    # set figure title 
+    fig.suptitle('momoPeriod%s vs. Fwd Returns'%(momoPeriod))
+    sns.set()
+
+    # plot momoPercentile vs. fwdReturns for each fwdReturnsPeriod
+    sns.scatterplot(ax=ax[0,0], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[0]))
+    sns.scatterplot(ax=ax[0,1], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[1]))
+    sns.scatterplot(ax=ax[0,2], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[2]))
+    sns.scatterplot(ax=ax[0,3], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[3]))
+    sns.scatterplot(ax=ax[1,0], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[4]))
+    sns.scatterplot(ax=ax[1,1], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[5]))
+    sns.scatterplot(ax=ax[1,2], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[6]))
+
+    # plot regplot of momoPercentile vs. fwdReturns for each fwdReturnsPeriod
+    sns.regplot(ax=ax[0,0], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[0]), scatter=False)
+    sns.regplot(ax=ax[0,1], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[1]), scatter=False)
+    sns.regplot(ax=ax[0,2], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[2]), scatter=False)
+    sns.regplot(ax=ax[0,3], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[3]), scatter=False)
+    sns.regplot(ax=ax[1,0], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[4]), scatter=False)
+    sns.regplot(ax=ax[1,1], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[5]), scatter=False)
+    sns.regplot(ax=ax[1,2], data=pxHistory, x='momoPercentile', y='fwdReturns%s'%(forwardReturnsPeriods[6]), scatter=False)
+
+    # calculate rsquared for each regplot
+    rsquared1 = smf.ols(formula='fwdReturns%s ~ momoPercentile'%(forwardReturnsPeriods[0]), data=pxHistory[['momoPercentile', 'fwdReturns%s'%(forwardReturnsPeriods[0])]]).fit()
+    rsquared2 = smf.ols(formula='fwdReturns%s ~ momoPercentile'%(forwardReturnsPeriods[1]), data=pxHistory[['momoPercentile', 'fwdReturns%s'%(forwardReturnsPeriods[1])]]).fit()
+    rsquared3 = smf.ols(formula='fwdReturns%s ~ momoPercentile'%(forwardReturnsPeriods[2]), data=pxHistory[['momoPercentile', 'fwdReturns%s'%(forwardReturnsPeriods[2])]]).fit()
+    rsquared4 = smf.ols(formula='fwdReturns%s ~ momoPercentile'%(forwardReturnsPeriods[3]), data=pxHistory[['momoPercentile', 'fwdReturns%s'%(forwardReturnsPeriods[3])]]).fit()
+    rsquared5 = smf.ols(formula='fwdReturns%s ~ momoPercentile'%(forwardReturnsPeriods[4]), data=pxHistory[['momoPercentile', 'fwdReturns%s'%(forwardReturnsPeriods[4])]]).fit()
+    rsquared6 = smf.ols(formula='fwdReturns%s ~ momoPercentile'%(forwardReturnsPeriods[5]), data=pxHistory[['momoPercentile', 'fwdReturns%s'%(forwardReturnsPeriods[5])]]).fit()
+    rsquared7 = smf.ols(formula='fwdReturns%s ~ momoPercentile'%(forwardReturnsPeriods[6]), data=pxHistory[['momoPercentile', 'fwdReturns%s'%(forwardReturnsPeriods[6])]]).fit()
+
+    # set titles
+    ax[0,0].set_title('fwdReturns%s vs momoPercentile(r2=%s)'%(forwardReturnsPeriods[0], round(rsquared1.rsquared, 5)))
+    ax[0,1].set_title('fwdReturns%s vs momoPercentile(r2=%s)'%(forwardReturnsPeriods[1], round(rsquared2.rsquared, 5)))
+    ax[0,2].set_title('fwdReturns%s vs momoPercentile(r2=%s)'%(forwardReturnsPeriods[2], round(rsquared3.rsquared, 5)))
+    ax[0,3].set_title('fwdReturns%s vs momoPercentile(r2=%s)'%(forwardReturnsPeriods[3], round(rsquared4.rsquared, 5)))
+    ax[1,0].set_title('fwdReturns%s vs momoPercentile(r2=%s)'%(forwardReturnsPeriods[4], round(rsquared5.rsquared, 5)))
+    ax[1,1].set_title('fwdReturns%s vs momoPercentile(r2=%s)'%(forwardReturnsPeriods[5], round(rsquared6.rsquared, 5)))
+    ax[1,2].set_title('fwdReturns%s vs momoPercentile(r2=%s)'%(forwardReturnsPeriods[6], round(rsquared7.rsquared, 5)))
+
+    return fig
+
+############################################
+### re-enable this secton to run script from console 
+############################################
+
+# load vvix and vix bars
+"""with db.sqlite_connection(config.dbname_stock) as conn:
     vvix = db.getPriceHistory(conn, 'VVIX', '1day')
     vvix_30mins = db.getPriceHistory(conn, 'VVIX', '30mins')
     vvix_5mins = db.getPriceHistory(conn, 'VVIX', '5mins')
@@ -549,34 +621,53 @@ with db.sqlite_connection(config.dbname_stock) as conn:
     vix = db.getPriceHistory(conn, 'VIX', '1day')
     vix_5mins = db.getPriceHistory(conn, 'VIX', '5mins')
     vix_5mins_r = vix_5mins[(vix_5mins['date'].dt.time >= pd.to_datetime('09:30:00').time()) & (vix_5mins['date'].dt.time <= pd.to_datetime('16:15:00').time())]
-    vix_30mins = db.getPriceHistory(conn, 'VIX', '30mins')
+    vix_30mins = db.getPriceHistory(conn, 'VIX', '30mins')"""
 
 
-tpw = tabbedWindow.plotWindow()
-
+#tpw = tabbedWindow.plotWindow()
 # resize to full screen
-tpw.MainWindow.showMaximized()
+#
 
-#tpw.addPlot('VIX_1d xOver(15,30)', plotMomoCrossoverSignal(vix, 15, 30))
-tpw.addPlot('VIX_1d momoScatter(15,30)', plotMomoScatter(vix, 15, 30,[5,15,20,25,30,35,40]))
-#tpw.addPlot('VIX vs. VVIXmomo(15)', plotCrossAssetMomoScatter(vix, vvix, 15, [5,15,20,25,30,35,40]))
-#tpw.addPlot('VIX_5min(15,30)', plotMomoCrossoverSignal(vix_5mins, 15, 30))
-#tpw.addPlot('VIX-5m(12, 48)', plotMomoScatter(vix_5mins, 12, 48))
-#tpw.addPlot('VIX_5m-r(12, 48)', plotMomoScatter(vix_5mins_r, 12, 48))
-#tpw.addPlot('VIX momo distributions', plotMomoDist(vix_5mins))
-#tpw.addPlot('VIX_5m momoAndpx', plotMomoandpx(vix_5mins, 12, 48))
+############################################
+
+#### VIX 
+# VANILLA SCATTERS
+#tpw.addPlot('VIX_1d momoScatter(15,30)', plotMomoScatter(vix, 15, 30,[5,15,20,25,30,35,40]))
 #tpw.addPlot('VIX_30m(12,48)', plotMomoScatter(vix_30mins, 12, 48, [5,15,20,25,30,35,40]))
+#tpw.addPlot('VIX-5m(10, 48)', plotMomoScatter(vix_5mins, 10, 48))
+#tpw.addPlot('VIX_5m-r(12, 48)', plotMomoScatter(vix_5mins_r, 12, 48))
+
+# VIX vs VVIX SCATTERS 
+#tpw.addPlot('VIX vs. VVIXmomo(30m)', plotCrossAssetMomoScatter(vix_5mins, vvix_5mins, 30, [1,3,5,10,12,20,30]))
+#tpw.addPlot('VIX vs. VVIXmomo(15)', plotCrossAssetMomoScatter(vix, vvix, 15, [5,15,20,25,30,35,40]))
+
+# MOMO PERCENTILE SCATTERS
+#tpw.addPlot('VVIX-5m, momo30 percentile scatter', plotMomoPercentileScatter(vvix_5mins, 30))
+
+# CROSSOVERS
+#tpw.addPlot('VIX_1d xOver(15,30)', plotMomoCrossoverSignal(vix, 15, 30))
+#tpw.addPlot('VIX_5min(15,30)', plotMomoCrossoverSignal(vix_5mins, 15, 30))
+
+# DISTRIBUTIONS 
+#tpw.addPlot('VIX momo distribution', plotMomoDist(vix_5mins))
 #tpw.addPlot('VIX_30m momo dist', plotMomoDist(vix_30mins))
-##########tpw.addPlot('VIX pairplot', plotMomoPairplot(vix_30mins))
-#tpw.addPlot('VIX vs. VVIXmomo(30m)', plotCrossAssetMomoScatter(vix_30mins, vvix_30mins, 15, [5,15,20,25,30,35,40]))
+
+# MISC. 
+#tpw.addPlot('VIX_5m momoAndpx', plotMomoandpx(vix_5mins, 12, 48))
+#tpw.addPlot('VIX pairplot', plotMomoPairplot(vix_30mins))
+
+
+#### VVIX 
 
 #tpw.addPlot('VVIX_5m xOver(15,30)', plotMomoCrossoverSignal(vvix_5mins, 15, 30))
+
 #tpw.addPlot('VVIX_1d(12,48)', plotMomoScatter(vvix, 12, 48))
-#tpw.addPlot('VVIX_30m momo dist', plotMomoDist(vvix_30mins))
 #tpw.addPlot('VVIX_5m(12, 48)', plotMomoScatter(vvix_5mins, 12, 48))
+
+#tpw.addPlot('VVIX_30m momo dist', plotMomoDist(vvix_30mins))
 #tpw.addPlot('VVIX_5m dist', plotMomoDist(vvix_5mins))
 
 
 #tpw.addPlot('KOLD momo 12 48', plotMomoScatter(kold_5mins, 12, 48))
 
-tpw.show()
+#tpw.show()
