@@ -322,53 +322,53 @@ def plotMomoDist(pxHistory, momPeriod=[3,6,12,24,48,96]):
     sns.set()
 
     # plot distribution of momo for each momoPeriod
-    sns.histplot(ax=ax[0,0], x=pxHistory['momo3'])
+    sns.histplot(ax=ax[0,0], x=pxHistory['momo%s'%(momPeriod[0])])
     # add vertical lines at percentiles
     for percentile in percentiles:
-        ax[0,0].axvline(pxHistory['momo3'].quantile(percentile), color='red')
+        ax[0,0].axvline(pxHistory['momo%s'%(momPeriod[0])].quantile(percentile), color='red')
         # draw the value on the plot 
-        ax[0,0].text(pxHistory['momo3'].quantile(percentile), 0, round(pxHistory['momo3'].quantile(percentile), 2), rotation=45, color='red')
-    sns.histplot(ax=ax[0,1], x=pxHistory['momo6'])
+        ax[0,0].text(pxHistory['momo%s'%(momPeriod[0])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[0])].quantile(percentile), 2), rotation=45, color='red')
+    sns.histplot(ax=ax[0,1], x=pxHistory['momo%s'%(momPeriod[1])])
     # add vertical lines at percentiles
     for percentile in percentiles:
-        ax[0,1].axvline(pxHistory['momo6'].quantile(percentile), color='red')
+        ax[0,1].axvline(pxHistory['momo%s'%(momPeriod[1])].quantile(percentile), color='red')
         # draw the value on the plot
-        ax[0,1].text(pxHistory['momo6'].quantile(percentile), 0, round(pxHistory['momo6'].quantile(percentile), 2), rotation=45, color='red')
-    sns.histplot(ax=ax[0,2], x=pxHistory['momo12'])
+        ax[0,1].text(pxHistory['momo%s'%(momPeriod[1])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[1])].quantile(percentile), 2), rotation=45, color='red')
+    sns.histplot(ax=ax[0,2], x=pxHistory['momo%s'%(momPeriod[2])])
     # add vertical lines at percentiles
     for percentile in percentiles:
-        ax[0,2].axvline(pxHistory['momo12'].quantile(percentile), color='red')
+        ax[0,2].axvline(pxHistory['momo%s'%(momPeriod[2])].quantile(percentile), color='red')
         # draw the value on the plot
-        ax[0,2].text(pxHistory['momo12'].quantile(percentile), 0, round(pxHistory['momo12'].quantile(percentile), 2), rotation=45, color='red')
+        ax[0,2].text(pxHistory['momo%s'%(momPeriod[2])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[2])].quantile(percentile), 2), rotation=45, color='red')
 
-    sns.histplot(ax=ax[1,0], x=pxHistory['momo24'])
+    sns.histplot(ax=ax[1,0], x=pxHistory['momo%s'%(momPeriod[3])])
     # add vertical lines at percentiles
     for percentile in percentiles:
-        ax[1,0].axvline(pxHistory['momo24'].quantile(percentile), color='red')
+        ax[1,0].axvline(pxHistory['momo%s'%(momPeriod[3])].quantile(percentile), color='red')
         # draw the value on the plot
-        ax[1,0].text(pxHistory['momo24'].quantile(percentile), 0, round(pxHistory['momo24'].quantile(percentile), 2), rotation=45, color='red')
+        ax[1,0].text(pxHistory['momo%s'%(momPeriod[3])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[3])].quantile(percentile), 2), rotation=45, color='red')
     
-    sns.histplot(ax=ax[1,1], x=pxHistory['momo48'])
+    sns.histplot(ax=ax[1,1], x=pxHistory['momo%s'%(momPeriod[4])])
     # add vertical lines at percentiles
     for percentile in percentiles:
-        ax[1,1].axvline(pxHistory['momo48'].quantile(percentile), color='red')
+        ax[1,1].axvline(pxHistory['momo%s'%(momPeriod[4])].quantile(percentile), color='red')
         # draw the value on the plot
-        ax[1,1].text(pxHistory['momo48'].quantile(percentile), 0, round(pxHistory['momo48'].quantile(percentile), 2), rotation=45, color='red')
+        ax[1,1].text(pxHistory['momo%s'%(momPeriod[4])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[4])].quantile(percentile), 2), rotation=45, color='red')
     
-    sns.histplot(ax=ax[1,2], x=pxHistory['momo96'])
+    sns.histplot(ax=ax[1,2], x=pxHistory['momo%s'%(momPeriod[5])])
     # add vertical lines at percentiles
     for percentile in percentiles:
-        ax[1,2].axvline(pxHistory['momo96'].quantile(percentile), color='red')
+        ax[1,2].axvline(pxHistory['momo%s'%(momPeriod[5])].quantile(percentile), color='red')
         # draw the value on the plot
-        ax[1,2].text(pxHistory['momo96'].quantile(percentile), 0, round(pxHistory['momo96'].quantile(percentile), 2), rotation=45, color='red')
+        ax[1,2].text(pxHistory['momo%s'%(momPeriod[5])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[5])].quantile(percentile), 2), rotation=45, color='red')
 
     # set titles
-    ax[0,0].set_title('momo3')
-    ax[0,1].set_title('momo6')
-    ax[0,2].set_title('momo12')
-    ax[1,0].set_title('momo24')
-    ax[1,1].set_title('momo48')
-    ax[1,2].set_title('momo96')
+    ax[0,0].set_title('momo%s'%(momPeriod[0]))
+    ax[0,1].set_title('momo%s'%(momPeriod[1]))
+    ax[0,2].set_title('momo%s'%(momPeriod[2]))
+    ax[1,0].set_title('momo%s'%(momPeriod[3]))
+    ax[1,1].set_title('momo%s'%(momPeriod[4]))
+    ax[1,2].set_title('momo%s'%(momPeriod[5]))
 
     return fig
 
