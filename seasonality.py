@@ -499,49 +499,5 @@ def seasonalAnalysis_intraday(symbol, interval, target='close'):
 """ 
      helper function to list all the unique symbols in the db
 """
-#def listSymbols():
-#    with db.sqlite_connection(dbname_stock) as conn:
-#        symbols = db.listSymbols(conn)
-#    print('Symbols in DB:')
-#    print(symbols)
 
-
-# set symbol to cli arg if provided
-#if len(sys.argv) > 1:
-    ## if the argument is 'list' then list all the symbols in the db
-#    if sys.argv[1] == 'list':
-#        listSymbols()
-#        exit()
-#    symbol = sys.argv[1]
-#else:
-#    print('ERROR: no symbol provided')
-#    exit()
-
-#overview_fig = logReturns_overview_of_seasonality(symbol)
-#overview_ytd_fig = logReturns_overview_of_seasonality(symbol, ytdlineplot=True)
-#fig2 = overview_fig
-
-# initialize plot window for tabbed plots
-#tpw = pltWindow.plotWindow()
-
-# add seasonality plots to plot window
-#tpw.addPlot('seasonality', overview_fig)
-#tpw.addPlot('seasonality vs. YTD', overview_ytd_fig)
-
-plt.tight_layout()
-#tpw.show()
-
-#########################################################################
-#########################################################################
-
-#interval = '30mins'
-#target = 'close' # open, high, low, close, volume
-#restrictTradingHours = True # if true -> only analyze data between 9:30am and 4pm
-
-#seasonalAnalysis_intraday(symbol, interval, target, restrictTradingHours)
-#seasonalAnalysis_overview(symbol, restrictTradingHours, target)
-
-#plot_seasonality(symbol)
-#plt.tight_layout()
-#plt.show()
 
