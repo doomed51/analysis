@@ -530,3 +530,39 @@ def plotMomoandpx(pxHistory, momoPeriod1, momoPeriod2, momoPercentile=0.1, perce
 
     return fig
 
+""" 
+    plots specified momoPeriods, fwdReturnPeriod scatter 
+    input: pxhistory
+            momoAndFwdreturnsPeriods [df] w/ columns: momoPeriod, fwdReturnPeriod
+"""
+def plotMomoAndFwdReturns(pxHistory, momoAndFwdReturnsPeriods):
+
+    # create figure with 2 rows and 3 columns
+    sns.set_theme(style="darkgrid")
+    fig, ax = plt.subplots(2,5, figsize=(20, 10), sharex=True, sharey=True)
+    sns.set()
+    # set figure title
+    fig.suptitle('Momo vs Fwd Returns with Top r2')
+    # get momo for each unique momoperiod in momoAndFwdReturnsPeriods
+    for period in momoAndFwdReturnsPeriods['momoPeriod'].unique():
+        pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
+        pxHistory.rename(columns={'momo': 'momo%s'%(period)}, inplace=True)
+    
+    # get forward returns for each unique fwdReturnPeriod in momoAndFwdReturnsPeriods
+    for period in momoAndFwdReturnsPeriods['fwdReturnPeriod'].unique():
+        pxHistory['fwdReturns%s'%(period)] = pxHistory['close'].pct_change(period).shift(-period)
+
+    # plot momo vs. fwdReturns for each momoAndFwdReturnsPeriods
+    for i in range(0, len(momoAndFwdReturnsPeriods)):
+        sns.scatterplot(ax=ax[int(i/5), i%5], data=pxHistory, x='momo%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i]), y='fwdReturns%s'%(momoAndFwdReturnsPeriods['fwdReturnPeriod'][i]))
+        ax[int(i/5), i%5].set_title('momo%s vs fwdReturns%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i], momoAndFwdReturnsPeriods['fwdReturnPeriod'][i]))
+        ax[int(i/5), i%5].set_xlabel('momo%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i]))
+        ax[int(i/5), i%5].set_ylabel('fwdReturns%s'%(momoAndFwdReturnsPeriods['fwdReturnPeriod'][i]))
+
+        # add title
+        ax[int(i/5), i%5].set_title('momo%s vs fwdReturns%s; %s'%(momoAndFwdReturnsPeriods['momoPeriod'][i], momoAndFwdReturnsPeriods['fwdReturnPeriod'][i], momoAndFwdReturnsPeriods['r2'][i]))
+
+        # plot regplot of momo vs. fwdReturns for each fwdReturnsPeriod
+        sns.regplot(ax=ax[int(i/5), i%5], data=pxHistory, x='momo%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i]), y='fwdReturns%s'%(momoAndFwdReturnsPeriods['fwdReturnPeriod'][i]), scatter=False)
+
+    return fig
