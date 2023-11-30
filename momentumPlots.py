@@ -307,6 +307,20 @@ def plotMomoCrossoverSignal(pxHistory, momoPeriod1, momoPeriod2, forwardReturnsP
     plots distribution of momo for each momoPeeriod
 """
 def plotMomoDist(pxHistory, momPeriod=[3,6,12,24,48,96]):
+    # dynamicall set the size of the plot 
+    if len(momPeriod) > 10: # max of 10 periods
+        momPeriod = momPeriod[:10]
+    # order 
+    momPeriod.sort()
+    #numRows = 1 # min of 1 row
+    #if len(momPeriod) > 5: 
+    numRows = 2
+    numPeriods = len(momPeriod)
+    numCols = int(numPeriods/numRows)
+
+    print('numPeriods: %s'%(numPeriods))
+    print('numRows: %s'%(numRows))
+    print('numCols: %s'%(numCols))
     # calc momo for each momPeriod
     for period in momPeriod:
         pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
@@ -318,59 +332,29 @@ def plotMomoDist(pxHistory, momPeriod=[3,6,12,24,48,96]):
 
     # plot distribution of momo for each momoPeriod
     sns.set_theme(style="darkgrid")
-    fig, ax = plt.subplots(2,3, figsize=(20, 10))
+    fig, ax = plt.subplots(numRows, numCols, figsize=(20, 10))
     sns.set()
+    i = 0
+    for rowNum in range(numRows): 
+        for colNum in range(numCols) :
+            # add histogram of momo
+            sns.histplot(ax=ax[rowNum, colNum], x=pxHistory['momo%s'%(momPeriod[i])]) 
+            ax[rowNum, i%numCols].set_title('momo%s'%(momPeriod[i]))
+            # add vertical lines at percentiles
+            for percentile in percentiles:
+                ax[rowNum, colNum].axvline(pxHistory['momo%s'%(momPeriod[i])].quantile(percentile), color='red')
+                # draw the value on the plot 
+                ax[rowNum, colNum].text(pxHistory['momo%s'%(momPeriod[i])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[i])].quantile(percentile), 2), rotation=45, color='red')
+            # set title
+            ax[rowNum, colNum].set_title('momo%s'%(momPeriod[i]))
 
-    # plot distribution of momo for each momoPeriod
-    sns.histplot(ax=ax[0,0], x=pxHistory['momo%s'%(momPeriod[0])])
-    # add vertical lines at percentiles
-    for percentile in percentiles:
-        ax[0,0].axvline(pxHistory['momo%s'%(momPeriod[0])].quantile(percentile), color='red')
-        # draw the value on the plot 
-        ax[0,0].text(pxHistory['momo%s'%(momPeriod[0])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[0])].quantile(percentile), 2), rotation=45, color='red')
-    sns.histplot(ax=ax[0,1], x=pxHistory['momo%s'%(momPeriod[1])])
-    # add vertical lines at percentiles
-    for percentile in percentiles:
-        ax[0,1].axvline(pxHistory['momo%s'%(momPeriod[1])].quantile(percentile), color='red')
-        # draw the value on the plot
-        ax[0,1].text(pxHistory['momo%s'%(momPeriod[1])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[1])].quantile(percentile), 2), rotation=45, color='red')
-    sns.histplot(ax=ax[0,2], x=pxHistory['momo%s'%(momPeriod[2])])
-    # add vertical lines at percentiles
-    for percentile in percentiles:
-        ax[0,2].axvline(pxHistory['momo%s'%(momPeriod[2])].quantile(percentile), color='red')
-        # draw the value on the plot
-        ax[0,2].text(pxHistory['momo%s'%(momPeriod[2])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[2])].quantile(percentile), 2), rotation=45, color='red')
-
-    sns.histplot(ax=ax[1,0], x=pxHistory['momo%s'%(momPeriod[3])])
-    # add vertical lines at percentiles
-    for percentile in percentiles:
-        ax[1,0].axvline(pxHistory['momo%s'%(momPeriod[3])].quantile(percentile), color='red')
-        # draw the value on the plot
-        ax[1,0].text(pxHistory['momo%s'%(momPeriod[3])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[3])].quantile(percentile), 2), rotation=45, color='red')
-    
-    sns.histplot(ax=ax[1,1], x=pxHistory['momo%s'%(momPeriod[4])])
-    # add vertical lines at percentiles
-    for percentile in percentiles:
-        ax[1,1].axvline(pxHistory['momo%s'%(momPeriod[4])].quantile(percentile), color='red')
-        # draw the value on the plot
-        ax[1,1].text(pxHistory['momo%s'%(momPeriod[4])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[4])].quantile(percentile), 2), rotation=45, color='red')
-    
-    sns.histplot(ax=ax[1,2], x=pxHistory['momo%s'%(momPeriod[5])])
-    # add vertical lines at percentiles
-    for percentile in percentiles:
-        ax[1,2].axvline(pxHistory['momo%s'%(momPeriod[5])].quantile(percentile), color='red')
-        # draw the value on the plot
-        ax[1,2].text(pxHistory['momo%s'%(momPeriod[5])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[5])].quantile(percentile), 2), rotation=45, color='red')
-
-    # set titles
-    ax[0,0].set_title('momo%s'%(momPeriod[0]))
-    ax[0,1].set_title('momo%s'%(momPeriod[1]))
-    ax[0,2].set_title('momo%s'%(momPeriod[2]))
-    ax[1,0].set_title('momo%s'%(momPeriod[3]))
-    ax[1,1].set_title('momo%s'%(momPeriod[4]))
-    ax[1,2].set_title('momo%s'%(momPeriod[5]))
+            # add axis 0 lines 
+            ax[rowNum, colNum].axhline(0, color='black')
+            ax[rowNum, colNum].axvline(0, color='black')
+            i +=1
 
     return fig
+
 
 """
     returns figure 
@@ -566,3 +550,40 @@ def plotMomoAndFwdReturns(pxHistory, momoAndFwdReturnsPeriods):
         sns.regplot(ax=ax[int(i/5), i%5], data=pxHistory, x='momo%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i]), y='fwdReturns%s'%(momoAndFwdReturnsPeriods['fwdReturnPeriod'][i]), scatter=False)
 
     return fig
+
+""" 
+    plots scatters filtered by percentilles 
+"""
+def plotMomoandPx_filteredByPercentile(pxHistory, momoAndFwdReturnsPeriods, momoPercentileTop=0.95, momoPercentileBottom=0.05):
+    # create figure with 2 rows and 3 columns
+    sns.set_theme(style="darkgrid")
+    fig, ax = plt.subplots(2,5, figsize=(20, 10), sharex=True, sharey=True)
+    sns.set()
+    # set figure title
+    fig.suptitle('Momo vs Fwd Returns with Top r2 filtered by momoPercentile')
+    
+    # get momo for each unique momoperiod in momoAndFwdReturnsPeriods
+    for period in momoAndFwdReturnsPeriods['momoPeriod'].unique():
+        pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
+        pxHistory.rename(columns={'momo': 'momo%s'%(period)}, inplace=True)
+    
+    # get forward returns for each unique fwdReturnPeriod in momoAndFwdReturnsPeriods
+    for period in momoAndFwdReturnsPeriods['fwdReturnPeriod'].unique():
+        pxHistory['fwdReturns%s'%(period)] = pxHistory['close'].pct_change(period).shift(-period)
+
+    # plot momo vs. fwdReturns for each momoAndFwdReturnsPeriods
+    for i in range(0, len(momoAndFwdReturnsPeriods)):
+        # set pxHistory filtered to select records where momo is above top percentil, and beloww bottom percentile
+        pxHistory_filtered = pxHistory[(pxHistory['momo%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i])] >= pxHistory['momo%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i])].quantile(momoPercentileTop)) | (pxHistory['momo%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i])] <= pxHistory['momo%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i])].quantile(momoPercentileBottom))]
+
+        # plot scatter
+        sns.scatterplot(ax=ax[int(i/5), i%5], data=pxHistory_filtered, x='momo%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i]), y='fwdReturns%s'%(momoAndFwdReturnsPeriods['fwdReturnPeriod'][i]))
+
+        # plot regplot 
+        sns.regplot(ax=ax[int(i/5), i%5], data=pxHistory_filtered, x='momo%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i]), y='fwdReturns%s'%(momoAndFwdReturnsPeriods['fwdReturnPeriod'][i]), scatter=False)
+
+        # add title
+        ax[int(i/5), i%5].set_title('momo%s vs fwdReturns%s; %s'%(momoAndFwdReturnsPeriods['momoPeriod'][i], momoAndFwdReturnsPeriods['fwdReturnPeriod'][i], momoAndFwdReturnsPeriods['r2'][i]))
+
+    return fig
+
