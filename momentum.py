@@ -33,7 +33,7 @@ def calcMomoFactor(universe, lag=1, shift=1, lagmomo=False):
 
 def getTopMomoPeriods(pxHistory, top=5, **kwargs):
     print('[yellow]Calculating top %s momo periods...[/yellow]'%(top))
-    momoPeriodMax = kwargs.get('rangeEnd', 101)
+    momoPeriodMax = kwargs.get('rangeEnd', 252)
     fwdReturnPeriodMax = kwargs.get('fwdReturns', 101)
 
 
