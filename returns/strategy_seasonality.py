@@ -78,7 +78,7 @@ def strategy_monthToMonth(symbol, startMonth, endMonth):
     #add cumsum column
     history['cumsum'] = history['logReturn'].cumsum()
 
-    return history
+    return history.reset_index(drop=True)
 
 def closest_day(group, targetDay):
    #target = pd.Timestamp(group.name.year, group.name.month, targetDay)
@@ -147,8 +147,10 @@ def strategy_dayOfMonthSeasonality(symbol, startDay, endDay, direction=1):
 """
     This function will plot the results of the strategy
 """
-def plotResults(returns, returns2=pd.DataFrame(), returns_merged=pd.DataFrame()):
-    symbol = returns['symbol'].iloc[0]
+def plotResults(returns = []):#, returns2=pd.DataFrame(), returns_merged=pd.DataFrame()):
+    print(returns[0])
+    exit()
+    symbol = returns[0]['symbol'].iloc[0]
     with db.sqlite_connection(config.dbname_stock) as conn:
         try: 
             history = db.getPriceHistory(conn, symbol, '1day', withpctChange=False)
@@ -158,22 +160,24 @@ def plotResults(returns, returns2=pd.DataFrame(), returns_merged=pd.DataFrame())
             print(f'ERROR: Could not retrieve price history for {symbol}')
             exit()
     # lineplot of cumsum
-    fig, ax = plt.subplots(figsize=(15, 10))
+    fig, ax = plt.subplots()
 
-    # seaborn lineplot of returns in red
-    sns.lineplot(x='date', y='cumsum', data=returns, ax=ax, color='blue', label='strat 1') 
-    # calculate sharpe ratio
-    sharpe = calcReturns.calcSharpeRatio(returns)
-    # print sharpe on plot
-    ax.text(0.05, 0.95, 'Sharpe Ratio: %.2f'%(sharpe), transform=ax.transAxes, fontsize=14, verticalalignment='top')
+    for i, strategyReturn in enumerate(returns):
+        # seaborn lineplot of returns in red
+        sns.lineplot(x='date', y='cumsum', data=strategyReturn, ax=ax, color='blue', label='strat %s'%(i+1)) 
+        
+        # calculate sharpe ratio
+        #sharpe = calcReturns.calcSharpeRatio(returns)
+        # print sharpe on plot
+        #ax.text(0.05, 0.95, 'Sharpe Ratio: %.2f'%(sharpe), transform=ax.transAxes, fontsize=14, verticalalignment='top')
 
     # add return2 on the same axis
-    if not returns2.empty:
-        sns.lineplot(x='date', y='cumsum', data=returns2, ax=ax, color='green', label='strat 2')
+    #if not returns2.empty:
+    #    sns.lineplot(x='date', y='cumsum', data=returns2, ax=ax, color='green', label='strat 2')
 
     ## add returns_merged
-    if not returns_merged.empty:
-        sns.lineplot(x='date', y='cumsum', data=returns_merged, ax=ax, color='orange', label='strats merged')
+    #if not returns_merged.empty:
+    #    sns.lineplot(x='date', y='cumsum', data=returns_merged, ax=ax, color='orange', label='strats merged')
     
     ## add history cumsum
     sns.lineplot(x='date', y='cumsum', data=history, ax=ax, color='black')
