@@ -14,6 +14,10 @@ sys.path.append('..')
 from utils import utils
 
 """
+
+"""
+
+"""
     Simple implementation of monthly seasonality strategy. 
     inputs:
         - symbol [string] symbol to get price history for
@@ -96,11 +100,12 @@ def closest_day(group, targetDay):
         - symbol [string] symbol to get price history for
         - startDay [int] day of month to open long 
         - endDay [int] day of month to close
+        - direction [int] 1 = open long, -1 = open short
     output:
         - dataframe with date, px, logReturn, cumsum 
         - Assumes opening and closing of positions at the END of target months
 """
-def strategy_dayOfMonthSeasonality(symbol, startDay, endDay): 
+def strategy_dayOfMonthSeasonality(symbol, startDay, endDay, direction=1): 
     # get price history
     with db.sqlite_connection(config.dbname_stock) as conn:
         try: 
@@ -120,16 +125,16 @@ def strategy_dayOfMonthSeasonality(symbol, startDay, endDay):
     history_endDates = history.groupby(['year', 'month'], group_keys=False).apply(closest_day, endDay).reset_index() # get end dates
     history_endDates.rename(columns={0: 'date'}, inplace=True)
 
-    # make sure first end date is after first start date
+    # make sure the list of trades begins with an opening trade
     if history_endDates.iloc[0]['date'] <= history_startDates.iloc[0]['date']:
         history_endDates = history_endDates.iloc[1:]
     
-    # select just the dates we want from history 
+    # get px history for trade open and close dates
     history = history[(history['date'].isin(history_startDates['date'])) | (history['date'].isin(history_endDates['date']))]
 
-    # recalculcate logReturn
-    history = utils.calcLogReturns(history, 'close')
-    # set logReturn to = 0 for every other row starting with the first row
+    # Calculate returns on trades 
+    history = utils.calcLogReturns(history, colName = 'close', direction=direction)
+    # drop open 
     history.loc[::2, 'logReturn'] = 0
     # drop rows with logReturn = 0
     history = history[history['logReturn'] != 0]
@@ -142,7 +147,7 @@ def strategy_dayOfMonthSeasonality(symbol, startDay, endDay):
 """
     This function will plot the results of the strategy
 """
-def plotResults(returns, returns2=pd.DataFrame(), returns_merged=''):
+def plotResults(returns, returns2=pd.DataFrame(), returns_merged=pd.DataFrame()):
     symbol = returns['symbol'].iloc[0]
     with db.sqlite_connection(config.dbname_stock) as conn:
         try: 
@@ -156,7 +161,7 @@ def plotResults(returns, returns2=pd.DataFrame(), returns_merged=''):
     fig, ax = plt.subplots(figsize=(15, 10))
 
     # seaborn lineplot of returns in red
-    sns.lineplot(x='date', y='cumsum', data=returns, ax=ax, color='blue') 
+    sns.lineplot(x='date', y='cumsum', data=returns, ax=ax, color='blue', label='strat 1') 
     # calculate sharpe ratio
     sharpe = calcReturns.calcSharpeRatio(returns)
     # print sharpe on plot
@@ -164,11 +169,11 @@ def plotResults(returns, returns2=pd.DataFrame(), returns_merged=''):
 
     # add return2 on the same axis
     if not returns2.empty:
-        sns.lineplot(x='date', y='cumsum', data=returns2, ax=ax, color='green')
+        sns.lineplot(x='date', y='cumsum', data=returns2, ax=ax, color='green', label='strat 2')
 
     ## add returns_merged
-    if returns_merged:
-        sns.lineplot(x='date', y='cumsum', data=returns_merged, ax=ax, color='orange')
+    if not returns_merged.empty:
+        sns.lineplot(x='date', y='cumsum', data=returns_merged, ax=ax, color='orange', label='strats merged')
     
     ## add history cumsum
     sns.lineplot(x='date', y='cumsum', data=history, ax=ax, color='black')
@@ -176,6 +181,9 @@ def plotResults(returns, returns2=pd.DataFrame(), returns_merged=''):
     ax.set_title('%s Cumulative Returns'%(history['symbol'].iloc[0]))
     ax.set_xlabel('Date')
     ax.set_ylabel('Cumulative Returns')
+
+    # place legend in upper left 
+    ax.legend(loc='upper left')
 
     return fig
 
@@ -199,8 +207,8 @@ def plotReturnDistribution(returns):
     # create figure and axes
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    # seaborn distplot of returns in red
-    sns.distplot(returns['logReturn'], ax=ax, color='red', kde=True, hist=True, bins=150) 
+    # seaborn histplot of returns in red
+    sns.histplot(returns['logReturn'], ax=ax, color='red', kde=True, bins=150) 
     # plot mean and sd
     ax.axvline(mean, color='black', linestyle='--')
     ax.axvline(mean + sd, color='blue', linestyle='--')
