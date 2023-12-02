@@ -9,7 +9,7 @@ Analysis scripts follow a standard naming convention of analysis_<analysis type>
 How to run:
 
 1. Install requirements.txt 
-2. Run analysis_*.py script  
+2. Run with "main.py <symbol>"
 
 
 ### Seasonality Monitor
