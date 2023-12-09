@@ -27,7 +27,7 @@ from utils import utils
         - dataframe with date, px, logReturn, cumsum 
         - Assumes opening and closing of positions at the END of target months
 """
-def strategy_monthToMonth(symbol, startMonth, endMonth):
+def strategy_monthToMonth(symbol, startMonth, endMonth, direction=1):
 
     # get price history
     with db.sqlite_connection(config.dbname_stock) as conn:
@@ -66,7 +66,7 @@ def strategy_monthToMonth(symbol, startMonth, endMonth):
     history.drop(columns=['logReturn'], inplace=True)
     
     ## add column logReturn with returns for every second row in the dataframe
-    history = utils.calcLogReturns(history, 'close')
+    history = utils.calcLogReturns(history, 'close', direction=direction)
 
     # set logReturn to 0 for every other row starting with the first row
     #history['logReturn'][::2] = 0
@@ -79,20 +79,6 @@ def strategy_monthToMonth(symbol, startMonth, endMonth):
     history['cumsum'] = history['logReturn'].cumsum()
 
     return history.reset_index(drop=True)
-
-def closest_day(group, targetDay):
-   #target = pd.Timestamp(group.name.year, group.name.month, targetDay)
-   #closest_date = group.loc[group.index.to_series().sub(target).abs().idxmin()]
-   
-   #add column daydiff = abs(targetDay - day)
-   group['daydiff'] = abs(targetDay - group['day'])
-   group = group.sort_values(by='daydiff', ascending=True)
-   # select top two rows
-   #group = group.head(2).sort_values(by='date', ascending=True)
-   
-   closest_date = group.iloc[0]['date']
-
-   return closest_date
 
 """
     Simple implementation of day of month seasonality strategy. 
@@ -120,9 +106,9 @@ def strategy_dayOfMonthSeasonality(symbol, startDay, endDay, direction=1):
     history['year'] = history['date'].dt.year
     
     # make a list dates to open and close trades 
-    history_startDates = history.groupby(['year', 'month'], group_keys=False).apply(closest_day, startDay).reset_index() # get start dates
+    history_startDates = history.groupby(['year', 'month'], group_keys=False).apply(utils.closest_day, startDay).reset_index() # get start dates
     history_startDates.rename(columns={0: 'date'}, inplace=True)
-    history_endDates = history.groupby(['year', 'month'], group_keys=False).apply(closest_day, endDay).reset_index() # get end dates
+    history_endDates = history.groupby(['year', 'month'], group_keys=False).apply(utils.closest_day, endDay).reset_index() # get end dates
     history_endDates.rename(columns={0: 'date'}, inplace=True)
 
     # make sure the list of trades begins with an opening trade
@@ -141,48 +127,66 @@ def strategy_dayOfMonthSeasonality(symbol, startDay, endDay, direction=1):
     # add cumsum
     history['cumsum'] = history['logReturn'].cumsum()
 
-    return history
-
+    return history.reset_index(drop=True)
 
 """
-    This function will plot the results of the strategy
+    This function will plot results of a stragegy df 
+    inputs:
+        - returns [] array of dataframes with columns: [date, px, logReturn, cumsum]
 """
-def plotResults(returns = []):#, returns2=pd.DataFrame(), returns_merged=pd.DataFrame()):
-    print(returns[0])
-    exit()
-    symbol = returns[0]['symbol'].iloc[0]
+def plotResults(returns = [], benchmark='SPY'):#, returns2=pd.DataFrame(), returns_merged=pd.DataFrame()):
+    if benchmark == '':
+        benchmark = returns[0]['symbol'][0]
+    history_underlying = pd.DataFrame()
     with db.sqlite_connection(config.dbname_stock) as conn:
         try: 
-            history = db.getPriceHistory(conn, symbol, '1day', withpctChange=False)
-            # add cumsum column
-            history['cumsum'] = history['logReturn'].cumsum()
+            history = db.getPriceHistory(conn, benchmark, '1day', withpctChange=False)
+            if benchmark != returns[0]['symbol'][0]:
+                history_underlying = db.getPriceHistory(conn, returns[0]['symbol'][0], '1day', withpctChange=False)
+            elif benchmark == returns[0]['symbol'][0]:
+                history_underlying = history 
+
         except:
-            print(f'ERROR: Could not retrieve price history for {symbol}')
+            print(f'ERROR: Could not retrieve price history for {benchmark}')
             exit()
+    
+    # make sure dates in benchmark > min date.month in returns
+    minDate = returns[0]['date'].min()
+    history = history[history['date'] >= minDate].reset_index(drop=True)
+    # add cumsum column
+    history['cumsum'] = history['logReturn'].cumsum()
+
+    if not history_underlying.empty:
+        # add cumsum column
+        history_underlying['cumsum'] = history_underlying['logReturn'].cumsum()
+    
     # lineplot of cumsum
     fig, ax = plt.subplots()
-
     for i, strategyReturn in enumerate(returns):
+
+        # check if strategyReturn had strategyName column
+        if 'strategyName' in strategyReturn.columns:
+            strategyName = strategyReturn['strategyName'][0]
+        else:
+            strategyName = 'strat %s'%(i+1)
+
         # seaborn lineplot of returns in red
-        sns.lineplot(x='date', y='cumsum', data=strategyReturn, ax=ax, color='blue', label='strat %s'%(i+1)) 
-        
-        # calculate sharpe ratio
-        #sharpe = calcReturns.calcSharpeRatio(returns)
-        # print sharpe on plot
-        #ax.text(0.05, 0.95, 'Sharpe Ratio: %.2f'%(sharpe), transform=ax.transAxes, fontsize=14, verticalalignment='top')
-
-    # add return2 on the same axis
-    #if not returns2.empty:
-    #    sns.lineplot(x='date', y='cumsum', data=returns2, ax=ax, color='green', label='strat 2')
-
-    ## add returns_merged
-    #if not returns_merged.empty:
-    #    sns.lineplot(x='date', y='cumsum', data=returns_merged, ax=ax, color='orange', label='strats merged')
+        sns.lineplot(x='date', y='cumsum', data=strategyReturn, ax=ax, label=strategyName)
+        if i == len(returns) - 1:
+            # calculate sharpe ratio
+            sharpe = calcReturns.calcSharpeRatio(strategyReturn, history_underlying)
+            sharpe_benchmark = calcReturns.calcSharpeRatio(strategyReturn, history)
+            # print sharpe on plot
+            ax.text(0.05, 0.05, 'Sharpe[[%s]]: %.2f'%(strategyName, sharpe), transform=ax.transAxes, fontsize=14, verticalalignment='bottom', bbox=dict(facecolor='white', alpha=0.95, edgecolor='black'))
+            # add another text box with a different sharpe 
+            ax.text(0.05, 0.01, 'Sharpe Vs. %s[[%s]]:%.2f'%(history['symbol'][0], strategyName, sharpe_benchmark), transform=ax.transAxes, fontsize=14, verticalalignment='bottom', bbox=dict(facecolor='white', alpha=0.95, edgecolor='black'))
     
     ## add history cumsum
-    sns.lineplot(x='date', y='cumsum', data=history, ax=ax, color='black')
+    sns.lineplot(x='date', y='cumsum', data=history, ax=ax, color='black', label=benchmark)
+    if not history_underlying.empty:
+        sns.lineplot(x='date', y='cumsum', data=history_underlying, ax=ax, color='grey', label=returns[0]['symbol'][0])
 
-    ax.set_title('%s Cumulative Returns'%(history['symbol'].iloc[0]))
+    ax.set_title('%s Cumulative Returns'%(returns[0]['symbol'][0]))
     ax.set_xlabel('Date')
     ax.set_ylabel('Cumulative Returns')
 
@@ -228,3 +232,8 @@ def plotReturnDistribution(returns):
     ax.set_ylabel('Density')
 
     return fig
+
+def mergeStrategies(returns):
+    # assert returns is a list
+    assert isinstance(returns, list), 'ERROR: returns must be a list'
+    return utils.mergeStrategyReturns(returns)
