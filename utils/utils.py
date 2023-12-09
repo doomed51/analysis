@@ -1,6 +1,25 @@
 import math
 import pandas as pd 
 
+""" 
+    This function returns the last business day for the given year and month
+    inputs:
+        year: [int] year
+        month: [int] month
+"""
+def getLastBusinessDay(year, month):
+    # get last day of month
+    lastDayOfMonth = pd.Timestamp(year, month, 1) + pd.offsets.MonthEnd(0)
+
+    # if last day of month is a weekend, get the last business day
+    if lastDayOfMonth.dayofweek == 5:
+        lastBusinessDay = lastDayOfMonth - pd.offsets.Day(1)
+    elif lastDayOfMonth.dayofweek == 6:
+        lastBusinessDay = lastDayOfMonth - pd.offsets.Day(2)
+    else:
+        lastBusinessDay = lastDayOfMonth
+
+    return lastBusinessDay.day
 
 """
     Returns mean and sd of target column grouped by month
@@ -55,7 +74,6 @@ def aggregate_by_dayOfMonth(history, targetCol):
     aggregate_by_dayOfMonth = history.groupby('dayOfMonth')[targetCol].agg(['mean', 'std']).reset_index()
 
     return aggregate_by_dayOfMonth
-
 
 """
     Returns means and sd of tagetCol grouped by day of week
@@ -129,27 +147,34 @@ def calcLogReturns(history, colName, lag=1, direction=1):
     return history.reset_index(drop=True)
 
 """
+    For timeseries data with gaps (e.g., only has business days), this function returns the closest date in pxHistory to the targetDay 
+"""
+def closest_day(pxHistory, targetDay):
+   #Calculate abs(targetDay - pxHistory dates)
+   pxHistory['daydiff'] = abs(targetDay - pxHistory['day'])
+   # sort by the difference, and return the date in the first row
+   pxHistory = pxHistory.sort_values(by='daydiff', ascending=True)
+   closest_date = pxHistory.iloc[0]['date']
+   return closest_date
+
+"""
     returns a string of the current date in YYYYMM format
 """
 def futures_getExpiryDateString():
     return pd.Timestamp.today().strftime('%Y%m')
 
 """ 
-    This function returns the last business day for the given year and month
-    inputs:
-        year: [int] year
-        month: [int] month
+    returns dataframe of merged strategy returns
+    intputs: 
+        - returns: [array] array of dataframes of returns
 """
-def getLastBusinessDay(year, month):
-    # get last day of month
-    lastDayOfMonth = pd.Timestamp(year, month, 1) + pd.offsets.MonthEnd(0)
+def mergeStrategyReturns(returns, strategyName='merged'):
 
-    # if last day of month is a weekend, get the last business day
-    if lastDayOfMonth.dayofweek == 5:
-        lastBusinessDay = lastDayOfMonth - pd.offsets.Day(1)
-    elif lastDayOfMonth.dayofweek == 6:
-        lastBusinessDay = lastDayOfMonth - pd.offsets.Day(2)
-    else:
-        lastBusinessDay = lastDayOfMonth
+    mergedReturns = pd.DataFrame()
+    for ret in returns:
+        mergedReturns = pd.concat([mergedReturns, ret])
+    mergedReturns.sort_values(by='date', inplace=True)
+    mergedReturns.reset_index(drop=True, inplace=True)
+    mergedReturns['cumsum'] = mergedReturns['logReturn'].cumsum()
 
-    return lastBusinessDay.day
+    return mergedReturns
