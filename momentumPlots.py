@@ -175,6 +175,45 @@ def plotMomoScatter(pxhistory, momPeriod1=10, momPeriod2=30, forwardReturnsPerio
 
     return fig 
 
+"""
+    plots quintiles of momo vs fwd returns 
+"""
+def plotMomoQuintiles(pxHistory, momoPeriods=[], fwdReturnPeriods=[]):
+    # get momo for each ? in momoPeriods
+    for period in momoPeriods:
+        pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
+        pxHistory.rename(columns={'momo': 'momo%s'%(period)}, inplace=True)
+
+    # get forward returns for each ? in fwdReturnPeriods
+    for period in fwdReturnPeriods:
+        pxHistory['fwdReturns%s'%(period)] = pxHistory['close'].pct_change(period).shift(-period)
+
+    # put momo in 5 quintiles
+    for period in momoPeriods:
+        pxHistory['momo%sQuintile'%(period)] = pd.qcut(pxHistory['momo%s'%(period)], 5, labels=False)
+    
+    # set numColumns to the length of fwdreturnperiods
+    numColumns = len(fwdReturnPeriods)
+    numRows = len(momoPeriods)
+        
+    # plot barchart of momoquintiles vs fwdreturns
+    sns.set_theme(style="darkgrid")
+    fig, ax = plt.subplots(numRows, numColumns, figsize=(20, 10), sharex=True, sharey=True)
+
+    # plot barchart of momoquintiles vs fwdreturns
+    sns.set()
+    for row in range(0, numRows):
+        for column in range(0, numColumns):
+            sns.barplot(ax=ax[row, column], data=pxHistory, x='momo%sQuintile'%(momoPeriods[row]), y='fwdReturns%s'%(fwdReturnPeriods[column]))
+            ax[row, column].set_title('momo%sQuintile vs fwdReturns%s'%(momoPeriods[row], fwdReturnPeriods[column]))
+            ax[row, column].set_xlabel('momo%sQuintile'%(momoPeriods[row]))
+            ax[row, column].set_ylabel('fwdReturns%s'%(fwdReturnPeriods[column]))
+
+    # set title
+    fig.suptitle('momo quintiles vs fwd returns')
+
+    return fig
+    
 
 def plotMomoPairplot(pxhistory, momoPeriods=[3,5,8,13,21,34], forwardReturnsPeriods=[3,5,8,13,21,34]):
     
@@ -316,11 +355,8 @@ def plotMomoDist(pxHistory, momPeriod=[3,6,12,24,48,96]):
     #if len(momPeriod) > 5: 
     numRows = 2
     numPeriods = len(momPeriod)
-    numCols = int(numPeriods/numRows)
+    numCols = max(2, int(numPeriods/numRows))
 
-    print('numPeriods: %s'%(numPeriods))
-    print('numRows: %s'%(numRows))
-    print('numCols: %s'%(numCols))
     # calc momo for each momPeriod
     for period in momPeriod:
         pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
@@ -335,8 +371,12 @@ def plotMomoDist(pxHistory, momPeriod=[3,6,12,24,48,96]):
     fig, ax = plt.subplots(numRows, numCols, figsize=(20, 10))
     sns.set()
     i = 0
+    if numPeriods == 1:
+        numRows = 1
     for rowNum in range(numRows): 
         for colNum in range(numCols) :
+            if i >= numPeriods:
+                break
             # add histogram of momo
             sns.histplot(ax=ax[rowNum, colNum], x=pxHistory['momo%s'%(momPeriod[i])]) 
             ax[rowNum, i%numCols].set_title('momo%s'%(momPeriod[i]))
@@ -549,6 +589,10 @@ def plotMomoAndFwdReturns(pxHistory, momoAndFwdReturnsPeriods):
         # plot regplot of momo vs. fwdReturns for each fwdReturnsPeriod
         sns.regplot(ax=ax[int(i/5), i%5], data=pxHistory, x='momo%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i]), y='fwdReturns%s'%(momoAndFwdReturnsPeriods['fwdReturnPeriod'][i]), scatter=False)
 
+        # add axis lines at 0
+        ax[int(i/5), i%5].axhline(0, color='grey', alpha=0.5)
+        ax[int(i/5), i%5].axvline(0, color='grey', alpha=0.5)
+
     return fig
 
 """ 
@@ -584,6 +628,10 @@ def plotMomoandPx_filteredByPercentile(pxHistory, momoAndFwdReturnsPeriods, momo
 
         # add title
         ax[int(i/5), i%5].set_title('momo%s vs fwdReturns%s; %s'%(momoAndFwdReturnsPeriods['momoPeriod'][i], momoAndFwdReturnsPeriods['fwdReturnPeriod'][i], momoAndFwdReturnsPeriods['r2'][i]))
+        
+        # add axis lines at 0
+        ax[int(i/5), i%5].axhline(0, color='grey', alpha=0.5)
+        ax[int(i/5), i%5].axvline(0, color='grey', alpha=0.5)
 
     return fig
 
