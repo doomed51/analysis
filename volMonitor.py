@@ -7,6 +7,7 @@ import interface_localDB as db
 from utils import utils as ut
 from utils import utils_termStructure as vixts
 from utils import utils_tabbedPlotsWindow as pltWindow
+import vol_momentum as volMomo
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -17,69 +18,6 @@ import momentum
 
 ### CONFIGS ### 
 db_stock = '/workbench/historicalData/venv/saveHistoricalData/historicalData_index.db'
-vvix_topPercentile = 0.9
-vvix_bottomPercentile = 0.1
-vvix_percentileLookbackDays = 252 ## 1 year lookback = 252 *trading* days
-
-#####################################
-## prepare vix term structure data 
-#####################################
-vix_ts_pctContango = vixts.getVixTermStructurePctContango(fourToSeven=True, currentToLast=True, averageContango=True)
-
-
-## prepare price history data
-###################################
-############# VIX  ################
-with db.sqlite_connection(db_stock) as conn:
-    vix = db.getPriceHistory(conn,'VIX', '1day', withpctChange=True)
-    vix_5min = db.getPriceHistory(conn, 'VIX', '5mins', withpctChange=True)
-    vvix = db.getPriceHistory(conn, 'VVIX', '1day', withpctChange=True)
-    vvix_5min = db.getPriceHistory(conn, 'VVIX', '5mins', withpctChange=True)
-    spx = db.getPriceHistory(conn, 'SPX', '1day', withpctChange=True)
-    spx_5mins = db.getPriceHistory(conn, 'SPX', '5mins', withpctChange=True)
-    uvxy_5mins= db.getPriceHistory(conn, 'UVXY', '5mins', withpctChange=True)
-    uvxy = db.getPriceHistory(conn, 'UVXY', '1day', withpctChange=True)
-
-## make sure vix and vix_ts_pctContango start on the same date
-#vix = vix[vix.index >= vix_ts_pctContango.index.min()]
-
-###################################
-############# VVIX ################
-
-## calculate percentile rank of VVIX
-vvix['percentileRank'] = vvix['close'].rolling(vvix_percentileLookbackDays).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
-
-vvix['percentileRank_90d'] = vvix['close'].rolling(90).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
-vvix['percentileRank_60d'] = vvix['close'].rolling(60).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
-
-# add log return column
-vvix = ut.calcLogReturns(vvix, 'close')
-vix = ut.calcLogReturns(vix, 'close')
-
-"""
-    for passed in dataframes (main, reference) return main with only the dates in reference 
-    sidenote: this is an incredibly unnecessary abstraction but here we are 
-"""
-def _filterDates(main, reference):
-    return main[main['date'].isin(reference['date'])]
-
-#################################################
-############## FINAL CLEANUP ... ################
-#################################################
-# reset index to eliminate duplicate indices resulting from joins 
-vix_ts_pctContango.reset_index(inplace=True)
-# make sure vix and vix_ts_pctContango start on the same date
-#vix = vix[vix.index >= vix_ts_pctContango['Date'].min()]
-
-## from vix_ts_pctContango remove any dates that are not in vix and vvix
-vix_ts_pctContango = vix_ts_pctContango[vix_ts_pctContango['date'].isin(vix['date']) & vix_ts_pctContango['date'].isin(vvix['date'])]
-
-# from vvix remove any dates that are not in vix and vix_ts_pctContango
-#vvix = vvix[vvix.index.isin(vix.index) & vvix.index.isin(vix_ts_pctContango['date'])]
-vvix = vvix[vvix['date'].isin(vix['date']) & vvix['date'].isin(vix_ts_pctContango['date'])]
-
-# from vix remove any dates that are not in vvix and vix_ts_pctContango
-vix = vix[vix['date'].isin(vvix['date']) & vix['date'].isin(vix_ts_pctContango['date'])]
 
 #####################################################
 ################# PLOT FUNCTIONS ####################
@@ -141,7 +79,6 @@ def plotVixRelationships(vix_ts_pctContango, vix, vvix):
     ax2[1,2].invert_xaxis()
 
     return fig2
-
 
 """
 view for day to day monitoring of VIX term structure changes. The following are displayed:
@@ -234,7 +171,6 @@ def plotVixTermStructureSeasonality(vix_ts_pctContango):
 
     return fig
 
-
 """ 
     plots symvbol autocorrelation 
 """
@@ -303,7 +239,6 @@ def plotVixVsSpx(vix, spx):
 
 
     return fig
-
 
 """
     Plots scatters of lagged momentum vs. next day return for multiple lags 
@@ -435,6 +370,153 @@ def plotMomentumComparison(pxHistory_momentumSymbol, pxHistory_returnSymbol):
     
     return fig
 
+"""
+    Plots distribution of forward returns
+"""
+def plotForwardReturnsDistribution(pxHistory, forwardReturnPeriods=[1,2,3,4,5,6,7]):
+    # create figure and axes
+    fig, ax = plt.subplots(2, 4, figsize=(15, 10), sharey=True)
+
+    # set figure title
+    fig.suptitle('%s Forward Returns Distribution'%(pxHistory['symbol'][0]))
+
+    # loop through forwardReturnPeriods and plot distribution of forward returns
+    for i in range(len(forwardReturnPeriods)):
+        # get forward returns for period i
+        fwdReturns = pxHistory['fwdReturn_%dd'%(forwardReturnPeriods[i])]
+        # plot distribution of fwdReturns
+        sns.histplot(x=fwdReturns, ax=ax[i//4, i%4])
+        # calculate median
+        median = fwdReturns.median()
+        # calculate mode and add to plot 
+        mode = fwdReturns.mode()[0]
+        ax[i//4, i%4].axvline(x=median, color='red', linestyle='--')
+        # add axvline value as overlay text
+        ax[i//4, i%4].text(median, 0, '%.2f'%(median), color='red', fontsize=10)
+
+        ax[i//4, i%4].set_title('%dd fwdReturn'%(forwardReturnPeriods[i]))
+
+    return fig
+
+"""
+    PLots cumulative distribution of forward returns
+"""
+def plotForwardReturnCumulativeDistribution(pxHistory, forwardReturnPeriods=[1,2,3,4,5,6,7]):
+    # create figure and axes
+    fig, ax = plt.subplots(2, 4, figsize=(15, 10), sharey=True)
+
+    # set figure title
+    fig.suptitle('%s Forward Returns Distribution'%(pxHistory['symbol'][0]))
+
+    # loop through forwardReturnPeriods and plot distribution of forward returns
+    for i in range(len(forwardReturnPeriods)):
+        # get forward returns for period i
+        fwdReturns = pxHistory['fwdReturn_%dd'%(forwardReturnPeriods[i])]
+        # plot cumulative distribution of fwdReturns
+        sns.histplot(x=fwdReturns, ax=ax[i//4, i%4], cumulative=True)
+        # calculate median
+        #median = fwdReturns.median()
+        # calculate mode and add to plot 
+        #mode = fwdReturns.mode()[0]
+        #ax[i//4, i%4].axvline(x=median, color='red', linestyle='--')
+        # add axvline value as overlay text
+        #ax[i//4, i%4].text(median, 0, '%.2f'%(median), color='red', fontsize=10)
+
+        ax[i//4, i%4].set_title('%dd fwdReturn'%(forwardReturnPeriods[i]))
+
+    return fig
+
+"""
+    Plot scatter of target column vs. forward returns
+"""
+def plotScatter(pxHistory, targetColumn, forwardReturnPeriods=[1,2,3,4,5,6,7]):
+    # create figure and axes
+    fig, ax = plt.subplots(2, 4, figsize=(15, 10), sharey=True)
+
+    # set figure title
+    fig.suptitle('%s Forward Returns Distribution'%(pxHistory['symbol'][0]))
+
+    # loop through forwardReturnPeriods and plot distribution of forward returns
+    for i in range(len(forwardReturnPeriods)):
+        # get forward returns for period i
+        fwdReturns = pxHistory['fwdReturn_%dd'%(forwardReturnPeriods[i])]
+        # plot scatter plot vs fwdReturns
+        sns.scatterplot(x=fwdReturns, y=pxHistory[targetColumn], ax=ax[i//4, i%4])
+        # plot regplot
+        sns.regplot(x=fwdReturns, y=pxHistory[targetColumn], ax=ax[i//4, i%4], line_kws={'color': 'red'})
+
+        # calculate r2
+        r2 = fwdReturns.corr(pxHistory[targetColumn])**2
+        # add r2 to plot
+        ax[i//4, i%4].text(0, 0, 'r2: %.2f'%(r2), color='red', fontsize=10)
+
+
+        ax[i//4, i%4].set_title('%dd fwdReturn'%(forwardReturnPeriods[i]))
+
+    return fig
+
+vvix_topPercentile = 0.9
+vvix_bottomPercentile = 0.1
+vvix_percentileLookbackDays = 252 ## 1 year lookback = 252 *trading* days
+
+#####################################
+## prepare vix term structure data 
+#####################################
+vix_ts_pctContango = vixts.getVixTermStructurePctContango(fourToSeven=True, currentToLast=True, averageContango=True)
+
+
+## prepare price history data
+###################################
+############# VIX  ################
+with db.sqlite_connection(db_stock) as conn:
+    vix = db.getPriceHistory(conn,'VIX', '1day', withpctChange=True)
+    vix_5min = db.getPriceHistory(conn, 'VIX', '5mins', withpctChange=True)
+    vvix = db.getPriceHistory(conn, 'VVIX', '1day', withpctChange=True)
+    vvix_5min = db.getPriceHistory(conn, 'VVIX', '5mins', withpctChange=True)
+    spx = db.getPriceHistory(conn, 'SPX', '1day', withpctChange=True)
+    spx_5mins = db.getPriceHistory(conn, 'SPX', '5mins', withpctChange=True)
+    uvxy_5mins= db.getPriceHistory(conn, 'UVXY', '5mins', withpctChange=True)
+    uvxy = db.getPriceHistory(conn, 'UVXY', '1day', withpctChange=True)
+
+###################################
+############# VVIX ################
+
+## calculate percentile rank of VVIX
+vvix['percentileRank'] = vvix['close'].rolling(vvix_percentileLookbackDays).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
+vvix['percentileRank_90d'] = vvix['close'].rolling(90).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
+vvix['percentileRank_60d'] = vvix['close'].rolling(60).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
+
+# create a copy of vvix for later use
+vvix_raw = vvix.copy()
+
+# add log return column
+vvix = ut.calcLogReturns(vvix, 'close')
+vix = ut.calcLogReturns(vix, 'close')
+
+"""
+    for passed in dataframes (main, reference) return main with only the dates in reference 
+    sidenote: this is an incredibly unnecessary abstraction but here we are 
+"""
+def _filterDates(main, reference):
+    return main[main['date'].isin(reference['date'])]
+
+#################################################
+############## FINAL CLEANUP ... ################
+#################################################
+# reset index to eliminate duplicate indices resulting from joins 
+vix_ts_pctContango.reset_index(inplace=True)
+# make sure vix and vix_ts_pctContango start on the same date
+#vix = vix[vix.index >= vix_ts_pctContango['Date'].min()]
+
+## from vix_ts_pctContango remove any dates that are not in vix and vvix
+vix_ts_pctContango = vix_ts_pctContango[vix_ts_pctContango['date'].isin(vix['date']) & vix_ts_pctContango['date'].isin(vvix['date'])]
+
+# from vvix remove any dates that are not in vix and vix_ts_pctContango
+#vvix = vvix[vvix.index.isin(vix.index) & vvix.index.isin(vix_ts_pctContango['date'])]
+vvix = vvix[vvix['date'].isin(vix['date']) & vvix['date'].isin(vix_ts_pctContango['date'])]
+
+# from vix remove any dates that are not in vvix and vix_ts_pctContango
+vix = vix[vix['date'].isin(vvix['date']) & vix['date'].isin(vix_ts_pctContango['date'])]
 
 ##################################################
 ############### call plots  
@@ -445,24 +527,77 @@ sns.set()
 sns.set_style('darkgrid')
 
 # get spx price history
-spx_filtered = _filterDates(spx, vix_ts_pctContango)
+#spx_filtered = _filterDates(spx, vix_ts_pctContango)
 
 #plotVixRelationships(vix_ts_pctContango, vix, vvix)
 #plotVixTermStructureSeasonality(vix_ts_pctContango)
 
 # initialize plot window for tabbed plots
 tpw = pltWindow.plotWindow()
+tpw.MainWindow.showMaximized()
 
-# add plots
-tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, spx_filtered))
-tpw.addPlot('seasonality - vix', seasonality.logReturns_overview_of_seasonality('VIX'))
-tpw.addPlot('seasonality - vvix', seasonality.logReturns_overview_of_seasonality('VVIX'))
+########## General Overview: 
+########## 
+
+#tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, spx_filtered))
+#tpw.addPlot('seasonality - vix', seasonality.logReturns_overview_of_seasonality('VIX'))
+#tpw.addPlot('seasonality - vvix', seasonality.logReturns_overview_of_seasonality('VVIX'))
 #tpw.addPlot('VVIX & VIX Autocorrelation', plotAutocorrelation(vvix, vix))
 #tpw.addPlot('VIX vs. SPX', plotVixVsSpx(vix, spx_filtered))
-tpw.addPlot('Momentum - VVIX', plotMomentumOverview(vvix))
-tpw.addPlot('Momentum - VIX', plotMomentumOverview(vix))
-#tpw.addPlot('Momentum - UVXY', plotMomentumOverview(uvxy_5mins))
-tpw.addPlot('Momentum - VIX vs. VVIX', plotMomentumComparison(vvix, vix))
+#tpw.addPlot('Momentum - VVIX', volMomo.plotMomoScatter(vvix))
+#tpw.addPlot('Momentum - VIX', volMomo.plotMomoScatter(vix))
+
+#tpw.addPlot('Momentum - VIX vs. VVIX', plotMomentumComparison(vvix, vix))
+
+
+########## Analysis: 
+########## uvxy forward returns given vvix percentile
+
+forwardReturnPeriods = [1,2,3,4,5,6,7]
+momoPeriods = [1,2,3,5,10,15] 
+# select only dates in uvxy that are in vvix
+uvxy = uvxy[uvxy['date'].isin(vvix_raw['date'])]
+
+# calcultate fwd returns for each forwardReturnPeriod
+for period in forwardReturnPeriods:
+    uvxy['fwdReturn_%dd'%(period)] = uvxy['close'].pct_change(periods=-period)
+
+# calculate momentum for each period in momoPeriods
+for period in momoPeriods:
+    uvxy['momo_%dd'%(period)] = momentum.calcMomoFactor(uvxy, lag=period)['momo']
+
+# join vvix and uvxy on date 
+uvxy = uvxy.merge(vvix_raw[['date', 'percentileRank', 'percentileRank_90d', 'percentileRank_60d']], on='date', how='left')
+
+# drop first 60 records
+uvxy = uvxy[uvxy.index > 59].reset_index(drop=True)
+
+# drop where forward return > 1.5
+uvxy = uvxy[uvxy['fwdReturn_1d'] < 1.5]
+for period in forwardReturnPeriods:
+    uvxy =uvxy[uvxy['fwdReturn_%dd'%(period)]<1.5]
+
+
+## plot fwd return distributions
+#tpw.addPlot('UVXY: Forward Returns Distribution', plotForwardReturnsDistribution(uvxy, forwardReturnPeriods))
+tpw.addPlot('UVXY: returns dist | <0.5p-252d', plotForwardReturnsDistribution(uvxy[uvxy['percentileRank'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
+#tpw.addPlot('UVXY: returns dist | <0.5p-90d', plotForwardReturnsDistribution(uvxy[uvxy['percentileRank_90d'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
+#tpw.addPlot('UVXY: returns dist | <0.5p-60d', plotForwardReturnsDistribution(uvxy[uvxy['percentileRank_60d'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
+
+# plot cumulative distribution of fwd returns
+tpw.addPlot('UVXY: returns dist | <0.5p-60d', plotForwardReturnCumulativeDistribution(uvxy[uvxy['percentileRank'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
+
+
+# plot scatters
+tpw.addPlot('UVXY: scatter | <0.5p-252d', plotScatter(uvxy[uvxy['percentileRank'] < 0.5].reset_index(drop=True), 'percentileRank', forwardReturnPeriods))
+tpw.addPlot('UVXY: scatter | <0.5p-90d', plotScatter(uvxy[uvxy['percentileRank_90d'] < 0.5].reset_index(drop=True), 'percentileRank_90d', forwardReturnPeriods))
+tpw.addPlot('UVXY: scatter | <0.5p-60d', plotScatter(uvxy[uvxy['percentileRank_60d'] < 0.5].reset_index(drop=True), 'percentileRank_60d', forwardReturnPeriods))
+
+
+## analyyze seasonality of log returns...
+# monthly , weekly 
+
+## -----------------------------------------------------
 
 # show window
 tpw.show()
