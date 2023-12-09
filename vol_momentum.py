@@ -19,9 +19,7 @@ import interface_localDB as db
 
 from utils import utils_tabbedPlotsWindow as tabbedWindow 
 
-###
-# set pandas to print all rows 
-pd.set_option('display.max_rows', None)
+
 ###
 """ Calcultes exponential moving average given pxhistory and period """
 def ema(pxhistory, period): 
