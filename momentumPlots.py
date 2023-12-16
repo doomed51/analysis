@@ -198,14 +198,22 @@ def plotMomoQuintiles(pxHistory, momoPeriods=[], fwdReturnPeriods=[]):
         
     # plot barchart of momoquintiles vs fwdreturns
     sns.set_theme(style="darkgrid")
-    fig, ax = plt.subplots(numRows, numColumns, figsize=(20, 10), sharex=True, sharey=True)
+    fig, ax = plt.subplots(numRows, numColumns, figsize=(20, 10))
+
+    # set monochrome color scheme 
+    sns.set_palette("dark")
 
     # plot barchart of momoquintiles vs fwdreturns
     sns.set()
     for row in range(0, numRows):
         for column in range(0, numColumns):
-            sns.barplot(ax=ax[row, column], data=pxHistory, x='momo%sQuintile'%(momoPeriods[row]), y='fwdReturns%s'%(fwdReturnPeriods[column]))
-            ax[row, column].set_title('momo%sQuintile vs fwdReturns%s'%(momoPeriods[row], fwdReturnPeriods[column]))
+            # select subset of pxhistory 
+            pxHistory_ = pxHistory[['momo%sQuintile'%(momoPeriods[row]), 'fwdReturns%s'%(fwdReturnPeriods[column])]]
+            # group by quantile calculating mean of fwdreturns
+            pxHistory_ = pxHistory_.groupby('momo%sQuintile'%(momoPeriods[row])).mean().reset_index()
+            # barplot of quintile vs mean of fwdreturns for that quintile
+            sns.barplot(ax=ax[row, column], data=pxHistory_, x='momo%sQuintile'%(momoPeriods[row]), y='fwdReturns%s'%(fwdReturnPeriods[column]), palette="Blues_d")
+            
             ax[row, column].set_xlabel('momo%sQuintile'%(momoPeriods[row]))
             ax[row, column].set_ylabel('fwdReturns%s'%(fwdReturnPeriods[column]))
 
@@ -584,7 +592,7 @@ def plotMomoAndFwdReturns(pxHistory, momoAndFwdReturnsPeriods):
         ax[int(i/5), i%5].set_ylabel('fwdReturns%s'%(momoAndFwdReturnsPeriods['fwdReturnPeriod'][i]))
 
         # add title
-        ax[int(i/5), i%5].set_title('momo%s vs fwdReturns%s; %s'%(momoAndFwdReturnsPeriods['momoPeriod'][i], momoAndFwdReturnsPeriods['fwdReturnPeriod'][i], momoAndFwdReturnsPeriods['r2'][i]))
+        ax[int(i/5), i%5].set_title('momo%s vs fwdReturns%s; %s'%(momoAndFwdReturnsPeriods['momoPeriod'][i], momoAndFwdReturnsPeriods['fwdReturnPeriod'][i], momoAndFwdReturnsPeriods['correl'][i]))
 
         # plot regplot of momo vs. fwdReturns for each fwdReturnsPeriod
         sns.regplot(ax=ax[int(i/5), i%5], data=pxHistory, x='momo%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i]), y='fwdReturns%s'%(momoAndFwdReturnsPeriods['fwdReturnPeriod'][i]), scatter=False)
@@ -627,7 +635,7 @@ def plotMomoandPx_filteredByPercentile(pxHistory, momoAndFwdReturnsPeriods, momo
         sns.regplot(ax=ax[int(i/5), i%5], data=pxHistory_filtered, x='momo%s'%(momoAndFwdReturnsPeriods['momoPeriod'][i]), y='fwdReturns%s'%(momoAndFwdReturnsPeriods['fwdReturnPeriod'][i]), scatter=False)
 
         # add title
-        ax[int(i/5), i%5].set_title('momo%s vs fwdReturns%s; %s'%(momoAndFwdReturnsPeriods['momoPeriod'][i], momoAndFwdReturnsPeriods['fwdReturnPeriod'][i], momoAndFwdReturnsPeriods['r2'][i]))
+        ax[int(i/5), i%5].set_title('momo%s vs fwdReturns%s; %s'%(momoAndFwdReturnsPeriods['momoPeriod'][i], momoAndFwdReturnsPeriods['fwdReturnPeriod'][i], momoAndFwdReturnsPeriods['correl'][i]))
         
         # add axis lines at 0
         ax[int(i/5), i%5].axhline(0, color='grey', alpha=0.5)
