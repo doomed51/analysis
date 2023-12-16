@@ -63,36 +63,9 @@ def _calc_optimized_momo_periods(pxHistory, top, **kwargs):
     return correl.head(top).reset_index(drop=True)
 
 """
-    This function returns an array of momoPeriods and fwd returns that have the highest correlation 
-    inputs:
-        pxHistory: dataframe of px history that includes a logReturn column
-        top: number of momoPeriods to return
-    returns:
-        dataframe of top [momoPeriods, fwdReturnPeriods] sorted by r2 values
+    This function returns a dataframe of momoPeriods and fwd returns that have the highest correlation
 """
 def getTopMomoPeriods(pxHistory, top=5, **kwargs):
-    print('[yellow]Calculating top %s momo periods...[/yellow]'%(top))
-    momoPeriodMax = kwargs.get('rangeEnd', 360)
-    fwdReturnPeriodMax = kwargs.get('fwdReturns', 360)
-    startTime = pd.Timestamp.now()
-
-    # Calculate r2 for each [momoPeriod] and [fwdReturnPeriod]
-    correl = pd.DataFrame(columns=['momoPeriod', 'fwdReturnPeriod', 'correl'])
-    for momoPeriod in range(1, momoPeriodMax):
-        startTime_inner = pd.Timestamp.now()
-        for forwardReturnPeriod in range(1, fwdReturnPeriodMax):
-            correl_ = calc_correlation(pxHistory, momoPeriod, forwardReturnPeriod)
-            correl.loc[len(correl)] = {'momoPeriod': int(momoPeriod), 'fwdReturnPeriod': int(forwardReturnPeriod), 'correl': correl_}
-        print('[yellow] time for inner loop %s/%s:[/yellow] %.2fs'%(momoPeriod, momoPeriodMax, (pd.Timestamp.now() - startTime_inner).total_seconds()))
-            
-
-    print('[green] Time to optimize vars for highest correlation:[/green] %.2fm'%((pd.Timestamp.now() - startTime).total_seconds()/60))
-    
-    sorted_correl = correl.sort_values(by='correl', ascending=False).head(top).reset_index(drop=True)
-    print(sorted_correl)
-    return sorted_correl
-
-def getTopMomoPeriods_optimized(pxHistory, top=5, **kwargs):
     print('[yellow]Getting top %s momo periods...[/yellow]'%(top))
     momoPeriodMax = kwargs.get('rangeEnd', 362) # add 1 day
     fwdReturnPeriodMax = kwargs.get('fwdReturns', 362) # add 1 day
