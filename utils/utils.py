@@ -178,3 +178,11 @@ def mergeStrategyReturns(returns, strategyName='merged'):
     mergedReturns['cumsum'] = mergedReturns['logReturn'].cumsum()
 
     return mergedReturns
+
+"""
+    returns correlation between two columns in pxHistory
+"""
+def calcCorrelation(pxHistory_, column1, column2, type='pearson'):
+    if type == 'pearson':
+        return pxHistory_[column1].corr(pxHistory_[column2], method='pearson')
+    #return pxHistory_[column1].corr(pxHistory_[column2])
