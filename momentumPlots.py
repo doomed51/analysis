@@ -353,46 +353,44 @@ def plotMomoCrossoverSignal(pxHistory, momoPeriod1, momoPeriod2, forwardReturnsP
 """
     plots distribution of momo for each momoPeeriod
 """
-def plotMomoDist(pxHistory, momPeriod=[3,6,12,24,48,96]):
-    # dynamicall set the size of the plot 
+def plotMomoDist(pxHistory, momPeriod=[3,6,12,24,48,96], percentiles = [.01, .05, .5, .95, .99], **kwargs):
+    _bins = kwargs.get('bins', 100) # number of bins for the histogram
+
     if len(momPeriod) > 10: # max of 10 periods
         momPeriod = momPeriod[:10]
-    # order 
     momPeriod.sort()
-    #numRows = 1 # min of 1 row
-    #if len(momPeriod) > 5: 
-    numRows = 2
-    numPeriods = len(momPeriod)
-    numCols = max(2, int(numPeriods/numRows))
-
+    
     # calc momo for each momPeriod
     for period in momPeriod:
         pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
         pxHistory.rename(columns={'momo': 'momo%s'%(period)}, inplace=True)
         pxHistory.rename(columns={'lagmomo': 'lagmomo%s'%(period)}, inplace=True)
     
-    # set percentiles to draw vertical lines at
-    percentiles = [.05, .5, .95, .99]
+    # dynamically set the size of the plot 
+    numRows = 2
+    numPeriods = max(1, len(momPeriod))
+    numCols = max(2, int(numPeriods/numRows))
 
     # plot distribution of momo for each momoPeriod
     sns.set_theme(style="darkgrid")
     fig, ax = plt.subplots(numRows, numCols, figsize=(20, 10))
     sns.set()
+    
     i = 0
-    if numPeriods == 1:
-        numRows = 1
     for rowNum in range(numRows): 
         for colNum in range(numCols) :
             if i >= numPeriods:
                 break
             # add histogram of momo
-            sns.histplot(ax=ax[rowNum, colNum], x=pxHistory['momo%s'%(momPeriod[i])]) 
+            sns.histplot(ax=ax[rowNum, colNum], x=pxHistory['momo%s'%(momPeriod[i])], bins=_bins) 
             ax[rowNum, i%numCols].set_title('momo%s'%(momPeriod[i]))
             # add vertical lines at percentiles
             for percentile in percentiles:
                 ax[rowNum, colNum].axvline(pxHistory['momo%s'%(momPeriod[i])].quantile(percentile), color='red')
                 # draw the value on the plot 
-                ax[rowNum, colNum].text(pxHistory['momo%s'%(momPeriod[i])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[i])].quantile(percentile), 2), rotation=45, color='red')
+                ax[rowNum, colNum].text(pxHistory['momo%s'%(momPeriod[i])].quantile(percentile), 0, round(pxHistory['momo%s'%(momPeriod[i])].quantile(percentile), 4), rotation=45, color='red', verticalalignment='bottom')
+                # add text to top of plot
+                #ax[rowNum, colNum].text(pxHistory['momo%s'%(momPeriod[i])].quantile(percentile), 1, str(percentile), rotation=45, color='red', verticalalignment='top')
             # set title
             ax[rowNum, colNum].set_title('momo%s'%(momPeriod[i]))
 
