@@ -178,7 +178,8 @@ def plotMomoScatter(pxhistory, momPeriod1=10, momPeriod2=30, forwardReturnsPerio
 """
     plots quintiles of momo vs fwd returns 
 """
-def plotMomoQuintiles(pxHistory, momoPeriods=[], fwdReturnPeriods=[]):
+def plotMomoQuintiles(pxHistory, momoPeriods=[], fwdReturnPeriods=[], **kwargs):
+    numQuintileBins = kwargs.get('numQuintileBins', 15) # number of quintile bins to use
     # get momo for each ? in momoPeriods
     for period in momoPeriods:
         pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
@@ -190,30 +191,27 @@ def plotMomoQuintiles(pxHistory, momoPeriods=[], fwdReturnPeriods=[]):
 
     # put momo in 5 quintiles
     for period in momoPeriods:
-        pxHistory['momo%sQuintile'%(period)] = pd.qcut(pxHistory['momo%s'%(period)], 5, labels=False)
+        pxHistory['momo%sQuintile'%(period)] = pd.qcut(pxHistory['momo%s'%(period)], numQuintileBins, labels=False)
     
     # set numColumns to the length of fwdreturnperiods
-    numColumns = len(fwdReturnPeriods)
-    numRows = len(momoPeriods)
-        
-    # plot barchart of momoquintiles vs fwdreturns
+    numColumns = max(1, len(fwdReturnPeriods))
+    numRows = max(2, len(momoPeriods))
+
+    # create figure
     sns.set_theme(style="darkgrid")
-    fig, ax = plt.subplots(numRows, numColumns, figsize=(20, 10))
-
-    # set monochrome color scheme 
+    fig, ax = plt.subplots(max(2, numRows), max(2, numColumns), figsize=(20, 10))
     sns.set_palette("dark")
-
+    
     # plot barchart of momoquintiles vs fwdreturns
     sns.set()
-    for row in range(0, numRows):
-        for column in range(0, numColumns):
+    for row in range(numRows):
+        for column in range(numColumns):
             # select subset of pxhistory 
             pxHistory_ = pxHistory[['momo%sQuintile'%(momoPeriods[row]), 'fwdReturns%s'%(fwdReturnPeriods[column])]]
             # group by quantile calculating mean of fwdreturns
             pxHistory_ = pxHistory_.groupby('momo%sQuintile'%(momoPeriods[row])).mean().reset_index()
             # barplot of quintile vs mean of fwdreturns for that quintile
             sns.barplot(ax=ax[row, column], data=pxHistory_, x='momo%sQuintile'%(momoPeriods[row]), y='fwdReturns%s'%(fwdReturnPeriods[column]), palette="Blues_d")
-            
             ax[row, column].set_xlabel('momo%sQuintile'%(momoPeriods[row]))
             ax[row, column].set_ylabel('fwdReturns%s'%(fwdReturnPeriods[column]))
 
@@ -604,7 +602,7 @@ def plotMomoAndFwdReturns(pxHistory, momoAndFwdReturnsPeriods):
 """ 
     plots scatters filtered by percentilles 
 """
-def plotMomoandPx_filteredByPercentile(pxHistory, momoAndFwdReturnsPeriods, momoPercentileTop=0.95, momoPercentileBottom=0.05):
+def plotMomoandPx_filteredByPercentile(pxHistory, momoAndFwdReturnsPeriods, momoPercentileTop=0.99, momoPercentileBottom=0.01):
     # create figure with 2 rows and 3 columns
     sns.set_theme(style="darkgrid")
     fig, ax = plt.subplots(2,5, figsize=(20, 10), sharex=True, sharey=True)
