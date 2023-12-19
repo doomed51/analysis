@@ -10,6 +10,7 @@ This module simplifies interacting with the local database of historical ohlc da
 
 import sqlite3
 import sys
+import config
 
 import pandas as pd
 sys.path.append('..')
@@ -18,7 +19,7 @@ from utils import utils as ut
 """ Global vars """
 dbname_index = 'historicalData_index.db'
 
-index_list = ['VIX', 'VIX3M', 'VVIX','SPX', 'VIX1D'] # global reference list of index symbols, this is some janky ass shit .... 
+index_list = config._indexList # global reference list of index symbols, this is some janky ass shit .... 
 
 """ implements contextmanager for db connection """
 class sqlite_connection(object): 
