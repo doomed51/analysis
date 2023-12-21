@@ -1,5 +1,5 @@
-dbname_stock = '/workbench/historicalData/venv/saveHistoricalData/historicalData_index.db'
-#dbname_stock = 'historicalData_index.db'
+dbname_stock = '/workbench/historicalData/venv/saveHistoricalData/data/historicalData_index.db'
+dbname_termstructure = '/workbench/historicalData/venv/saveHistoricalData/data/termstructure.db'
 
 #dbname_analysisOptimizations = '/workbench/historicalData/venv/analysisOptimizations.db'
 dbname_analysisOptimizations = 'analysisOptimizations.db'
