@@ -315,6 +315,9 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdli
     ######
     # get aggregate by timestamp for 5min interval
     aggregate_timestamp_5mins = ut.aggregate_by_timestamp(logReturn_5mins, 'logReturn')
+    # add cumsum  on mean column
+    aggregate_timestamp_5mins['cumsum'] = aggregate_timestamp_5mins['mean'].cumsum()
+
     # set axes
     ax7 = axes[1,0]
     ax8 = ax7.twinx()
@@ -322,6 +325,8 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdli
     # plot the mean and sd
     sns.barplot(x=aggregate_timestamp_5mins.index, y='std', data=aggregate_timestamp_5mins, ax=ax7, color='grey', alpha=0.5)
     sns.barplot(x=aggregate_timestamp_5mins.index, y='mean', data=aggregate_timestamp_5mins, ax=ax8, color='red', alpha=1)
+    # add cumsum lineplot with dotted grey line 
+    sns.lineplot(x=aggregate_timestamp_5mins.index, y='cumsum', data=aggregate_timestamp_5mins, ax=ax8, color='grey', alpha=0.5, linestyle='--')
     axes[1,0].set_title('Intra-Day Seasonality') # set title for subplot
     axes[1,0].set_xlabel('Time of Day')
     # set xtick labels to 'timestamp' column of aggregate_timestamp_5mins
@@ -340,6 +345,8 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdli
     # aggregate restricted hours only 
     logReturn_5mins_restricted = logReturn_5mins[(logReturn_5mins['date'].dt.time >= dt.time(9, 30)) & (logReturn_5mins['date'].dt.time <= dt.time(15, 55))]
     aggregate_logReturn_5mins_restricted = ut.aggregate_by_timestamp(logReturn_5mins_restricted, 'logReturn')
+    # recalculate cumsum
+    aggregate_logReturn_5mins_restricted['cumsum'] = aggregate_logReturn_5mins_restricted['mean'].cumsum()
     
     # set axes
     ax9 = axes[1,1]
@@ -348,6 +355,8 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdli
     # plot the mean and sd
     sns.barplot(x=aggregate_logReturn_5mins_restricted.index, y='std', data=aggregate_logReturn_5mins_restricted, ax=ax9, color='grey', alpha=0.5)
     sns.barplot(x=aggregate_logReturn_5mins_restricted.index, y='mean', data=aggregate_logReturn_5mins_restricted, ax=ax10, color='red', alpha=1)
+    # add cumsum lineplot with dotted grey line
+    sns.lineplot(x=aggregate_logReturn_5mins_restricted.index, y='cumsum', data=aggregate_logReturn_5mins_restricted, ax=ax10, color='grey', alpha=0.5, linestyle='--')
     axes[1,1].set_title('Intra-Day Seasonality (Restricted Hours)') # set title for subplot
     axes[1,1].set_xlabel('Time of Day')
     # set xtick labels to 'timestamp' column of aggregate_timestamp_5mins
@@ -385,13 +394,9 @@ def getSeasonalAggregate(pxHistory, interval, symbol, numdays=0):
     
     # aggregate by time and compute mean and std dev of %change
     if interval in ['1min', '5mins', '15mins', '30mins', '1hour']:
-        
         pxHistory_aggregated = pxHistory.groupby(pxHistory['date'].dt.time).agg({'pctChange':['mean', 'std']})
-        
-        # drop the row where the time component of the date column = 9:30:00
-        #pxHistory_aggregated = pxHistory_aggregated.drop(pd.to_datetime('9:30:00').time())
-        #print(pxHistory_aggregated)
-        #exit()
+        # add cumsum that resets at the start of each day
+        pxHistory_aggregated['cumsum'] = pxHistory.groupby(pxHistory['date'].dt.time)['pctChange'].cumsum()
 
     elif interval in ['1day', '1week', '1month']:
         pxHistory_aggregated = pxHistory.groupby(pxHistory['date'].dt.day).agg({'pctChange':['mean', 'std']})
