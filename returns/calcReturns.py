@@ -48,3 +48,16 @@ def calcReturnBetweenDates(history, start, end, direction, cash=10000):
     quantity = calcShares(cash, start_price)
 
     return return_ * quantity
+
+"""
+    calculates sharpe ratio for a given returns dataframe
+    Params:
+    @returns: [pd.DataFrame] dataframe with log returns
+    @underlying_df: [pd.DataFrame] dataframe with underlying ohlc data
+    @rfrate: [float] risk free rate
+    @periods: [int] number of periods per year
+"""
+def calcSharpeRatio(returns, underlying_df, rfrate=0.0487, periods=12):
+    # return sharpe ratio
+    sharpe = (returns['logReturn'].mean() - rfrate) / underlying_df['logReturn'].std()
+    return sharpe
