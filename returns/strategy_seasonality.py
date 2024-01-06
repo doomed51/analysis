@@ -195,15 +195,6 @@ def plotResults(returns = [], benchmark='SPY'):#, returns2=pd.DataFrame(), retur
 
     return fig
 
-"""    ## create proxy artists for legend
-    baseline = plt.Line2D((0,1),(0,0), color='black', linestyle='-')
-    julyToNov = plt.Line2D((0,1),(0,0), color='blue', linestyle='-')
-    janToMarch = plt.Line2D((0,1),(0,0), color='green', linestyle='-')
-    combined = plt.Line2D((0,1),(0,0), color='orange', linestyle='-')
-
-    # add legend with red = 'june to nov', orange='jan to march'
-    ax.legend([baseline, julyToNov, combined, janToMarch], ['history', 'july to nov', 'combined', 'jan to march'])"""
-
 """ 
     plot the return distribution of the strategy along with mean and sd 
 """
