@@ -13,11 +13,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+import config
 import seasonality
 import momentum
 
 ### CONFIGS ### 
-db_stock = '/workbench/historicalData/venv/saveHistoricalData/historicalData_index.db'
+db_stock = config.dbname_stock
+db_termstructure = config.dbname_termstructure
 
 #####################################################
 ################# PLOT FUNCTIONS ####################
@@ -92,48 +94,25 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     fig, ax = plt.subplots(2, 2, figsize=(15, 10))
     # set title
     fig.suptitle('VIX Term Structure')
-
+    vix_ts_pctContango['fourToSevenMoContango'] = vix_ts_pctContango['fourToSevenMoContango']*100
     ###############################
     # plot fourtosevenMoContango, avgContanto, and percentile rank of vvix
     sns.lineplot(x='date', y='fourToSevenMoContango', data=vix_ts_pctContango, ax=ax[0,0], color='blue', label='4-7 Mo Contango')
+    ax2=ax[0,0].twinx()
     ## replace close with percentileRank for vvix 
-    sns.lineplot(x=vvix['date'], y='close', data=vvix, ax=ax[0,0].twinx(), drawstyle='steps-pre', color='red', alpha=0.3, label='VVIX')
-
-    # add legend
-    #ax[0,0].legend(['4-7 Mo Contango'], loc='upper left')
-
-    # plot avgcontango on the same axis as fourtosevenMoContango
-    #sns.lineplot(x='date', y='averageContango', data=vix_ts_pctContango_last30, ax=ax[0])
+    sns.lineplot(x=vvix['date'], y='close', data=vvix, ax=ax2, drawstyle='steps-pre', color='red', alpha=0.3, label='VVIX')
 
     ###############################
     # Format plot
     ax[0,0].axhline(y=0, color='black', linestyle='-')
-
-    ax[0,0].axhline(y=0.06, color='blue', linestyle='--', alpha=0.5)
-    ax[0,0].set_title('4th to 7th Month Contango') 
+    ax[0,0].axhline(y=6, color='blue', linestyle='--', alpha=0.5)
+    ax[0,0].set_title('4-7 Month Contango') 
     # set opacity of avgcontango to 0.5
     ax[0,0].lines[1].set_alpha(0.5)
-        
-    # get 3 period momentum 
-    vix_momo3 = momentum.calcMomoFactor(vix_5min.tail(160), lag=3)
-    vix_momo5 = momentum.calcMomoFactor(vix_5min.tail(160), lag=5)
+    ax[0,0].legend()   
+    ax2.legend(loc='upper right')
 
-    vvix_momo3 = momentum.calcMomoFactor(vvix_5min.tail(160), lag=3)
-
-    # lineplot of vix_momo3['momo'] and close
-    sns.lineplot(x=vix_momo3['date'], y=vix_momo3['momo'], ax=ax[0,1], color='blue', label='VIX_momo3')
-    sns.lineplot(x=vix_momo3['date'], y=vix_momo5['momo'], ax=ax[0,1].twinx(), color='green', alpha=0.3, label='VIX_momo 5')
-    sns.lineplot(x=vix_momo3['date'], y=vix_momo3['close'], ax=ax[0,1].twinx(), color='grey', alpha=0.3, label='VIX_close')
-    # set title
-    ax[0,1].set_title('VIX 3d Momo')
-
-    # lineplot of vvix_momo3['momo'] and close
-    sns.lineplot(x=vvix_momo3['date'], y=vvix_momo3['momo'], ax=ax[1,0], color='red', label='VVIX_momo3')
-    sns.lineplot(x=vvix_momo3['date'], y=vvix_momo3['close'], ax=ax[1,0].twinx(), color='grey', alpha=0.3, label='VVIX_close')
-    # set title
-    ax[1,0].set_title('VVIX 3d Momo')
-
-
+    # plot distribution of 4-7 month contango
     return fig
 
 """
@@ -462,7 +441,9 @@ vvix_percentileLookbackDays = 252 ## 1 year lookback = 252 *trading* days
 #####################################
 ## prepare vix term structure data 
 #####################################
-vix_ts_pctContango = vixts.getVixTermStructurePctContango(fourToSeven=True, currentToLast=True, averageContango=True)
+with db.sqlite_connection(db_termstructure) as conn:
+    vix_ts_raw = vixts.getRawTermStructure(termstructure_db_conn=conn)
+vix_ts_pctContango = vixts.getVixTermStructurePctContango(vix_ts_raw, fourToSeven=True, currentToLast=True, averageContango=True)
 
 
 ## prepare price history data
@@ -527,23 +508,23 @@ sns.set()
 sns.set_style('darkgrid')
 
 # get spx price history
-#spx_filtered = _filterDates(spx, vix_ts_pctContango)
+spx_filtered = _filterDates(spx, vix_ts_pctContango)
 
 #plotVixRelationships(vix_ts_pctContango, vix, vvix)
 #plotVixTermStructureSeasonality(vix_ts_pctContango)
 
 # initialize plot window for tabbed plots
 tpw = pltWindow.plotWindow()
-tpw.MainWindow.showMaximized()
+tpw.MainWindow.resize(2560, 1380)
 
 ########## General Overview: 
 ########## 
 
-#tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, spx_filtered))
+tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, spx_filtered))
 #tpw.addPlot('seasonality - vix', seasonality.logReturns_overview_of_seasonality('VIX'))
 #tpw.addPlot('seasonality - vvix', seasonality.logReturns_overview_of_seasonality('VVIX'))
-#tpw.addPlot('VVIX & VIX Autocorrelation', plotAutocorrelation(vvix, vix))
-#tpw.addPlot('VIX vs. SPX', plotVixVsSpx(vix, spx_filtered))
+tpw.addPlot('VVIX & VIX Autocorrelation', plotAutocorrelation(vvix, vix))
+tpw.addPlot('VIX vs. SPX', plotVixVsSpx(vix, spx_filtered))
 #tpw.addPlot('Momentum - VVIX', volMomo.plotMomoScatter(vvix))
 #tpw.addPlot('Momentum - VIX', volMomo.plotMomoScatter(vix))
 
@@ -580,18 +561,18 @@ for period in forwardReturnPeriods:
 
 ## plot fwd return distributions
 #tpw.addPlot('UVXY: Forward Returns Distribution', plotForwardReturnsDistribution(uvxy, forwardReturnPeriods))
-tpw.addPlot('UVXY: returns dist | <0.5p-252d', plotForwardReturnsDistribution(uvxy[uvxy['percentileRank'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
+#tpw.addPlot('UVXY: returns dist | <0.5p-252d', plotForwardReturnsDistribution(uvxy[uvxy['percentileRank'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
 #tpw.addPlot('UVXY: returns dist | <0.5p-90d', plotForwardReturnsDistribution(uvxy[uvxy['percentileRank_90d'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
 #tpw.addPlot('UVXY: returns dist | <0.5p-60d', plotForwardReturnsDistribution(uvxy[uvxy['percentileRank_60d'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
 
 # plot cumulative distribution of fwd returns
-tpw.addPlot('UVXY: returns dist | <0.5p-60d', plotForwardReturnCumulativeDistribution(uvxy[uvxy['percentileRank'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
+#tpw.addPlot('UVXY: returns dist | <0.5p-60d', plotForwardReturnCumulativeDistribution(uvxy[uvxy['percentileRank'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
 
 
 # plot scatters
-tpw.addPlot('UVXY: scatter | <0.5p-252d', plotScatter(uvxy[uvxy['percentileRank'] < 0.5].reset_index(drop=True), 'percentileRank', forwardReturnPeriods))
-tpw.addPlot('UVXY: scatter | <0.5p-90d', plotScatter(uvxy[uvxy['percentileRank_90d'] < 0.5].reset_index(drop=True), 'percentileRank_90d', forwardReturnPeriods))
-tpw.addPlot('UVXY: scatter | <0.5p-60d', plotScatter(uvxy[uvxy['percentileRank_60d'] < 0.5].reset_index(drop=True), 'percentileRank_60d', forwardReturnPeriods))
+#tpw.addPlot('UVXY: scatter | <0.5p-252d', plotScatter(uvxy[uvxy['percentileRank'] < 0.5].reset_index(drop=True), 'percentileRank', forwardReturnPeriods))
+#tpw.addPlot('UVXY: scatter | <0.5p-90d', plotScatter(uvxy[uvxy['percentileRank_90d'] < 0.5].reset_index(drop=True), 'percentileRank_90d', forwardReturnPeriods))
+#tpw.addPlot('UVXY: scatter | <0.5p-60d', plotScatter(uvxy[uvxy['percentileRank_60d'] < 0.5].reset_index(drop=True), 'percentileRank_60d', forwardReturnPeriods))
 
 
 ## analyyze seasonality of log returns...
