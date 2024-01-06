@@ -113,6 +113,15 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     ax2.legend(loc='upper right')
 
     # plot distribution of 4-7 month contango
+    sns.histplot(x=vix_ts_pctContango['fourToSevenMoContango'], ax=ax[0,1], bins=100, kde=True)
+    # add black hline at 0
+    ax[0,1].axvline(x=0, color='black', linestyle='-')
+    ax[0,1].set_title('4-7 Month Contango Distribution')
+    ax[0,1].set_xlabel('4-7 Month Contango (%)')
+    ax[0,1].set_ylabel('Frequency')
+
+    # plot 1-2 month contango 
+
     return fig
 
 """
