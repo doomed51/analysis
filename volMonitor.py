@@ -95,7 +95,8 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     # set title
     fig.suptitle('VIX Term Structure')
     vix_ts_pctContango['fourToSevenMoContango'] = vix_ts_pctContango['fourToSevenMoContango']*100
-    
+    contangoPercentile90 = vix_ts_pctContango['fourToSevenMoContango'].quantile(0.9)
+    contangoPercentile10 = vix_ts_pctContango['fourToSevenMoContango'].quantile(0.1)
     ###############################
     # plot fourtosevenMoContango and vvix
     ax2=ax[0,0].twinx()
@@ -105,12 +106,14 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     # Format plot
     ax[0,0].set_title('4-7 Month Contango & VVIX') 
     ax[0,0].axhline(y=0, color='black', linestyle='-')
-    ax[0,0].axhline(y=6, color='blue', linestyle='--', alpha=0.5)
+    ax[0,0].axhline(y=contangoPercentile90, color='grey', linestyle='--', alpha=0.5)
+    ax[0,0].axhline(y=contangoPercentile10, color='grey', linestyle='--', alpha=0.5)
     ax[0,0].lines[1].set_alpha(0.5)
 
     ###############################
     # plot distribution of 4-7 month contango
     sns.histplot(x=vix_ts_pctContango['fourToSevenMoContango'], ax=ax[0,1], bins=100, kde=True)
+    
     # format plot
     ax[0,1].set_title('4-7 Month Contango Distribution')
     ax[0,1].set_xlabel('4-7 Month Contango (%)')
@@ -119,7 +122,22 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     ax[0,0].legend(loc='upper left')   
     ax2.legend(loc='upper right')
     ax2.grid(False)
+    
+    # add percentile vlines to the historgram 
+    ax[0,1].axvline(x=vix_ts_pctContango['fourToSevenMoContango'].quantile(0.05), color='grey', linestyle='-', alpha=0.9)
+    ax[0,1].axvline(x=vix_ts_pctContango['fourToSevenMoContango'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
+    # add value of percentile as overlay text
+    ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.05), 0, '%.2f'%(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.05)), color='black', fontsize=10)
+    ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.1), 0, '%.2f'%(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.1)), color='black', fontsize=10)
 
+    ax[0,1].axvline(x=vix_ts_pctContango['fourToSevenMoContango'].quantile(0.95), color='grey', linestyle='-', alpha=0.9)
+    ax[0,1].axvline(x=vix_ts_pctContango['fourToSevenMoContango'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
+    # add value of percentile as overlay text
+    ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.95), 0, '%.2f'%(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.95)), color='black', fontsize=10)
+    ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.9), 0, '%.2f'%(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.9)), color='black', fontsize=10)
+
+
+    ###############################        
     # plot contango and vix
     ax2=ax[1,0].twinx()
     sns.lineplot(x='date', y='fourToSevenMoContango', data=vix_ts_pctContango, ax=ax[1,0], color='blue', label='4-7 Mo Contango')
@@ -127,11 +145,13 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     
     # format plot 
     ax[1,0].set_title('4-7 Mo Contango & VIX')
-    ax2.axhline(y=0, color='black', linestyle='-')
-    ax2.axhline(y=6, color='blue', linestyle='--', alpha=0.5)
+    ax[1,0].axhline(y=0, color='black', linestyle='-')
+    ax[1,0].axhline(y=contangoPercentile90, color='grey', linestyle='--', alpha=0.5)
+    ax[1,0].axhline(y=contangoPercentile10, color='grey', linestyle='--', alpha=0.5)
     ax[1,0].legend(loc='upper left')   
     ax2.legend(loc='upper right')
     ax2.grid(False)
+
 
     # plot 1-2 month contango 
 
