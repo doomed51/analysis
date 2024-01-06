@@ -16,11 +16,11 @@ import pandas as pd
         conn: database connection object
         symbol: str of the symbol to get term structure for
         lookback: number of records to lookback, default is 100
-        numMonths: number of future contract months to look forward, default 12
+        numMonths: number of future contract months to look forward, default 8
     Outputs:
         termStructure: pandas dataframe of term structure with columns (date, currentmonth_close, currentmonth+1_close, currentmonth+2_close, ...)
 """
-def getRawTermstructure(conn, symbol, lookback=100, numMonths=12):
+def getRawTermstructure(conn, symbol, lookback=100, numMonths=8):
     # expiryString: current date in format YYYYMM + 1 month 
     expiryString = (pd.to_datetime('today') + pd.DateOffset(months=1)).strftime('%Y%m')
 
