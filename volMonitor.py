@@ -89,36 +89,49 @@ view for day to day monitoring of VIX term structure changes. The following are 
     - VIX close pct change vs. vvix percentile rank scatter
 """
 def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
-
+    sns.set_style('darkgrid')
     # using seaborn, create figure with 2 subplots
     fig, ax = plt.subplots(2, 2, figsize=(15, 10))
     # set title
     fig.suptitle('VIX Term Structure')
     vix_ts_pctContango['fourToSevenMoContango'] = vix_ts_pctContango['fourToSevenMoContango']*100
+    
     ###############################
-    # plot fourtosevenMoContango, avgContanto, and percentile rank of vvix
-    sns.lineplot(x='date', y='fourToSevenMoContango', data=vix_ts_pctContango, ax=ax[0,0], color='blue', label='4-7 Mo Contango')
+    # plot fourtosevenMoContango and vvix
     ax2=ax[0,0].twinx()
-    ## replace close with percentileRank for vvix 
-    sns.lineplot(x=vvix['date'], y='close', data=vvix, ax=ax2, drawstyle='steps-pre', color='red', alpha=0.3, label='VVIX')
+    sns.lineplot(x='date', y='fourToSevenMoContango', data=vix_ts_pctContango, ax=ax[0,0], color='blue', label='4-7 Mo Contango')
+    sns.lineplot(x=vvix['date'], y='close', data=vvix, ax=ax2, color='red', alpha=0.3, label='VVIX')
 
-    ###############################
     # Format plot
+    ax[0,0].set_title('4-7 Month Contango & VVIX') 
     ax[0,0].axhline(y=0, color='black', linestyle='-')
     ax[0,0].axhline(y=6, color='blue', linestyle='--', alpha=0.5)
-    ax[0,0].set_title('4-7 Month Contango') 
-    # set opacity of avgcontango to 0.5
     ax[0,0].lines[1].set_alpha(0.5)
-    ax[0,0].legend()   
-    ax2.legend(loc='upper right')
 
+    ###############################
     # plot distribution of 4-7 month contango
     sns.histplot(x=vix_ts_pctContango['fourToSevenMoContango'], ax=ax[0,1], bins=100, kde=True)
-    # add black hline at 0
-    ax[0,1].axvline(x=0, color='black', linestyle='-')
+    # format plot
     ax[0,1].set_title('4-7 Month Contango Distribution')
     ax[0,1].set_xlabel('4-7 Month Contango (%)')
     ax[0,1].set_ylabel('Frequency')
+    ax[0,1].axvline(x=0, color='black', linestyle='-')
+    ax[0,0].legend(loc='upper left')   
+    ax2.legend(loc='upper right')
+    ax2.grid(False)
+
+    # plot contango and vix
+    ax2=ax[1,0].twinx()
+    sns.lineplot(x='date', y='fourToSevenMoContango', data=vix_ts_pctContango, ax=ax[1,0], color='blue', label='4-7 Mo Contango')
+    sns.lineplot(x='date', y='close', data=vix, ax=ax2, color='red', alpha=0.3, label='VIX')
+    
+    # format plot 
+    ax[1,0].set_title('4-7 Mo Contango & VIX')
+    ax2.axhline(y=0, color='black', linestyle='-')
+    ax2.axhline(y=6, color='blue', linestyle='--', alpha=0.5)
+    ax[1,0].legend(loc='upper left')   
+    ax2.legend(loc='upper right')
+    ax2.grid(False)
 
     # plot 1-2 month contango 
 
@@ -529,7 +542,7 @@ tpw.MainWindow.resize(2560, 1380)
 ########## General Overview: 
 ########## 
 
-tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, spx_filtered))
+tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix))
 #tpw.addPlot('seasonality - vix', seasonality.logReturns_overview_of_seasonality('VIX'))
 #tpw.addPlot('seasonality - vvix', seasonality.logReturns_overview_of_seasonality('VVIX'))
 tpw.addPlot('VVIX & VIX Autocorrelation', plotAutocorrelation(vvix, vix))
