@@ -16,6 +16,7 @@ import seaborn as sns
 import config
 import seasonality
 import momentum
+import math
 
 ### CONFIGS ### 
 db_stock = config.dbname_stock
@@ -130,12 +131,16 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.05), 0, '%.2f'%(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.05)), color='black', fontsize=10)
     ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.1), 0, '%.2f'%(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.1)), color='black', fontsize=10)
 
+    # add top percentile vlines to histogram 
     ax[0,1].axvline(x=vix_ts_pctContango['fourToSevenMoContango'].quantile(0.95), color='grey', linestyle='-', alpha=0.9)
     ax[0,1].axvline(x=vix_ts_pctContango['fourToSevenMoContango'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
     # add value of percentile as overlay text
     ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.95), 0, '%.2f'%(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.95)), color='black', fontsize=10)
     ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.9), 0, '%.2f'%(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.9)), color='black', fontsize=10)
 
+    # add lastest value of 4-7 month contango vline
+    ax[0,1].axvline(x=vix_ts_pctContango['fourToSevenMoContango'].iloc[-1], color='red', linestyle='-', alpha=0.9)
+    ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].iloc[-1], 0, 'Today: %.2f'%(vix_ts_pctContango['fourToSevenMoContango'].iloc[-1]), color='red', fontsize=10)
 
     ###############################        
     # plot contango and vix
@@ -151,10 +156,46 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     ax[1,0].legend(loc='upper left')   
     ax2.legend(loc='upper right')
     ax2.grid(False)
+    
+    # plot contango vs lagged logreturn 
+    vix['lagged'] = vix['logReturn'].shift(-1)
+    vix['laggedReturn20'] = vix['logReturn'].shift(-20)
+    sns.scatterplot(x=vix_ts_pctContango['fourToSevenMoContango'], y=vix['logReturn'].shift(-1), ax=ax[1,1])
+    sns.regplot(x=vix_ts_pctContango['fourToSevenMoContango'], y=vix['logReturn'].shift(-1), ax=ax[1,1], line_kws={'color': 'red'})
+    ax[1,1].set_title('4-7 Mo Contango vs. VIX logReturn')
+    ax[1,1].axhline(y=0, color='black', linestyle='-')
+    ax[1,1].axvline(x=0, color='black', linestyle='-')
 
+    return fig
 
-    # plot 1-2 month contango 
+"""
+    Returns figure with plots for contango vs. lagged return
+    @ts_pctContango: [pd.DataFrame] vix term structure data
+    @pxHistory: [pd.DataFrame] vix price history
+    @lagPeriods: [[int]] number of periods to lag the return by
+"""
+def plotContangoVsLaggedReturn(ts_pctContango, pxHistory, lagPeriods=[1,2,3,4,5,6,10,20]):
+    # set numrows and numcols for the plot
+    numrows = 2
+    numcols = math.ceil((len(lagPeriods)//numrows))
 
+    # create figure and axes
+    fig, ax = plt.subplots(numrows, numcols)
+
+    # calculate pctChange for each logPeriods 
+    for i in range(len(lagPeriods)):
+        pxHistory['laggedReturn%s'%(lagPeriods[i])] = pxHistory['logReturn'].shift(-lagPeriods[i])
+    
+    # plot contango vs. lagged return for each lagPeriod
+    for i in range(len(lagPeriods)):
+        rowNum = int(i/numcols)
+        colNum = i%numcols
+        sns.scatterplot(x=ts_pctContango['fourToSevenMoContango'], y=pxHistory['laggedReturn%s'%(lagPeriods[i])], ax=ax[rowNum,colNum])
+        sns.regplot(x=ts_pctContango['fourToSevenMoContango'], y=pxHistory['laggedReturn%s'%(lagPeriods[i])], ax=ax[rowNum,colNum], line_kws={'color': 'red'})
+        ax[rowNum,colNum].set_title('4-7 Mo Contango vs. VIX fwd return %s'%(lagPeriods[i]))
+        ax[rowNum,colNum].axhline(y=0, color='black', linestyle='-')
+        ax[rowNum,colNum].axvline(x=0, color='black', linestyle='-')
+    
     return fig
 
 """
@@ -563,6 +604,7 @@ tpw.MainWindow.resize(2560, 1380)
 ########## 
 
 tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix))
+tpw.addPlot('contango vs. fwdReturn', plotContangoVsLaggedReturn(vix_ts_pctContango, vix))
 #tpw.addPlot('seasonality - vix', seasonality.logReturns_overview_of_seasonality('VIX'))
 #tpw.addPlot('seasonality - vvix', seasonality.logReturns_overview_of_seasonality('VVIX'))
 tpw.addPlot('VVIX & VIX Autocorrelation', plotAutocorrelation(vvix, vix))
