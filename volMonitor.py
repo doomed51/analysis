@@ -284,10 +284,6 @@ def plotTermstructureSpread(ts_data, pxHistory_underlying, colName1:str, colName
     ax.axhline(y=ts_data['spread'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
     ax.axhline(y=ts_data['spread'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
 
-    # add lines of rolling 60 day 90th and 10th percentile of spread 
-    #sns.lineplot(x='date', y='spread', data=ts_data.rolling(60).quantile(0.9), ax=ax, color='pink', linestyle='-', alpha=0.5)
-    #sns.lineplot(x='date', y='spread', data=ts_data.rolling(60).quantile(0.1), ax=ax, color='pink', linestyle='-', alpha=0.5) 
-
     return fig
 
 
