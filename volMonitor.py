@@ -89,23 +89,25 @@ view for day to day monitoring of VIX term structure changes. The following are 
     - VIX: close 
     - VIX close pct change vs. vvix percentile rank scatter
 """
-def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
+def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix, contangoColName = 'fourToSevenMoContango'):
     sns.set_style('darkgrid')
     # using seaborn, create figure with 2 subplots
     fig, ax = plt.subplots(2, 2, figsize=(15, 10))
     # set title
     fig.suptitle('VIX Term Structure')
-    vix_ts_pctContango['fourToSevenMoContango'] = vix_ts_pctContango['fourToSevenMoContango']*100
-    contangoPercentile90 = vix_ts_pctContango['fourToSevenMoContango'].quantile(0.9)
-    contangoPercentile10 = vix_ts_pctContango['fourToSevenMoContango'].quantile(0.1)
+    vix_ts_pctContango[contangoColName] = vix_ts_pctContango[contangoColName]*100
+    contangoPercentile90 = vix_ts_pctContango[contangoColName].quantile(0.9)
+    contangoPercentile10 = vix_ts_pctContango[contangoColName].quantile(0.1)
     ###############################
     # plot fourtosevenMoContango and vvix
     ax2=ax[0,0].twinx()
-    sns.lineplot(x='date', y='fourToSevenMoContango', data=vix_ts_pctContango, ax=ax[0,0], color='blue', label='4-7 Mo Contango')
+    sns.lineplot(x='date', y=contangoColName, data=vix_ts_pctContango, ax=ax[0,0], color='blue', label=contangoColName)
+    sns.lineplot(x='date', y='fourToSevenMoContango', data=vix_ts_pctContango, ax=ax[0,0], color='green', label='fourToSevenMoContango')
     sns.lineplot(x=vvix['date'], y='close', data=vvix, ax=ax2, color='red', alpha=0.3, label='VVIX')
 
     # Format plot
-    ax[0,0].set_title('4-7 Month Contango & VVIX') 
+    ax2.set_yscale('log')
+    ax[0,0].set_title('%s & VVIX'%(contangoColName)) 
     ax[0,0].axhline(y=0, color='black', linestyle='-')
     ax[0,0].axhline(y=contangoPercentile90, color='grey', linestyle='--', alpha=0.5)
     ax[0,0].axhline(y=contangoPercentile10, color='grey', linestyle='--', alpha=0.5)
@@ -113,11 +115,11 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
 
     ###############################
     # plot distribution of 4-7 month contango
-    sns.histplot(x=vix_ts_pctContango['fourToSevenMoContango'], ax=ax[0,1], bins=100, kde=True)
+    sns.histplot(x=vix_ts_pctContango[contangoColName], ax=ax[0,1], bins=100, kde=True)
     
     # format plot
-    ax[0,1].set_title('4-7 Month Contango Distribution')
-    ax[0,1].set_xlabel('4-7 Month Contango (%)')
+    ax[0,1].set_title('%s Distribution'%(contangoColName))
+    #ax[0,1].set_xlabel('%s (%)'%(contangoColName))
     ax[0,1].set_ylabel('Frequency')
     ax[0,1].axvline(x=0, color='black', linestyle='-')
     ax[0,0].legend(loc='upper left')   
@@ -125,31 +127,31 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     ax2.grid(False)
     
     # add percentile vlines to the historgram 
-    ax[0,1].axvline(x=vix_ts_pctContango['fourToSevenMoContango'].quantile(0.05), color='grey', linestyle='-', alpha=0.9)
-    ax[0,1].axvline(x=vix_ts_pctContango['fourToSevenMoContango'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
+    ax[0,1].axvline(x=vix_ts_pctContango[contangoColName].quantile(0.05), color='grey', linestyle='-', alpha=0.9)
+    ax[0,1].axvline(x=vix_ts_pctContango[contangoColName].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
     # add value of percentile as overlay text
-    ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.05), 0, '%.2f'%(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.05)), color='black', fontsize=10)
-    ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.1), 0, '%.2f'%(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.1)), color='black', fontsize=10)
+    ax[0,1].text(vix_ts_pctContango[contangoColName].quantile(0.05), 0, '%.2f'%(vix_ts_pctContango[contangoColName].quantile(0.05)), color='black', fontsize=10)
+    ax[0,1].text(vix_ts_pctContango[contangoColName].quantile(0.1), 0, '%.2f'%(vix_ts_pctContango[contangoColName].quantile(0.1)), color='black', fontsize=10)
 
     # add top percentile vlines to histogram 
-    ax[0,1].axvline(x=vix_ts_pctContango['fourToSevenMoContango'].quantile(0.95), color='grey', linestyle='-', alpha=0.9)
-    ax[0,1].axvline(x=vix_ts_pctContango['fourToSevenMoContango'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
+    ax[0,1].axvline(x=vix_ts_pctContango[contangoColName].quantile(0.95), color='grey', linestyle='-', alpha=0.9)
+    ax[0,1].axvline(x=vix_ts_pctContango[contangoColName].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
     # add value of percentile as overlay text
-    ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.95), 0, '%.2f'%(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.95)), color='black', fontsize=10)
-    ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.9), 0, '%.2f'%(vix_ts_pctContango['fourToSevenMoContango'].quantile(0.9)), color='black', fontsize=10)
+    ax[0,1].text(vix_ts_pctContango[contangoColName].quantile(0.95), 0, '%.2f'%(vix_ts_pctContango[contangoColName].quantile(0.95)), color='black', fontsize=10)
+    ax[0,1].text(vix_ts_pctContango[contangoColName].quantile(0.9), 0, '%.2f'%(vix_ts_pctContango[contangoColName].quantile(0.9)), color='black', fontsize=10)
 
     # add lastest value of 4-7 month contango vline
-    ax[0,1].axvline(x=vix_ts_pctContango['fourToSevenMoContango'].iloc[-1], color='red', linestyle='-', alpha=0.9)
-    ax[0,1].text(vix_ts_pctContango['fourToSevenMoContango'].iloc[-1], 0, 'Today: %.2f'%(vix_ts_pctContango['fourToSevenMoContango'].iloc[-1]), color='red', fontsize=10)
+    ax[0,1].axvline(x=vix_ts_pctContango[contangoColName].iloc[-1], color='red', linestyle='-', alpha=0.9)
+    ax[0,1].text(vix_ts_pctContango[contangoColName].iloc[-1], 0, 'Today: %.2f'%(vix_ts_pctContango[contangoColName].iloc[-1]), color='red', fontsize=10)
 
     ###############################        
     # plot contango and vix
     ax2=ax[1,0].twinx()
-    sns.lineplot(x='date', y='fourToSevenMoContango', data=vix_ts_pctContango, ax=ax[1,0], color='blue', label='4-7 Mo Contango')
+    sns.lineplot(x='date', y=contangoColName, data=vix_ts_pctContango, ax=ax[1,0], color='blue', label='4-7 Mo Contango')
     sns.lineplot(x='date', y='close', data=vix, ax=ax2, color='red', alpha=0.3, label='VIX')
     
     # format plot 
-    ax[1,0].set_title('4-7 Mo Contango & VIX')
+    ax[1,0].set_title('%s & VIX'%(contangoColName))
     ax[1,0].axhline(y=0, color='black', linestyle='-')
     ax[1,0].axhline(y=contangoPercentile90, color='grey', linestyle='--', alpha=0.5)
     ax[1,0].axhline(y=contangoPercentile10, color='grey', linestyle='--', alpha=0.5)
@@ -160,9 +162,9 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     # plot contango vs lagged logreturn 
     vix['lagged'] = vix['logReturn'].shift(-1)
     vix['laggedReturn20'] = vix['logReturn'].shift(-20)
-    sns.scatterplot(x=vix_ts_pctContango['fourToSevenMoContango'], y=vix['logReturn'].shift(-1), ax=ax[1,1])
-    sns.regplot(x=vix_ts_pctContango['fourToSevenMoContango'], y=vix['logReturn'].shift(-1), ax=ax[1,1], line_kws={'color': 'red'})
-    ax[1,1].set_title('4-7 Mo Contango vs. VIX logReturn')
+    sns.scatterplot(x=vix_ts_pctContango[contangoColName], y=vix['logReturn'].shift(-1), ax=ax[1,1])
+    sns.regplot(x=vix_ts_pctContango[contangoColName], y=vix['logReturn'].shift(-1), ax=ax[1,1], line_kws={'color': 'red'})
+    ax[1,1].set_title('%s vs. VIX logReturn'%(contangoColName))
     ax[1,1].axhline(y=0, color='black', linestyle='-')
     ax[1,1].axvline(x=0, color='black', linestyle='-')
 
@@ -174,7 +176,8 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix):
     @pxHistory: [pd.DataFrame] vix price history
     @lagPeriods: [[int]] number of periods to lag the return by
 """
-def plotContangoVsLaggedReturn(ts_pctContango, pxHistory, lagPeriods=[1,2,3,4,5,6,10,20]):
+def plotContangoVsLaggedReturn(ts_pctContango, pxHistory, contangoColName = 'fourToSevenMoContango', lagPeriods=[1,2,3,4,5,6,10,20]):
+    pxHistory.reset_index(drop=True, inplace=True)
     # set numrows and numcols for the plot
     numrows = 2
     numcols = math.ceil((len(lagPeriods)//numrows))
@@ -184,15 +187,15 @@ def plotContangoVsLaggedReturn(ts_pctContango, pxHistory, lagPeriods=[1,2,3,4,5,
 
     # calculate pctChange for each logPeriods 
     for i in range(len(lagPeriods)):
-        pxHistory['laggedReturn%s'%(lagPeriods[i])] = pxHistory['logReturn'].shift(-lagPeriods[i])
-    
+        pxHistory.loc[:, 'laggedReturn%s'%(lagPeriods[i])] = pxHistory['logReturn'].shift(-lagPeriods[i])
+
     # plot contango vs. lagged return for each lagPeriod
     for i in range(len(lagPeriods)):
         rowNum = int(i/numcols)
         colNum = i%numcols
-        sns.scatterplot(x=ts_pctContango['fourToSevenMoContango'], y=pxHistory['laggedReturn%s'%(lagPeriods[i])], ax=ax[rowNum,colNum])
-        sns.regplot(x=ts_pctContango['fourToSevenMoContango'], y=pxHistory['laggedReturn%s'%(lagPeriods[i])], ax=ax[rowNum,colNum], line_kws={'color': 'red'})
-        ax[rowNum,colNum].set_title('4-7 Mo Contango vs. VIX fwd return %s'%(lagPeriods[i]))
+        sns.scatterplot(x=ts_pctContango[contangoColName], y=pxHistory['laggedReturn%s'%(lagPeriods[i])], ax=ax[rowNum,colNum])
+        sns.regplot(x=ts_pctContango[contangoColName], y=pxHistory['laggedReturn%s'%(lagPeriods[i])], ax=ax[rowNum,colNum], line_kws={'color': 'red'})
+        ax[rowNum,colNum].set_title('%s vs. %s fwd return %s'%(contangoColName, pxHistory['symbol'][0], lagPeriods[i]))
         ax[rowNum,colNum].axhline(y=0, color='black', linestyle='-')
         ax[rowNum,colNum].axvline(x=0, color='black', linestyle='-')
     
@@ -232,6 +235,54 @@ def plotVixTermStructureSeasonality(vix_ts_pctContango):
     ax[1].set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 
     return fig
+
+
+""" 
+    Plots term structure in one large plot 
+"""
+def plotTermStructure(ts_data, pxHistory_underlying, contangoColName='default'):
+    pxHistory_underlying.reset_index(drop=True, inplace=True)
+    if contangoColName == 'default':
+        # plot lineplots on 1 plot 
+        fig, ax = plt.subplots()
+        sns.lineplot(x='date', y='oneToTwoMoContango', data=ts_data, ax=ax, label='oneToTwoMocontango', color='blue')
+        sns.lineplot(x='date', y='fourToSevenMoContango', data=ts_data, ax=ax, label='fourToSevenMoContango', color='green')
+        #sns.lineplot(x='date', y='currentToLastContango', data=ts_data, ax=ax, label='currentToLastContango', color='red')
+        #sns.lineplot(x='date', y='averageContango', data=ts_data, ax=ax, label='averageContango', color='orange')
+        
+        # format plot 
+        ax.legend(loc='upper left')
+        ax2 = ax.twinx()
+        sns.lineplot(x='date', y='close', data=pxHistory_underlying, ax=ax2, label=pxHistory_underlying['symbol'][0], color='black', alpha=0.3)
+        ax2.set_yscale('log')
+        ax2.grid(False)
+    
+    return fig
+
+"""
+    Plots spread between two ts columns 
+"""
+def plotTermstructureSpread(ts_data, pxHistory_underlying, colName1:str, colName2:str): 
+    pxHistory_underlying.reset_index(drop=True, inplace=True)
+    # add spread column
+    ts_data['spread'] = ts_data[colName2] - ts_data[colName1]
+    # plot lineplots on 1 plot 
+    fig, ax = plt.subplots()
+    sns.lineplot(x='date', y='spread', data=ts_data, ax=ax, label='spread', color='red', alpha=0.7)
+    ax2 = ax.twinx()
+    sns.lineplot(x='date', y=colName1, data=ts_data, ax=ax2, label=colName1, color='blue')
+    sns.lineplot(x='date', y=colName2, data=ts_data, ax=ax2, label=colName2, color='green')
+    #sns.lineplot(x='date', y='currentToLastContango', data=ts_data, ax=ax, label='currentToLastContango', color='red')
+    #sns.lineplot(x='date', y='averageContango', data=ts_data, ax=ax, label='averageContango', color='orange')
+    
+    # format plot 
+    ax.legend(loc='upper left')
+    ax2.legend(loc='upper right')
+    ax2.set_yscale('log')
+    ax2.grid(False)
+    
+    return fig
+
 
 """ 
     plots symvbol autocorrelation 
@@ -526,12 +577,11 @@ vvix_percentileLookbackDays = 252 ## 1 year lookback = 252 *trading* days
 #####################################
 with db.sqlite_connection(db_termstructure) as conn:
     vix_ts_raw = vixts.getRawTermStructure(termstructure_db_conn=conn)
-vix_ts_pctContango = vixts.getVixTermStructurePctContango(vix_ts_raw, fourToSeven=True, currentToLast=True, averageContango=True)
+vix_ts_pctContango = vixts.getVixTermStructurePctContango(vix_ts_raw, oneToTwo=True, fourToSeven=True, currentToLast=True, averageContango=True)
 
 
-## prepare price history data
 ###################################
-############# VIX  ################
+## prepare price history data
 with db.sqlite_connection(db_stock) as conn:
     vix = db.getPriceHistory(conn,'VIX', '1day', withpctChange=True)
     vix_5min = db.getPriceHistory(conn, 'VIX', '5mins', withpctChange=True)
@@ -541,9 +591,6 @@ with db.sqlite_connection(db_stock) as conn:
     spx_5mins = db.getPriceHistory(conn, 'SPX', '5mins', withpctChange=True)
     uvxy_5mins= db.getPriceHistory(conn, 'UVXY', '5mins', withpctChange=True)
     uvxy = db.getPriceHistory(conn, 'UVXY', '1day', withpctChange=True)
-
-###################################
-############# VVIX ################
 
 ## calculate percentile rank of VVIX
 vvix['percentileRank'] = vvix['close'].rolling(vvix_percentileLookbackDays).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
@@ -582,6 +629,16 @@ vvix = vvix[vvix['date'].isin(vix['date']) & vvix['date'].isin(vix_ts_pctContang
 # from vix remove any dates that are not in vvix and vix_ts_pctContango
 vix = vix[vix['date'].isin(vvix['date']) & vix['date'].isin(vix_ts_pctContango['date'])]
 
+# from uvxy_filtered remove any dates not in contango 
+uvxy_filtered = uvxy[uvxy['date'].isin(vix_ts_pctContango['date'])].copy()
+vix_ts_pctContango_filtered = vix_ts_pctContango[vix_ts_pctContango['date'].isin(uvxy_filtered['date'])]
+# remove duplicates 
+uvxy_filtered.drop_duplicates(subset=['date'], inplace=True)
+vix_ts_pctContango.drop_duplicates(subset=['date'], inplace=True)
+#print(uvxy_filtered.count())
+#print(vix_ts_pctContango_filtered.count())
+#exit()
+
 ##################################################
 ############### call plots  
 ##################################################
@@ -604,11 +661,16 @@ tpw.MainWindow.resize(2560, 1380)
 ########## 
 
 tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix))
-tpw.addPlot('contango vs. fwdReturn', plotContangoVsLaggedReturn(vix_ts_pctContango, vix))
+tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, uvxy_filtered, contangoColName='oneToTwoMoContango'))
+tpw.addPlot('term structure', plotTermStructure(vix_ts_pctContango, uvxy_filtered))
+tpw.addPlot('term structure', plotTermStructure(vix_ts_pctContango, uvxy_filtered))
+tpw.addPlot('term structure', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
+#tpw.addPlot('4-7mo vs. fwdReturn', plotContangoVsLaggedReturn(vix_ts_pctContango_filtered, uvxy_filtered))
+#tpw.addPlot('1-2mo vs. fwdReturn', plotContangoVsLaggedReturn(vix_ts_pctContango_filtered, uvxy_filtered, contangoColName='oneToTwoMoContango'))
+
 #tpw.addPlot('seasonality - vix', seasonality.logReturns_overview_of_seasonality('VIX'))
 #tpw.addPlot('seasonality - vvix', seasonality.logReturns_overview_of_seasonality('VVIX'))
 tpw.addPlot('VVIX & VIX Autocorrelation', plotAutocorrelation(vvix, vix))
-tpw.addPlot('VIX vs. SPX', plotVixVsSpx(vix, spx_filtered))
 #tpw.addPlot('Momentum - VVIX', volMomo.plotMomoScatter(vvix))
 #tpw.addPlot('Momentum - VIX', volMomo.plotMomoScatter(vix))
 
