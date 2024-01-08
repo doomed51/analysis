@@ -272,6 +272,7 @@ def plotTermstructureSpread(ts_data, pxHistory_underlying, colName1:str, colName
     sns.lineplot(x='date', y=colName2, data=ts_data, ax=ax, label=colName2, color='green', alpha=0.2)
     ax2 = ax.twinx()
     sns.lineplot(x='date', y='close', data=pxHistory_underlying, ax=ax2, label=pxHistory_underlying['symbol'][0], color='black', alpha=0.3)
+    
     # format plot 
     ax.legend(loc='upper left')
     ax.axhline(y=0, color='black', linestyle='-')
@@ -279,6 +280,14 @@ def plotTermstructureSpread(ts_data, pxHistory_underlying, colName1:str, colName
     ax2.legend(loc='upper right')
     ax2.grid(False)
     
+    # add hlines at 90th and 10th percentile of spread 
+    ax.axhline(y=ts_data['spread'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
+    ax.axhline(y=ts_data['spread'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
+
+    # add lines of rolling 60 day 90th and 10th percentile of spread 
+    #sns.lineplot(x='date', y='spread', data=ts_data.rolling(60).quantile(0.9), ax=ax, color='pink', linestyle='-', alpha=0.5)
+    #sns.lineplot(x='date', y='spread', data=ts_data.rolling(60).quantile(0.1), ax=ax, color='pink', linestyle='-', alpha=0.5) 
+
     return fig
 
 
