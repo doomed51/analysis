@@ -580,6 +580,7 @@ vvix_percentileLookbackDays = 252 ## 1 year lookback = 252 *trading* days
 #####################################
 with db.sqlite_connection(db_termstructure) as conn:
     vix_ts_raw = vixts.getRawTermStructure(termstructure_db_conn=conn)
+    ng_ts_raw = vixts.getRawTermStructure(termstructure_db_conn=conn, symbol='NG')
 vix_ts_pctContango = vixts.getVixTermStructurePctContango(vix_ts_raw, oneToTwo=True, fourToSeven=True, currentToLast=True, averageContango=True)
 
 
@@ -638,9 +639,6 @@ vix_ts_pctContango_filtered = vix_ts_pctContango[vix_ts_pctContango['date'].isin
 # remove duplicates 
 uvxy_filtered.drop_duplicates(subset=['date'], inplace=True)
 vix_ts_pctContango.drop_duplicates(subset=['date'], inplace=True)
-#print(uvxy_filtered.count())
-#print(vix_ts_pctContango_filtered.count())
-#exit()
 
 ##################################################
 ############### call plots  
@@ -653,9 +651,6 @@ sns.set_style('darkgrid')
 # get spx price history
 spx_filtered = _filterDates(spx, vix_ts_pctContango)
 
-#plotVixRelationships(vix_ts_pctContango, vix, vvix)
-#plotVixTermStructureSeasonality(vix_ts_pctContango)
-
 # initialize plot window for tabbed plots
 tpw = pltWindow.plotWindow()
 tpw.MainWindow.resize(2560, 1380)
@@ -666,66 +661,11 @@ tpw.MainWindow.resize(2560, 1380)
 tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, uvxy_filtered, contangoColName='oneToTwoMoContango'))
 tpw.addPlot('term structure', plotTermStructure(vix_ts_pctContango, uvxy_filtered))
 tpw.addPlot('ts 1-2:4-7 spread', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
-#tpw.addPlot('4-7mo vs. fwdReturn', plotContangoVsLaggedReturn(vix_ts_pctContango_filtered, uvxy_filtered))
-#tpw.addPlot('1-2mo vs. fwdReturn', plotContangoVsLaggedReturn(vix_ts_pctContango_filtered, uvxy_filtered, contangoColName='oneToTwoMoContango'))
 
-#tpw.addPlot('seasonality - vix', seasonality.logReturns_overview_of_seasonality('VIX'))
-#tpw.addPlot('seasonality - vvix', seasonality.logReturns_overview_of_seasonality('VVIX'))
 tpw.addPlot('VVIX & VIX Autocorrelation', plotAutocorrelation(vvix, vix))
 #tpw.addPlot('Momentum - VVIX', volMomo.plotMomoScatter(vvix))
 #tpw.addPlot('Momentum - VIX', volMomo.plotMomoScatter(vix))
 
 #tpw.addPlot('Momentum - VIX vs. VVIX', plotMomentumComparison(vvix, vix))
 
-
-########## Analysis: 
-########## uvxy forward returns given vvix percentile
-
-forwardReturnPeriods = [1,2,3,4,5,6,7]
-momoPeriods = [1,2,3,5,10,15] 
-# select only dates in uvxy that are in vvix
-uvxy = uvxy[uvxy['date'].isin(vvix_raw['date'])]
-
-# calcultate fwd returns for each forwardReturnPeriod
-for period in forwardReturnPeriods:
-    uvxy['fwdReturn_%dd'%(period)] = uvxy['close'].pct_change(periods=-period)
-
-# calculate momentum for each period in momoPeriods
-for period in momoPeriods:
-    uvxy['momo_%dd'%(period)] = momentum.calcMomoFactor(uvxy, lag=period)['momo']
-
-# join vvix and uvxy on date 
-uvxy = uvxy.merge(vvix_raw[['date', 'percentileRank', 'percentileRank_90d', 'percentileRank_60d']], on='date', how='left')
-
-# drop first 60 records
-uvxy = uvxy[uvxy.index > 59].reset_index(drop=True)
-
-# drop where forward return > 1.5
-uvxy = uvxy[uvxy['fwdReturn_1d'] < 1.5]
-for period in forwardReturnPeriods:
-    uvxy =uvxy[uvxy['fwdReturn_%dd'%(period)]<1.5]
-
-
-## plot fwd return distributions
-#tpw.addPlot('UVXY: Forward Returns Distribution', plotForwardReturnsDistribution(uvxy, forwardReturnPeriods))
-#tpw.addPlot('UVXY: returns dist | <0.5p-252d', plotForwardReturnsDistribution(uvxy[uvxy['percentileRank'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
-#tpw.addPlot('UVXY: returns dist | <0.5p-90d', plotForwardReturnsDistribution(uvxy[uvxy['percentileRank_90d'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
-#tpw.addPlot('UVXY: returns dist | <0.5p-60d', plotForwardReturnsDistribution(uvxy[uvxy['percentileRank_60d'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
-
-# plot cumulative distribution of fwd returns
-#tpw.addPlot('UVXY: returns dist | <0.5p-60d', plotForwardReturnCumulativeDistribution(uvxy[uvxy['percentileRank'] < 0.5].reset_index(drop=True), forwardReturnPeriods))
-
-
-# plot scatters
-#tpw.addPlot('UVXY: scatter | <0.5p-252d', plotScatter(uvxy[uvxy['percentileRank'] < 0.5].reset_index(drop=True), 'percentileRank', forwardReturnPeriods))
-#tpw.addPlot('UVXY: scatter | <0.5p-90d', plotScatter(uvxy[uvxy['percentileRank_90d'] < 0.5].reset_index(drop=True), 'percentileRank_90d', forwardReturnPeriods))
-#tpw.addPlot('UVXY: scatter | <0.5p-60d', plotScatter(uvxy[uvxy['percentileRank_60d'] < 0.5].reset_index(drop=True), 'percentileRank_60d', forwardReturnPeriods))
-
-
-## analyyze seasonality of log returns...
-# monthly , weekly 
-
-## -----------------------------------------------------
-
-# show window
 tpw.show()
