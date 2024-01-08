@@ -33,20 +33,25 @@ Params:
         if True, adds a column to the dataframe that is the percent difference between the current and longest term future
 
 """
-def getVixTermStructurePctContango(vix_ts_raw, fourToSeven = False, currentToLast = False, averageContango = False):
+def getVixTermStructurePctContango(vix_ts_raw, oneToTwo=False, fourToSeven = False, currentToLast = False, averageContango = False):
     
     # create a new df with the percent change between n and n+1 month futures
     vix_ts_pctContango = vix_ts_raw.pct_change(axis='columns', periods=-1).drop(columns='month8')*-1
     
     if fourToSeven:
         # add contango from the 4th to 7th month
-        vix_ts_raw['fourToSevenMoContango'] = (vix_ts_raw['month7'] - vix_ts_raw['month4'])/vix_ts_raw['month4']
+        vix_ts_raw['fourToSevenMoContango'] = ((vix_ts_raw['month7'] - vix_ts_raw['month4'])/vix_ts_raw['month4'])*100
         vix_ts_pctContango = vix_ts_pctContango.join(vix_ts_raw['fourToSevenMoContango'], on='date')
 
     if currentToLast:
         # add contango between current and longest term future
-        vix_ts_raw['currentToLastContango'] = (vix_ts_raw['month8'] - vix_ts_raw['month1'])/vix_ts_raw['month1']
+        vix_ts_raw['currentToLastContango'] = ((vix_ts_raw['month8'] - vix_ts_raw['month1'])/vix_ts_raw['month1'])*100
         vix_ts_pctContango = vix_ts_pctContango.join(vix_ts_raw['currentToLastContango'], on='date')
+    
+    if oneToTwo:
+        # add contango between m1 and m2
+        vix_ts_raw['oneToTwoMoContango'] = ((vix_ts_raw['month2'] - vix_ts_raw['month1'])/vix_ts_raw['month1'])*100
+        vix_ts_pctContango = vix_ts_pctContango.join(vix_ts_raw['oneToTwoMoContango'], on='date')
     
     if averageContango:
         # add averageContango column 
