@@ -95,13 +95,12 @@ def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix, contangoColName =
     fig, ax = plt.subplots(2, 2, figsize=(15, 10))
     # set title
     fig.suptitle('VIX Term Structure')
-    vix_ts_pctContango[contangoColName] = vix_ts_pctContango[contangoColName]*100
     contangoPercentile90 = vix_ts_pctContango[contangoColName].quantile(0.9)
     contangoPercentile10 = vix_ts_pctContango[contangoColName].quantile(0.1)
     ###############################
     # plot fourtosevenMoContango and vvix
     ax2=ax[0,0].twinx()
-    sns.lineplot(x='date', y=contangoColName, data=vix_ts_pctContango, ax=ax[0,0], color='blue', label=contangoColName)
+    sns.lineplot(x='date', y=contangoColName, data=vix_ts_pctContango, ax=ax[0,0], color='blue', label=contangoColName, alpha=0.5)
     sns.lineplot(x='date', y='fourToSevenMoContango', data=vix_ts_pctContango, ax=ax[0,0], color='green', label='fourToSevenMoContango')
     sns.lineplot(x=vvix['date'], y='close', data=vvix, ax=ax2, color='red', alpha=0.3, label='VVIX')
 
@@ -268,17 +267,16 @@ def plotTermstructureSpread(ts_data, pxHistory_underlying, colName1:str, colName
     ts_data['spread'] = ts_data[colName2] - ts_data[colName1]
     # plot lineplots on 1 plot 
     fig, ax = plt.subplots()
-    sns.lineplot(x='date', y='spread', data=ts_data, ax=ax, label='spread', color='red', alpha=0.7)
+    sns.lineplot(x='date', y='spread', data=ts_data, ax=ax, label='spread', color='black', alpha=0.7)
+    sns.lineplot(x='date', y=colName1, data=ts_data, ax=ax, label=colName1, color='blue', alpha=0.2)
+    sns.lineplot(x='date', y=colName2, data=ts_data, ax=ax, label=colName2, color='green', alpha=0.2)
     ax2 = ax.twinx()
-    sns.lineplot(x='date', y=colName1, data=ts_data, ax=ax2, label=colName1, color='blue')
-    sns.lineplot(x='date', y=colName2, data=ts_data, ax=ax2, label=colName2, color='green')
-    #sns.lineplot(x='date', y='currentToLastContango', data=ts_data, ax=ax, label='currentToLastContango', color='red')
-    #sns.lineplot(x='date', y='averageContango', data=ts_data, ax=ax, label='averageContango', color='orange')
-    
+    sns.lineplot(x='date', y='close', data=pxHistory_underlying, ax=ax2, label=pxHistory_underlying['symbol'][0], color='black', alpha=0.3)
     # format plot 
     ax.legend(loc='upper left')
-    ax2.legend(loc='upper right')
+    ax.axhline(y=0, color='black', linestyle='-')
     ax2.set_yscale('log')
+    ax2.legend(loc='upper right')
     ax2.grid(False)
     
     return fig
@@ -660,11 +658,9 @@ tpw.MainWindow.resize(2560, 1380)
 ########## General Overview: 
 ########## 
 
-tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix))
 tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, uvxy_filtered, contangoColName='oneToTwoMoContango'))
 tpw.addPlot('term structure', plotTermStructure(vix_ts_pctContango, uvxy_filtered))
-tpw.addPlot('term structure', plotTermStructure(vix_ts_pctContango, uvxy_filtered))
-tpw.addPlot('term structure', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
+tpw.addPlot('ts 1-2:4-7 spread', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
 #tpw.addPlot('4-7mo vs. fwdReturn', plotContangoVsLaggedReturn(vix_ts_pctContango_filtered, uvxy_filtered))
 #tpw.addPlot('1-2mo vs. fwdReturn', plotContangoVsLaggedReturn(vix_ts_pctContango_filtered, uvxy_filtered, contangoColName='oneToTwoMoContango'))
 
