@@ -122,7 +122,7 @@ def aggregate_by_timestamp(history, targetCol):
     # add month column
     history['timestamp'] = history['date'].dt.strftime('%H:%M:%S')
 
-    # group by month and get mean and sd of volume
+    # group by timestamp and get mean and sd of volume
     aggregate_by_timestamp = history.groupby('timestamp')[targetCol].agg(['mean', 'std']).reset_index()
 
     return aggregate_by_timestamp
