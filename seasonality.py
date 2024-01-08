@@ -212,7 +212,6 @@ def seasonalAnalysis_overview(symbol, restrictTradingHours=False, target='close'
     axes[1,1].set_title('Yearly Seasonality (Log Returns)') # set title for subplot
     axes[1,1].set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 
-
 ## this function plots a 3 x 3 grid of plots of log returns seasonality for select timeframes  
 def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdlineplot=False):
     # get px history from db
@@ -384,6 +383,76 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdli
     return fig      
 
 """
+    Returns figure with 12 plots of daily logreturns for the last 12 months 
+"""
+def plotLogReturns_12months(symbol):
+    # get px history from db
+    with db.sqlite_connection(dbname_stock) as conn:
+        pxHistory_1day = db.getPriceHistory(conn, symbol, '1day', withpctChange=True)
+        #pxHistory_5mins = db.getPriceHistory(conn, symbol, '30mins', withpctChange=True)
+    
+    logReturn_1day = ut.calcLogReturns(pxHistory_1day, 'close')
+    logReturn_1day['dayOfMonth'] = logReturn_1day['date'].dt.day
+
+    logReturn_1day['monthyear'] = logReturn_1day['date'].dt.strftime('%Y-%m')
+    
+    # select only the last 12 months of data
+    logReturn_1day = logReturn_1day[logReturn_1day['monthyear'] > ((logReturn_1day['date'].max() - pd.Timedelta(days=365)).strftime('%Y-%m'))]
+    print(logReturn_1day.head(10))
+
+    # for each unique monthyear in logreturn_1day, plot barchart of logreturn
+    # create figure, and axes
+    fig, axes = plt.subplots(3, 4, figsize=(19, 9))
+
+    fig.suptitle('Log Return Seasonality for %s (%s years of data)'%(symbol.upper(), round(len(pxHistory_1day)/252, 1)))
+
+    for i, monthyear in enumerate(logReturn_1day['monthyear'].unique()):
+        # get logReturn for current monthyear
+        logReturn_1day_currentMonthYear = logReturn_1day[logReturn_1day['monthyear'] == monthyear]
+        # set axes
+        ax = axes[int(i/4), i%4]
+        # plot the mean and sd
+        sns.barplot(x=logReturn_1day_currentMonthYear['dayOfMonth'], y='logReturn', data=logReturn_1day_currentMonthYear, ax=ax, color='red', alpha=0.5)
+        # add axis lines 
+        ax.axhline(y=0, color='grey', linestyle='-', alpha=0.3)
+
+        ax.set_title(monthyear)
+
+    return fig
+
+    ###############################################
+    # restrict trading hours to 9:30am to 4pm
+    ###############################################
+    #if restrictTradingHours:
+    #    pxHistory_5mins = pxHistory_5mins[(pxHistory_5mins['date'].dt.time >= dt.time(9, 30)) & (pxHistory_5mins['date'].dt.time <= dt.time(15, 55))]
+    ###############################################
+    ###############################################
+
+    # get log returns for pxhistory
+    # set month/year column from date 
+    exit()
+
+    minYear = pxHistory_1day['date'].dt.year.min()
+    minMonth = pxHistory_1day[pxHistory_1day['date'].dt.year == minYear]['date'].dt.month.min()
+    
+    # create figure, and axes
+    fig, axes = plt.subplots(3, 4)
+
+    for i in range(12): 
+        numrow = int(i/4)
+        numcolumn = i%4
+    ## ADD TITLE
+    fig.suptitle('Log Return Seasonality for %s (%s years of data)'%(symbol.upper(), round(len(pxHistory_1day)/252, 1)))
+
+    # aggregate by month 
+    aggregate_by_month_1day = ut.aggregate_by_month(logReturn_1day_last12months, 'logReturn')
+
+    # aggregate by day of month
+    aggregate_by_dayOfMonth_1day = ut.aggregate_by_dayOfMonth(logReturn_1day_last12months, 'logReturn')
+
+    return fig
+
+"""
 Returns seasonal aggregate of passed in pxhistory df
 """
 def getSeasonalAggregate(pxHistory, interval, symbol, numdays=0):
@@ -501,8 +570,6 @@ def seasonalAnalysis_intraday(symbol, interval, target='close'):
               'From %s to %s'%(pxHistory302['date'].min().date(), pxHistory302['date'].max().date()),
                'From %s to %s'%(pxHistory303['date'].min().date(), pxHistory303['date'].max().date()) ])
 
-""" 
-     helper function to list all the unique symbols in the db
-"""
 
-
+if __name__ =='__main__':
+    plotLogReturns_12months('xflt')
