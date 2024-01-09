@@ -12,6 +12,8 @@ import vol_momentum as volMomo
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
 
 import config
 import seasonality
@@ -244,10 +246,10 @@ def plotTermStructure(ts_data, pxHistory_underlying, contangoColName='default'):
     if contangoColName == 'default':
         # plot lineplots on 1 plot 
         fig, ax = plt.subplots()
-        sns.lineplot(x='date', y='oneToTwoMoContango', data=ts_data, ax=ax, label='oneToTwoMocontango', color='blue')
-        sns.lineplot(x='date', y='fourToSevenMoContango', data=ts_data, ax=ax, label='fourToSevenMoContango', color='green')
+        #sns.lineplot(x='date', y='oneToTwoMoContango', data=ts_data, ax=ax, label='oneToTwoMocontango', color='blue')
+        #sns.lineplot(x='date', y='fourToSevenMoContango', data=ts_data, ax=ax, label='fourToSevenMoContango', color='green')
         #sns.lineplot(x='date', y='currentToLastContango', data=ts_data, ax=ax, label='currentToLastContango', color='red')
-        #sns.lineplot(x='date', y='averageContango', data=ts_data, ax=ax, label='averageContango', color='orange')
+        sns.lineplot(x='date', y='averageContango', data=ts_data, ax=ax, label='averageContango', color='orange')
         
         # format plot 
         ax.legend(loc='upper left')
@@ -261,34 +263,93 @@ def plotTermStructure(ts_data, pxHistory_underlying, contangoColName='default'):
 """
     Plots spread between two ts columns 
 """
-def plotTermstructureSpread(ts_data, pxHistory_underlying, colName1:str, colName2:str): 
+def plotTermstructureSpread_seaborn(ts_data, pxHistory_underlying, colName1:str, colName2:str): 
     pxHistory_underlying.reset_index(drop=True, inplace=True)
     # add spread column
     ts_data['spread'] = ts_data[colName2] - ts_data[colName1]
     # plot lineplots on 1 plot 
     fig, ax = plt.subplots()
-    sns.lineplot(x='date', y='spread', data=ts_data, ax=ax, label='spread', color='black', alpha=0.7)
-    sns.lineplot(x='date', y=colName1, data=ts_data, ax=ax, label=colName1, color='blue', alpha=0.2)
-    sns.lineplot(x='date', y=colName2, data=ts_data, ax=ax, label=colName2, color='green', alpha=0.2)
-    ax2 = ax.twinx()
-    sns.lineplot(x='date', y='close', data=pxHistory_underlying, ax=ax2, label=pxHistory_underlying['symbol'][0], color='black', alpha=0.3)
+    #px.line(ts_data, x='date', y='spread', ax=ax, label='spread', color='black', alpha=0.7)
+    #px.line(ts_data, x='date', y=colName1, ax=ax, label=colName1, color='blue', alpha=0.2)
+    #px.line(ts_data, x='date', y=colName2, ax=ax, label=colName2, color='green', alpha=0.2)
+    px.line(ts_data, x='spread', y='date')
+
+    #ax2 = ax.twinx()
+    #px.line(pxHistory_underlying, x='date', y='close', ax=ax2, label=pxHistory_underlying['symbol'][0], color='black', alpha=0.3)
     
     # format plot 
-    ax.legend(loc='upper left')
-    ax.axhline(y=0, color='black', linestyle='-')
-    ax2.set_yscale('log')
-    ax2.legend(loc='upper right')
-    ax2.grid(False)
+    #ax.legend(loc='upper left')
+    #ax.axhline(y=0, color='black', linestyle='-')
+    #ax2.set_yscale('log')
+    #ax2.legend(loc='upper right')
+    #ax2.grid(False)
     
     # add hlines at 90th and 10th percentile of spread 
-    ax.axhline(y=ts_data['spread'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
-    ax.axhline(y=ts_data['spread'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
+    #ax.axhline(y=ts_data['spread'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
+    #ax.axhline(y=ts_data['spread'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
 
     return fig
 
+def plotTermstructureSpread(ts_data, pxHistory_underlying, colName1, colName2):
+    # Reset index and calculate spread
+    pxHistory_underlying.reset_index(drop=True, inplace=True)
+    ts_data['spread'] = ts_data[colName2] - ts_data[colName1]
+
+    # Create a figure with secondary y-axis
+    fig = go.Figure()
+
+    # Add spread line
+    fig.add_trace(go.Scatter(x=ts_data['date'], y=ts_data['spread'],
+                             mode='lines', name='Spread',
+                             line=dict(color='black', width=2)))
+
+    # Add colName1 line
+    fig.add_trace(go.Scatter(x=ts_data['date'], y=ts_data[colName1],
+                             mode='lines', name=colName1,
+                             line=dict(color='blue', width=1, dash='dot')))
+
+    # Add colName2 line
+    fig.add_trace(go.Scatter(x=ts_data['date'], y=ts_data[colName2],
+                             mode='lines', name=colName2,
+                             line=dict(color='green', width=1, dash='dot')))
+
+    # Add pxHistory_underlying close line on secondary y-axis
+    fig.add_trace(go.Scatter(x=pxHistory_underlying['date'], y=pxHistory_underlying['close'],
+                             mode='lines', name=pxHistory_underlying['symbol'][0],
+                             line=dict(color='red', width=1, dash='dash'), yaxis="y2"))
+
+    # Add horizontal lines at 90th and 10th percentile of spread
+    fig.add_hline(y=ts_data['spread'].quantile(0.9), line=dict(color='grey', width=1, dash='dashdot'))
+    fig.add_hline(y=ts_data['spread'].quantile(0.1), line=dict(color='grey', width=1, dash='dashdot'))
+
+    # add rolling 10 day 90th and 10th percentil of spread 
+    fig.add_trace(go.Scatter(x=ts_data['date'], y=ts_data['spread'].rolling(10).quantile(0.9),
+                             mode='lines', name='10d 90th percentile',
+                             line=dict(color='pink', width=2)))
+    fig.add_trace(go.Scatter(x=ts_data['date'], y=ts_data['spread'].rolling(10).quantile(0.1),
+                                mode='lines', name='10d 10th percentile',
+                                line=dict(color='pink', width=2)))
+
+    # Update layout for a dual-axis chart
+    fig.update_layout(
+        xaxis_title='Date',
+        yaxis=dict(
+            title='Spread and Prices',
+            tickformat=".2f"
+        ),
+        yaxis2=dict(
+            title='Close Prices',
+            overlaying='y',
+            side='right',
+            showgrid=False,
+            type='log'
+        )
+    )
+    fig.show()
+    return fig
 
 """ 
-    plots symvbol autocorrelation 
+    plots symbol autocorrelation 
 """
 def plotAutocorrelation(vvix, vix):
     vvix.reset_index(drop=True, inplace=True)
@@ -571,6 +632,13 @@ def plotScatter(pxHistory, targetColumn, forwardReturnPeriods=[1,2,3,4,5,6,7]):
 
     return fig
 
+"""
+    for passed in dataframes (main, reference) return main with only the dates in reference 
+    sidenote: this is an incredibly unnecessary abstraction but here we are 
+"""
+def _filterDates(main, reference):
+    return main[main['date'].isin(reference['date'])]
+
 vvix_topPercentile = 0.9
 vvix_bottomPercentile = 0.1
 vvix_percentileLookbackDays = 252 ## 1 year lookback = 252 *trading* days
@@ -581,50 +649,42 @@ vvix_percentileLookbackDays = 252 ## 1 year lookback = 252 *trading* days
 with db.sqlite_connection(db_termstructure) as conn:
     vix_ts_raw = vixts.getRawTermStructure(termstructure_db_conn=conn)
     ng_ts_raw = vixts.getRawTermStructure(termstructure_db_conn=conn, symbol='NG')
-vix_ts_pctContango = vixts.getVixTermStructurePctContango(vix_ts_raw, oneToTwo=True, fourToSeven=True, currentToLast=True, averageContango=True)
 
+vix_ts_pctContango = vixts.getVixTermStructurePctContango(vix_ts_raw, oneToTwo=True, fourToSeven=True, currentToLast=True, averageContango=True)
+ng_ts_pctContango = vixts.getVixTermStructurePctContango(ng_ts_raw, oneToTwo=True, fourToSeven=True, currentToLast=True, averageContango=True)
 
 ###################################
 ## prepare price history data
 with db.sqlite_connection(db_stock) as conn:
     vix = db.getPriceHistory(conn,'VIX', '1day', withpctChange=True)
-    vix_5min = db.getPriceHistory(conn, 'VIX', '5mins', withpctChange=True)
+    #vix_5min = db.getPriceHistory(conn, 'VIX', '5mins', withpctChange=True)
     vvix = db.getPriceHistory(conn, 'VVIX', '1day', withpctChange=True)
-    vvix_5min = db.getPriceHistory(conn, 'VVIX', '5mins', withpctChange=True)
+    #vvix_5min = db.getPriceHistory(conn, 'VVIX', '5mins', withpctChange=True)
     spx = db.getPriceHistory(conn, 'SPX', '1day', withpctChange=True)
-    spx_5mins = db.getPriceHistory(conn, 'SPX', '5mins', withpctChange=True)
-    uvxy_5mins= db.getPriceHistory(conn, 'UVXY', '5mins', withpctChange=True)
+    #spx_5mins = db.getPriceHistory(conn, 'SPX', '5mins', withpctChange=True)
     uvxy = db.getPriceHistory(conn, 'UVXY', '1day', withpctChange=True)
+    #uvxy_5mins= db.getPriceHistory(conn, 'UVXY', '5mins', withpctChange=True)
+    ung = db.getPriceHistory(conn, 'kold', '1day', withpctChange=True)
 
 ## calculate percentile rank of VVIX
 vvix['percentileRank'] = vvix['close'].rolling(vvix_percentileLookbackDays).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
 vvix['percentileRank_90d'] = vvix['close'].rolling(90).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
 vvix['percentileRank_60d'] = vvix['close'].rolling(60).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
 
-# create a copy of vvix for later use
-vvix_raw = vvix.copy()
-
 # add log return column
 vvix = ut.calcLogReturns(vvix, 'close')
 vix = ut.calcLogReturns(vix, 'close')
 
-"""
-    for passed in dataframes (main, reference) return main with only the dates in reference 
-    sidenote: this is an incredibly unnecessary abstraction but here we are 
-"""
-def _filterDates(main, reference):
-    return main[main['date'].isin(reference['date'])]
 
 #################################################
-############## FINAL CLEANUP ... ################
-#################################################
+############## Filter dates 
 # reset index to eliminate duplicate indices resulting from joins 
 vix_ts_pctContango.reset_index(inplace=True)
-# make sure vix and vix_ts_pctContango start on the same date
-#vix = vix[vix.index >= vix_ts_pctContango['Date'].min()]
+ng_ts_pctContango.reset_index(inplace=True)
 
 ## from vix_ts_pctContango remove any dates that are not in vix and vvix
 vix_ts_pctContango = vix_ts_pctContango[vix_ts_pctContango['date'].isin(vix['date']) & vix_ts_pctContango['date'].isin(vvix['date'])]
+vix_ts_pctContango.drop_duplicates(subset=['date'], inplace=True)
 
 # from vvix remove any dates that are not in vix and vix_ts_pctContango
 #vvix = vvix[vvix.index.isin(vix.index) & vvix.index.isin(vix_ts_pctContango['date'])]
@@ -638,18 +698,21 @@ uvxy_filtered = uvxy[uvxy['date'].isin(vix_ts_pctContango['date'])].copy()
 vix_ts_pctContango_filtered = vix_ts_pctContango[vix_ts_pctContango['date'].isin(uvxy_filtered['date'])]
 # remove duplicates 
 uvxy_filtered.drop_duplicates(subset=['date'], inplace=True)
-vix_ts_pctContango.drop_duplicates(subset=['date'], inplace=True)
+spx_filtered = _filterDates(spx, vix_ts_pctContango)
 
+#print(ng_ts_pctContango.head(5))
+#print(vix_ts_pctContango.head(5))
+# filter ng
+ng_ts_pctContango_filtered = _filterDates(ng_ts_pctContango, ung)
+ung_filtered = _filterDates(ung, ng_ts_pctContango_filtered)
+#print(ung.head(5))
+#print(ung_filtered.head(5))
 ##################################################
 ############### call plots  
-##################################################
-
-# set seaborn style
 sns.set()
 sns.set_style('darkgrid')
 
 # get spx price history
-spx_filtered = _filterDates(spx, vix_ts_pctContango)
 
 # initialize plot window for tabbed plots
 tpw = pltWindow.plotWindow()
@@ -658,10 +721,10 @@ tpw.MainWindow.resize(2560, 1380)
 ########## General Overview: 
 ########## 
 
+tpw.addPlot('ts 1-2:4-7 spread', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
 tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, uvxy_filtered, contangoColName='oneToTwoMoContango'))
 tpw.addPlot('term structure', plotTermStructure(vix_ts_pctContango, uvxy_filtered))
-tpw.addPlot('ts 1-2:4-7 spread', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
-
+tpw.addPlot('NG ts', plotTermStructure(ng_ts_pctContango_filtered, ung_filtered))
 tpw.addPlot('VVIX & VIX Autocorrelation', plotAutocorrelation(vvix, vix))
 #tpw.addPlot('Momentum - VVIX', volMomo.plotMomoScatter(vvix))
 #tpw.addPlot('Momentum - VIX', volMomo.plotMomoScatter(vix))
