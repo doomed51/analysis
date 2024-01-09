@@ -28,17 +28,13 @@ def calcMomoFactor(universe, lag=1, shift=1, lagmomo=False):
     return returns
 
 def calc_correlation(pxHistory_, momoPeriod, forwardReturnPeriod):
-    # start timer 
-   # startTime = pd.Timestamp.now()
-    
+  
     # add forward returns and momo columns
     pxHistory_['fwdReturns%s'%(forwardReturnPeriod)] = pxHistory_['close'].pct_change(forwardReturnPeriod).shift(-forwardReturnPeriod)
     pxHistory_ = calcMomoFactor(pxHistory_, lag=momoPeriod)
     pxHistory_.rename(columns={'momo': 'momo%s'%(momoPeriod)}, inplace=True)
-    print('Calculating correlation for momo%s and fwdReturns%s'%(momoPeriod, forwardReturnPeriod))
     # calculate correlation
     correl = utils.calcCorrelation(pxHistory_, 'momo%s'%(momoPeriod), 'fwdReturns%s'%(forwardReturnPeriod))
-    #print('[green] Time to add momo & rtrn columns:[/green] %s'%(pd.Timestamp.now() - startTime).microseconds)
     
     return correl
 
@@ -66,7 +62,6 @@ def _calc_optimized_momo_periods(pxHistory, top, **kwargs):
     This function returns a dataframe of momoPeriods and fwd returns that have the highest correlation
 """
 def getTopMomoPeriods(pxHistory, top=5, **kwargs):
-    print('[yellow]Getting top %s momo periods...[/yellow]'%(top))
     momoPeriodMax = kwargs.get('rangeEnd', 362) # add 1 day
     fwdReturnPeriodMax = kwargs.get('fwdReturns', 362) # add 1 day
 
@@ -78,6 +73,7 @@ def getTopMomoPeriods(pxHistory, top=5, **kwargs):
     opt_vars=optimization_db.get_analysis_variables(pxHistory['symbol'][0], analysis_name)
 
     if opt_vars is not None: # return optimized variables from db
+        print('[yellow]Getting top %s momo periods from db...[/yellow]'%(top))
         # convert strings to lists
         opt_vars['momoPeriod'] = opt_vars['momoPeriod'].apply(lambda x: literal_eval(x))
         fwdReturnPeriods = opt_vars['fwdReturnPeriod'].apply(lambda x: literal_eval(x))[0]
