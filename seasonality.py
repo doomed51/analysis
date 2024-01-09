@@ -389,7 +389,6 @@ def plotLogReturns_12months(symbol):
     # get px history from db
     with db.sqlite_connection(dbname_stock) as conn:
         pxHistory_1day = db.getPriceHistory(conn, symbol, '1day', withpctChange=True)
-        #pxHistory_5mins = db.getPriceHistory(conn, symbol, '30mins', withpctChange=True)
     
     logReturn_1day = ut.calcLogReturns(pxHistory_1day, 'close')
     logReturn_1day['dayOfMonth'] = logReturn_1day['date'].dt.day
@@ -398,7 +397,6 @@ def plotLogReturns_12months(symbol):
     
     # select only the last 12 months of data
     logReturn_1day = logReturn_1day[logReturn_1day['monthyear'] > ((logReturn_1day['date'].max() - pd.Timedelta(days=365)).strftime('%Y-%m'))]
-    print(logReturn_1day.head(10))
 
     # for each unique monthyear in logreturn_1day, plot barchart of logreturn
     # create figure, and axes
