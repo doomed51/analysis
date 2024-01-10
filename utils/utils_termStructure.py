@@ -3,6 +3,7 @@ This module consists of two functions that return VIX term structure, and contan
     The current implementation uses vix contract data from vixcentral.com 
 """
 import pandas as pd
+import seaborn as sns
 
 """ 
 Returns raw term structure for the supplied symbol and interval
@@ -72,4 +73,28 @@ def getTermStructurePctContango(ts_raw, oneToTwo=False, oneToThree=False, twoToT
     ## sort by Date column
     ts_pctContango.sort_values(by='date', inplace=True)
     return ts_pctContango
+
+"""
+    Returns a plot of term structure for the last n periods 
+    df: terms structure dataframe with columns: [date, month1, month2, ...]
+"""
+def plotTermStructure(ts, symbol, ax, numDays=5):
+    ts.reset_index(inplace=True)
+    # sort ts by date, and get the last 5 rows
+    ts['date'] = pd.to_datetime(ts['date'])
+    ts = ts.sort_values(by='date').tail(numDays)
+    print(ts)
+    
+    # iterate through the last numDays records in ts
+    for i in range(len(ts.tail(numDays))):
+        sns.lineplot(x=ts.columns[1:], y=ts.iloc[i, 1:], ax=ax, label=ts['date'].iloc[i].strftime('%Y-%m-%d'))
+    
+    # set gridstyle
+    ax.grid(True, which='both', axis='both', linestyle='--')
+    sns.set_style('darkgrid')
+    
+    
+
+
+
 
