@@ -372,37 +372,20 @@ def plotAutocorrelation(pxHistory_top, pxHistory_bottom, **kwargs):
     fig, ax = plt.subplots(2, 2, figsize=(15, 10))
     fig.suptitle('%s & %s Autocorrelation'%(pxHistory_top['symbol'][0], pxHistory_bottom['symbol'][0]))
 
-    # plot autocorrelation of vvix
+    # plot autocorrelation of vix and vvix close px
     ax[0,0].stem(vvixautocorrel, linefmt='--')
-    # add title
     ax[0,0].set_title('%s Autocorrelation (close px)'%(pxHistory_top['symbol'][0]))
 
-    # plot autocorrelation of vix
     ax[1,0].stem(vixautocorrel, linefmt='--')
-    # add title
     ax[1,0].set_title('%s Autocorrelation (close px)'%(pxHistory_bottom['symbol'][0]))
 
-    # plot autocorrelation of vvix
-    #pd.plotting.autocorrelation_plot(vvix['close'], ax=ax[0,0])
-    # add title
-    #ax[0,0].set_title('Autocorrelation: %s close px'%(vvix['symbol'][0]))
-
+    # plot autocorrelation of vix and vvix log returns 
     vix_logReturnAutoCorrelation = np.array([1.0] + [pxHistory_bottom['logReturn'].autocorr(lag) for lag in range(1, max_lag + 1)])
     vvix_logReturnAutoCorrelation = np.array([1.0] + [pxHistory_top['logReturn'].autocorr(lag) for lag in range(1, max_lag + 1)])
-    # plot autocorrelation of vvix logreturn on the same axis
-    #pd.plotting.autocorrelation_plot(pxHistory_top['logReturn'], ax=ax[0,1])
-    # add title
+
     ax[0,1].stem(vix_logReturnAutoCorrelation, linefmt='--')
     ax[0,1].set_title('%s Autocorrelation (logrtrn)'%(pxHistory_top['symbol'][0]))
 
-    # plot autocorrelation of vix
-    #pd.plotting.autocorrelation_plot(vix['close'], ax=ax[1,0])
-    # add title
-    #ax[1,0].set_title('Autocorrelation: %s close px'%(vix['symbol'][0]))
-
-    # plot autocorrelation of vix logreturn on the same axis
-    #pd.plotting.autocorrelation_plot(pxHistory_bottom['logReturn'], ax=ax[1,1])
-    # add title
     ax[1,1].stem(vvix_logReturnAutoCorrelation, linefmt='--')
     ax[1,1].set_title('%s Autocorrelation (logrtrn)'%(pxHistory_bottom['symbol'][0]))
 
