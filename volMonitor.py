@@ -11,6 +11,7 @@ import vol_momentum as volMomo
 
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
@@ -203,14 +204,14 @@ def plotContangoVsLaggedReturn(ts_pctContango, pxHistory, contangoColName = 'fou
     return fig
 
 """
-function that plots intra-month, and month over month seasonality of 4-7mo. contango
+plots intra-month, and month over month seasonality of 4-7mo. contango
  arguments:
     - vix_ts_pctContango: dataframe of vix term structure data
  plots the following:
  - mean and sd of 4-7 month contango aggregated by day of month
  - mean and sd of 4-7 month contango aggregated by month
 """
-def plotVixTermStructureSeasonality(vix_ts_pctContango):
+def plotVixTermStructureSeasonality(vix_ts_pctContango, contangoColName='fourToSevenMoContango'):
     # new df that aggregates 4-7 month contango by day of month
     vix_ts_pctContango_day = vix_ts_pctContango.groupby(vix_ts_pctContango['date'].dt.day).agg({'fourToSevenMoContango': ['mean', 'std']})
 
@@ -241,13 +242,16 @@ def plotVixTermStructureSeasonality(vix_ts_pctContango):
 """ 
     Plots term structure in one large plot 
 """
-def plotTermStructure(ts_data, pxHistory_underlying, contangoColName='default'):
+def plotHistoricalTermstructure(ts_data, pxHistory_underlying, contangoColName='default'):
     pxHistory_underlying.reset_index(drop=True, inplace=True)
     if contangoColName == 'default':
         # plot lineplots on 1 plot 
         fig, ax = plt.subplots()
-        #sns.lineplot(x='date', y='oneToTwoMoContango', data=ts_data, ax=ax, label='oneToTwoMocontango', color='blue')
-        #sns.lineplot(x='date', y='fourToSevenMoContango', data=ts_data, ax=ax, label='fourToSevenMoContango', color='green')
+        sns.lineplot(x='date', y='oneToTwoMoContango', data=ts_data, ax=ax, label='oneToTwoMoContango', color='blue')
+        sns.lineplot(x='date', y='oneToThreeMoContango', data=ts_data, ax=ax, label='oneToThreeMoContango', color='green')
+        sns.lineplot(x='date', y='twoToThreeMoContango', data=ts_data, ax=ax, label='twoToThreeMoContango', color='red')
+        sns.lineplot(x='date', y='threeToFourMoContango', data=ts_data, ax=ax, label='threeToFourMoContango', color='pink')
+        sns.lineplot(x='date', y='fourToSevenMoContango', data=ts_data, ax=ax, label='fourToSevenMoContango', color='green')
         #sns.lineplot(x='date', y='currentToLastContango', data=ts_data, ax=ax, label='currentToLastContango', color='red')
         sns.lineplot(x='date', y='averageContango', data=ts_data, ax=ax, label='averageContango', color='orange')
         
@@ -269,24 +273,25 @@ def plotTermstructureSpread_seaborn(ts_data, pxHistory_underlying, colName1:str,
     ts_data['spread'] = ts_data[colName2] - ts_data[colName1]
     # plot lineplots on 1 plot 
     fig, ax = plt.subplots()
-    #px.line(ts_data, x='date', y='spread', ax=ax, label='spread', color='black', alpha=0.7)
-    #px.line(ts_data, x='date', y=colName1, ax=ax, label=colName1, color='blue', alpha=0.2)
-    #px.line(ts_data, x='date', y=colName2, ax=ax, label=colName2, color='green', alpha=0.2)
+    sns.lineplot(x='date', y='spread', data=ts_data, ax=ax, label='spread', color='blue')
+    sns.lineplot(x='date', y=colName1, data=ts_data, ax=ax, label=colName1, color='green')
+    sns.lineplot(x='date', y=colName2, data=ts_data, ax=ax, label=colName2, color='red')
+    
     px.line(ts_data, x='spread', y='date')
 
-    #ax2 = ax.twinx()
-    #px.line(pxHistory_underlying, x='date', y='close', ax=ax2, label=pxHistory_underlying['symbol'][0], color='black', alpha=0.3)
+    ax2 = ax.twinx()
+    sns.lineplot(x='date', y='close', data=pxHistory_underlying, ax=ax2, label=pxHistory_underlying['symbol'][0], color='black', alpha=0.3)
     
     # format plot 
-    #ax.legend(loc='upper left')
-    #ax.axhline(y=0, color='black', linestyle='-')
-    #ax2.set_yscale('log')
-    #ax2.legend(loc='upper right')
-    #ax2.grid(False)
+    ax.legend(loc='upper left')
+    ax.axhline(y=0, color='black', linestyle='-')
+    ax2.set_yscale('log')
+    ax2.legend(loc='upper right')
+    ax2.grid(False)
     
     # add hlines at 90th and 10th percentile of spread 
-    #ax.axhline(y=ts_data['spread'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
-    #ax.axhline(y=ts_data['spread'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
+    ax.axhline(y=ts_data['spread'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
+    ax.axhline(y=ts_data['spread'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
 
     return fig
 
@@ -351,32 +356,55 @@ def plotTermstructureSpread(ts_data, pxHistory_underlying, colName1, colName2):
 """ 
     plots symbol autocorrelation 
 """
-def plotAutocorrelation(vvix, vix):
-    vvix.reset_index(drop=True, inplace=True)
-    vix.reset_index(drop=True, inplace=True)
+def plotAutocorrelation(pxHistory_top, pxHistory_bottom, **kwargs):
+    max_lag = kwargs.get('max_lag', 40)
+    pxHistory_top.reset_index(drop=True, inplace=True)
+    pxHistory_bottom.reset_index(drop=True, inplace=True)
+
+    vixnormalizedclose = (pxHistory_bottom['close'] - pxHistory_bottom['close'].mean())/pxHistory_bottom['close'].std()
+    vvixnormalizedclose = (pxHistory_top['close'] - pxHistory_top['close'].mean())/pxHistory_top['close'].std()
+
+    # initialize autocrrelation
+    vixautocorrel = np.array([1.0] + [vixnormalizedclose.autocorr(lag) for lag in range(1, max_lag + 1)])
+    vvixautocorrel = np.array([1.0] + [vvixnormalizedclose.autocorr(lag) for lag in range(1, max_lag + 1)])
+
     # create figure and axes, 2x2 grid
     fig, ax = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle('VVIX & VIX Autocorrelation')
+    fig.suptitle('%s & %s Autocorrelation'%(pxHistory_top['symbol'][0], pxHistory_bottom['symbol'][0]))
 
     # plot autocorrelation of vvix
-    pd.plotting.autocorrelation_plot(vvix['close'], ax=ax[0,0])
+    ax[0,0].stem(vvixautocorrel, linefmt='--')
     # add title
-    ax[0,0].set_title('Autocorrelation: %s close px'%(vvix['symbol'][0]))
-
-    # plot autocorrelation of vvix logreturn on the same axis
-    pd.plotting.autocorrelation_plot(vvix['logReturn'], ax=ax[0,1])
-    # add title
-    ax[0,1].set_title('Autocorrelation: %s logReturn'%(vvix['symbol'][0]))
+    ax[0,0].set_title('%s Autocorrelation (close px)'%(pxHistory_top['symbol'][0]))
 
     # plot autocorrelation of vix
-    pd.plotting.autocorrelation_plot(vix['close'], ax=ax[1,0])
+    ax[1,0].stem(vixautocorrel, linefmt='--')
     # add title
-    ax[1,0].set_title('Autocorrelation: %s close px'%(vix['symbol'][0]))
+    ax[1,0].set_title('%s Autocorrelation (close px)'%(pxHistory_bottom['symbol'][0]))
+
+    # plot autocorrelation of vvix
+    #pd.plotting.autocorrelation_plot(vvix['close'], ax=ax[0,0])
+    # add title
+    #ax[0,0].set_title('Autocorrelation: %s close px'%(vvix['symbol'][0]))
+
+    vix_logReturnAutoCorrelation = np.array([1.0] + [pxHistory_bottom['logReturn'].autocorr(lag) for lag in range(1, max_lag + 1)])
+    vvix_logReturnAutoCorrelation = np.array([1.0] + [pxHistory_top['logReturn'].autocorr(lag) for lag in range(1, max_lag + 1)])
+    # plot autocorrelation of vvix logreturn on the same axis
+    #pd.plotting.autocorrelation_plot(pxHistory_top['logReturn'], ax=ax[0,1])
+    # add title
+    ax[0,1].stem(vix_logReturnAutoCorrelation, linefmt='--')
+    ax[0,1].set_title('%s Autocorrelation (logrtrn)'%(pxHistory_top['symbol'][0]))
+
+    # plot autocorrelation of vix
+    #pd.plotting.autocorrelation_plot(vix['close'], ax=ax[1,0])
+    # add title
+    #ax[1,0].set_title('Autocorrelation: %s close px'%(vix['symbol'][0]))
 
     # plot autocorrelation of vix logreturn on the same axis
-    pd.plotting.autocorrelation_plot(vix['logReturn'], ax=ax[1,1])
+    #pd.plotting.autocorrelation_plot(pxHistory_bottom['logReturn'], ax=ax[1,1])
     # add title
-    ax[1,1].set_title('Autocorrelation: %s logReturn'%(vix['symbol'][0]))
+    ax[1,1].stem(vvix_logReturnAutoCorrelation, linefmt='--')
+    ax[1,1].set_title('%s Autocorrelation (logrtrn)'%(pxHistory_bottom['symbol'][0]))
 
     return fig
 
@@ -650,8 +678,8 @@ with db.sqlite_connection(db_termstructure) as conn:
     vix_ts_raw = vixts.getRawTermStructure(termstructure_db_conn=conn)
     ng_ts_raw = vixts.getRawTermStructure(termstructure_db_conn=conn, symbol='NG')
 
-vix_ts_pctContango = vixts.getVixTermStructurePctContango(vix_ts_raw, oneToTwo=True, fourToSeven=True, currentToLast=True, averageContango=True)
-ng_ts_pctContango = vixts.getVixTermStructurePctContango(ng_ts_raw, oneToTwo=True, fourToSeven=True, currentToLast=True, averageContango=True)
+vix_ts_pctContango = vixts.getTermStructurePctContango(vix_ts_raw, oneToTwo=True, oneToThree=True, twoToThree=True, threeToFour=True, fourToSeven=True, currentToLast=True, averageContango=True)
+ng_ts_pctContango = vixts.getTermStructurePctContango(ng_ts_raw, oneToTwo=True, oneToThree=True, twoToThree=True, fourToSeven=True, threeToFour=True, currentToLast=True, averageContango=True)
 
 ###################################
 ## prepare price history data
@@ -665,6 +693,7 @@ with db.sqlite_connection(db_stock) as conn:
     uvxy = db.getPriceHistory(conn, 'UVXY', '1day', withpctChange=True)
     #uvxy_5mins= db.getPriceHistory(conn, 'UVXY', '5mins', withpctChange=True)
     ung = db.getPriceHistory(conn, 'kold', '1day', withpctChange=True)
+    boil = db.getPriceHistory(conn, 'boil', '1day', withpctChange=True)
 
 ## calculate percentile rank of VVIX
 vvix['percentileRank'] = vvix['close'].rolling(vvix_percentileLookbackDays).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
@@ -705,6 +734,7 @@ spx_filtered = _filterDates(spx, vix_ts_pctContango)
 # filter ng
 ng_ts_pctContango_filtered = _filterDates(ng_ts_pctContango, ung)
 ung_filtered = _filterDates(ung, ng_ts_pctContango_filtered)
+boil_filtered = _filterDates(boil, ng_ts_pctContango_filtered)
 #print(ung.head(5))
 #print(ung_filtered.head(5))
 ##################################################
@@ -721,10 +751,12 @@ tpw.MainWindow.resize(2560, 1380)
 ########## General Overview: 
 ########## 
 
-tpw.addPlot('ts 1-2:4-7 spread', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
-tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, uvxy_filtered, contangoColName='oneToTwoMoContango'))
-tpw.addPlot('term structure', plotTermStructure(vix_ts_pctContango, uvxy_filtered))
-tpw.addPlot('NG ts', plotTermStructure(ng_ts_pctContango_filtered, ung_filtered))
+#tpw.addPlot('ts 1-2:4-7 spread', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
+#tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, uvxy_filtered, contangoColName='oneToTwoMoContango'))
+tpw.addPlot('VIX ts', plotHistoricalTermstructure(vix_ts_pctContango, uvxy_filtered))
+tpw.addPlot('NG ts', plotHistoricalTermstructure(ng_ts_pctContango, boil_filtered))
+tpw.addPlot('NG vs ung ts', plotTermstructureSpread_seaborn(ng_ts_pctContango_filtered, ung_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
+tpw.addPlot('NG vs boil ts', plotTermstructureSpread_seaborn(ng_ts_pctContango_filtered, boil_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
 tpw.addPlot('VVIX & VIX Autocorrelation', plotAutocorrelation(vvix, vix))
 #tpw.addPlot('Momentum - VVIX', volMomo.plotMomoScatter(vvix))
 #tpw.addPlot('Momentum - VIX', volMomo.plotMomoScatter(vix))
