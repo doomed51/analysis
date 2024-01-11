@@ -81,7 +81,7 @@ def strategy_monthToMonth(symbol, startMonth, endMonth, direction=1):
     return history.reset_index(drop=True)
 
 """
-    Simple implementation of day of month seasonality strategy. 
+   Returns day of month seasonality. 
     inputs:
         - symbol [string] symbol to get price history for
         - startDay [int] day of month to open long 
