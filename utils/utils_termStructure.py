@@ -76,7 +76,7 @@ def getTermStructurePctContango(ts_raw, oneToTwo=False, oneToThree=False, twoToT
 
 """
     Returns a plot of term structure for the last n periods 
-    df: terms structure dataframe with columns: [date, month1, month2, ...]
+    ts: termstructure dataframe with columns: [date, month1, month2, ...]
 """
 def plotTermStructure(ts, symbol, ax, numDays=5):
     ts.reset_index(inplace=True)
@@ -93,8 +93,26 @@ def plotTermStructure(ts, symbol, ax, numDays=5):
     ax.grid(True, which='both', axis='both', linestyle='--')
     sns.set_style('darkgrid')
     
+"""
+    Returns a plot of historical term structure contango for the last n periods
+"""    
+def plotHistoricalTermstructure(ts_data, pxHistory_underlying, ax, contangoColName='default'):
+    ts_data.reset_index(inplace=True)
+    print(ts_data)
+    pxHistory_underlying.reset_index(inplace=True)
+    sns.lineplot(x='date', y='oneToTwoMoContango', data=ts_data, ax=ax, label='oneToTwoMoContango', color='blue')
+    sns.lineplot(x='date', y='oneToThreeMoContango', data=ts_data, ax=ax, label='oneToThreeMoContango', color='green')
+    sns.lineplot(x='date', y='twoToThreeMoContango', data=ts_data, ax=ax, label='twoToThreeMoContango', color='red')
+    sns.lineplot(x='date', y='threeToFourMoContango', data=ts_data, ax=ax, label='threeToFourMoContango', color='pink')
+    sns.lineplot(x='date', y='fourToSevenMoContango', data=ts_data, ax=ax, label='fourToSevenMoContango', color='green')
+    #sns.lineplot(x='date', y='currentToLastContango', data=ts_data, ax=ax, label='currentToLastContango', color='red')
+    #sns.lineplot(x='date', y='averageContango', data=ts_data, ax=ax, label='averageContango', color='orange')
     
-
-
+    # format plot 
+    ax.legend(loc='upper left')
+    ax2 = ax.twinx()
+    sns.lineplot(x='date', y='close', data=pxHistory_underlying, ax=ax2, label=pxHistory_underlying['symbol'][0], color='black', alpha=0.3)
+    ax2.set_yscale('log')
+    ax2.grid(False)
 
 
