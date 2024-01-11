@@ -5,7 +5,7 @@ sys.path.append('..')
 import interface_localDB as db
 
 from utils import utils as ut
-from utils import utils_termStructure as vixts
+from utils import utils_termStructure as tsutils
 from utils import utils_tabbedPlotsWindow as pltWindow
 import vol_momentum as volMomo
 
@@ -247,20 +247,7 @@ def plotHistoricalTermstructure(ts_data, pxHistory_underlying, contangoColName='
     if contangoColName == 'default':
         # plot lineplots on 1 plot 
         fig, ax = plt.subplots()
-        sns.lineplot(x='date', y='oneToTwoMoContango', data=ts_data, ax=ax, label='oneToTwoMoContango', color='blue')
-        sns.lineplot(x='date', y='oneToThreeMoContango', data=ts_data, ax=ax, label='oneToThreeMoContango', color='green')
-        sns.lineplot(x='date', y='twoToThreeMoContango', data=ts_data, ax=ax, label='twoToThreeMoContango', color='red')
-        sns.lineplot(x='date', y='threeToFourMoContango', data=ts_data, ax=ax, label='threeToFourMoContango', color='pink')
-        sns.lineplot(x='date', y='fourToSevenMoContango', data=ts_data, ax=ax, label='fourToSevenMoContango', color='green')
-        #sns.lineplot(x='date', y='currentToLastContango', data=ts_data, ax=ax, label='currentToLastContango', color='red')
-        sns.lineplot(x='date', y='averageContango', data=ts_data, ax=ax, label='averageContango', color='orange')
-        
-        # format plot 
-        ax.legend(loc='upper left')
-        ax2 = ax.twinx()
-        sns.lineplot(x='date', y='close', data=pxHistory_underlying, ax=ax2, label=pxHistory_underlying['symbol'][0], color='black', alpha=0.3)
-        ax2.set_yscale('log')
-        ax2.grid(False)
+        tsutils.plotHistoricalTermstructure(ts_data, pxHistory_underlying, ax)
     
     return fig
 
@@ -650,6 +637,14 @@ def plotScatter(pxHistory, targetColumn, forwardReturnPeriods=[1,2,3,4,5,6,7]):
 def _filterDates(main, reference):
     return main[main['date'].isin(reference['date'])]
 
+def plotTermStructure(ts, ts_pctcontango, pxHistory_underlying, symbol):
+    fig, ax = plt.subplots(2, 2)
+
+    tsutils.plotTermStructure(ts, symbol, ax=ax[0,0])
+    tsutils.plotHistoricalTermstructure(ts_pctcontango, pxHistory_underlying, ax[0,1])
+    return fig
+
+
 vvix_topPercentile = 0.9
 vvix_bottomPercentile = 0.1
 vvix_percentileLookbackDays = 252 ## 1 year lookback = 252 *trading* days
@@ -658,11 +653,12 @@ vvix_percentileLookbackDays = 252 ## 1 year lookback = 252 *trading* days
 ## prepare vix term structure data 
 #####################################
 with db.sqlite_connection(db_termstructure) as conn:
-    vix_ts_raw = vixts.getRawTermStructure(termstructure_db_conn=conn)
-    ng_ts_raw = vixts.getRawTermStructure(termstructure_db_conn=conn, symbol='NG')
+    vix_ts_raw = tsutils.getRawTermStructure(termstructure_db_conn=conn)
+    ng_ts_raw = tsutils.getRawTermStructure(termstructure_db_conn=conn, symbol='NG')
 
-vix_ts_pctContango = vixts.getTermStructurePctContango(vix_ts_raw, oneToTwo=True, oneToThree=True, twoToThree=True, threeToFour=True, fourToSeven=True, currentToLast=True, averageContango=True)
-ng_ts_pctContango = vixts.getTermStructurePctContango(ng_ts_raw, oneToTwo=True, oneToThree=True, twoToThree=True, fourToSeven=True, threeToFour=True, currentToLast=True, averageContango=True)
+vix_ts_pctContango = tsutils.getTermStructurePctContango(vix_ts_raw, oneToTwo=True, oneToThree=True, twoToThree=True, threeToFour=True, fourToSeven=True, currentToLast=True, averageContango=True)
+ng_ts_pctContango = tsutils.getTermStructurePctContango(ng_ts_raw, oneToTwo=True, oneToThree=True, twoToThree=True, fourToSeven=True, threeToFour=True, currentToLast=True, averageContango=True)
+# print the first 9 columns 
 
 ###################################
 ## prepare price history data
@@ -686,7 +682,6 @@ vvix['percentileRank_60d'] = vvix['close'].rolling(60).apply(lambda x: pd.Series
 # add log return column
 vvix = ut.calcLogReturns(vvix, 'close')
 vix = ut.calcLogReturns(vix, 'close')
-
 
 #################################################
 ############## Filter dates 
@@ -722,8 +717,8 @@ boil_filtered = _filterDates(boil, ng_ts_pctContango_filtered)
 #print(ung_filtered.head(5))
 ##################################################
 ############### call plots  
-sns.set()
-sns.set_style('darkgrid')
+#sns.set()
+#sns.set_style('darkgrid')
 
 # get spx price history
 
@@ -736,7 +731,9 @@ tpw.MainWindow.resize(2560, 1380)
 
 #tpw.addPlot('ts 1-2:4-7 spread', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
 #tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, uvxy_filtered, contangoColName='oneToTwoMoContango'))
-tpw.addPlot('VIX ts', plotHistoricalTermstructure(vix_ts_pctContango, uvxy_filtered))
+tpw.addPlot('VIX ts', plotTermStructure(vix_ts_raw.iloc[:,:8],vix_ts_raw,vix, 'VIX'))
+tpw.addPlot('NG ts', plotTermStructure(ng_ts_raw.iloc[:,:8], ng_ts_raw, boil_filtered, 'BOIL'))
+#tpw.addPlot('VIX historical ts', plotHistoricalTermstructure(vix_ts_pctContango, uvxy_filtered))
 tpw.addPlot('NG ts', plotHistoricalTermstructure(ng_ts_pctContango, boil_filtered))
 tpw.addPlot('NG vs ung ts', plotTermstructureSpread_seaborn(ng_ts_pctContango_filtered, ung_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
 tpw.addPlot('NG vs boil ts', plotTermstructureSpread_seaborn(ng_ts_pctContango_filtered, boil_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
