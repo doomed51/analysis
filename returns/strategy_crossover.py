@@ -55,14 +55,14 @@ class CrossoverStrategy:
 
         return fig
     
-    def plotSignalReturnsHeatmap(self):
+    def plotSignalReturnsHeatmap(self, maxperiod_fwdreturns=100):
         fig, ax = plt.subplots()
         fig.suptitle('Signal Returns Heatmap')
-        self.drawSignalReturnsHeatmap(ax)
+        self.drawSignalReturnsHeatmap(ax, maxperiod_fwdreturns)
         return fig
 
-    def drawSignalReturnsHeatmap(self, ax, maxperiod_fwdreturns=100):        
-        signal_rounding = 3 # how much to bucket together the signal column
+    def drawSignalReturnsHeatmap(self, ax, maxperiod_fwdreturns):        
+        signal_rounding = 4 # how much to bucket together the signal column
         signaldf = self.signal_df.copy()
         # drop rows where signal is nan
         signaldf.dropna(subset=['signal'], inplace=True)
@@ -103,14 +103,11 @@ class CrossoverStrategy:
         ax.set_title('Base vs. Signal')
 
         # plot the base and signal timeseries 
-        #ax.plot(self.base_df['date'], self.base_df[self.target_column_name], label=self.target_column_name)
         sns.lineplot(x=self.base_df['date'], y=self.base_df[self.target_column_name], ax=ax, label=self.target_column_name)
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label=self.signal_column_name)
-        #ax.plot(self.signal_df['date'], self.signal_df[self.signal_column_name], label=self.signal_column_name)
 
         # plot the underlying 
         ax2 = ax.twinx()
-        #ax2.plot(self.base_df['date'], self.base_df['close'], color='black', label='close')
         sns.lineplot(x=self.base_df['date'], y=self.base_df['close'], ax=ax2, color='black', label='close')
 
         # set style & format plot
@@ -129,7 +126,8 @@ class CrossoverStrategy:
         ax.set_title('Signal with Percentile Bounds')
 
         # plot signal on bottom plot
-        ax.plot(self.signal_df['date'], self.signal_df['signal'], label='signal')
+        #ax.plot(self.signal_df['date'], self.signal_df['signal'], label='signal')
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df['signal'], ax=ax, label='signal')
 
         # plot percentile bounds
         ax.axhline(self.signal_df['signal'].quantile(upperbound), color='red', linestyle='-', alpha=0.4)
