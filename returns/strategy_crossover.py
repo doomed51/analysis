@@ -1,7 +1,11 @@
 """
     Class that implements a crossover strategy. initialized with base_df, signal_df, and signal_column_name.
 """
+import math
+
 import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 
 class CrossoverStrategy:
     def __init__(self, base_df, signal_df, target_column_name, signal_column_name):
@@ -42,6 +46,7 @@ class CrossoverStrategy:
     def plotSignalOverview(self): 
         fig, ax = plt.subplots(2,2, sharex=True)
         fig.suptitle('Signal Overview')
+        
         # tight layout
         self.drawBaseAndSignal(ax[0,0])
         self.drawSignalAndBounds(ax[1,0])
@@ -49,6 +54,47 @@ class CrossoverStrategy:
         fig.tight_layout()
 
         return fig
+    
+    def plotSignalReturnsHeatmap(self):
+        fig, ax = plt.subplots()
+        fig.suptitle('Signal Returns Heatmap')
+        self.drawSignalReturnsHeatmap(ax)
+        return fig
+
+    def drawSignalReturnsHeatmap(self, ax, maxperiod_fwdreturns=100):        
+        signal_rounding = 3 # how much to bucket together the signal column
+        signaldf = self.signal_df.copy()
+        # drop rows where signal is nan
+        signaldf.dropna(subset=['signal'], inplace=True)
+        # add fwdreturn column for each fwdreturn period
+        for i in range(1, maxperiod_fwdreturns+1):
+            if 'fwdReturns%s'%(i) in signaldf.columns: # skip if col exists
+                continue
+            signaldf['fwdReturns%s'%(i)] = signaldf['close'].pct_change(i).shift(-i)
+        # x100 and round up to 2 decimals the signal column
+        signaldf['signal_normalized'] = signaldf['signal'].apply(lambda x: round(x, signal_rounding))
+        
+        unique_signals = signaldf['signal_normalized'].unique()
+        # 90th percentile of unique signals
+        p95 = signaldf['signal_normalized'].quantile(0.7)
+        p5 = signaldf['signal_normalized'].quantile(0.2)
+        # create a dataframe with the unique signals as the index
+        df = pd.DataFrame(index=unique_signals)
+
+        # for each fwdreturns column, get the avgfwdreturns for each unique signal
+        for i in range(1, maxperiod_fwdreturns+1):
+            df['fwdReturns%s'%(i)] = signaldf.groupby('signal_normalized')['fwdReturns%s'%(i)].mean()
+        df.sort_index(inplace=True, ascending=False)
+
+        sns.heatmap(df, annot=False, cmap='RdYlGn', ax=ax)
+        # add percentile hlines of signal 
+        ax.axhline(p95, color='black', linestyle='-', alpha=0.3)
+        ax.axhline(p5, color='black', linestyle='-', alpha=0.3)
+
+
+        #ax.set_title('Signal Returns Heatmap')
+
+
     """
         Plots the base and signal timeseries on the provided axis
     """
@@ -57,12 +103,15 @@ class CrossoverStrategy:
         ax.set_title('Base vs. Signal')
 
         # plot the base and signal timeseries 
-        ax.plot(self.base_df['date'], self.base_df[self.target_column_name], label=self.target_column_name)
-        ax.plot(self.signal_df['date'], self.signal_df[self.signal_column_name], label=self.signal_column_name)
+        #ax.plot(self.base_df['date'], self.base_df[self.target_column_name], label=self.target_column_name)
+        sns.lineplot(x=self.base_df['date'], y=self.base_df[self.target_column_name], ax=ax, label=self.target_column_name)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label=self.signal_column_name)
+        #ax.plot(self.signal_df['date'], self.signal_df[self.signal_column_name], label=self.signal_column_name)
 
         # plot the underlying 
         ax2 = ax.twinx()
-        ax2.plot(self.base_df['date'], self.base_df['close'], color='black', label='close')
+        #ax2.plot(self.base_df['date'], self.base_df['close'], color='black', label='close')
+        sns.lineplot(x=self.base_df['date'], y=self.base_df['close'], ax=ax2, color='black', label='close')
 
         # set style & format plot
         ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
