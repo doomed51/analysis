@@ -9,13 +9,12 @@ from rich import print
 from utils import utils
 
 """
-    This function calculates the momentum feature for a given pxhistory, lag, and shift 
+    This function calculates the momentum factor for a given pxhistory, lag, and shift 
     inputs:
         pxhistory: dataframe of px history that includes a logReturn column
         lag: number of days to look back for pct change (momo)
         shift: number of days to shift momo
 """
-
 def calcMomoFactor(universe, lag=1, shift=1, lagmomo=False):
     returns = universe.groupby('symbol', group_keys=False).apply(lambda group: (
     group.sort_values(by='date')
@@ -25,8 +24,12 @@ def calcMomoFactor(universe, lag=1, shift=1, lagmomo=False):
     ).reset_index(drop=True)
     if lagmomo == False:
         returns.drop(columns=['lagmomo'], inplace=True)
+    
     return returns
 
+"""
+    Returns correlation between momoperiod and fwdreturnperiod 
+"""
 def calc_correlation(pxHistory_, momoPeriod, forwardReturnPeriod):
   
     # add forward returns and momo columns
@@ -38,6 +41,9 @@ def calc_correlation(pxHistory_, momoPeriod, forwardReturnPeriod):
     
     return correl
 
+"""
+    Returns the momoPeriod and fwdReturnPeriod combod with the highest correlation for the given pxHistory
+"""
 def _calc_optimized_momo_periods(pxHistory, top, **kwargs):
     momoPeriodMax = kwargs.get('momoPeriodMax', 361) # add 1 day
     fwdReturnPeriodMax = kwargs.get('fwdReturnPeriodMax', 361) # add 1 day
@@ -91,3 +97,15 @@ def getTopMomoPeriods(pxHistory, top=5, **kwargs):
         optimization_db.save_opt_variables(pxHistory['symbol'][0], analysis_name, opt_momo_periods)
         optimization_db.disconnect()
         return opt_momo_periods
+
+"""
+    Implements a crossover function for momoperiod and its ema 
+"""
+def _calc_momo_ema_crossover(pxHistory, momoPeriod, emaPeriod):
+    # add momo and ema columns
+    pxHistory = calcMomoFactor(pxHistory, lag=momoPeriod)
+    pxHistory['momo%s'%(momoPeriod)] = pxHistory['momo%s'%(momoPeriod)].shift(1)
+    pxHistory['momoEma%s'%(momoPeriod)] = pxHistory['momo%s'%(momoPeriod)].ewm(span=emaPeriod).mean()
+    # calculate crossover
+    pxHistory['momoEmaCrossover%s'%(momoPeriod)] = pxHistory['momo%s'%(momoPeriod)] - pxHistory['momoEma%s'%(momoPeriod)]
+    return pxHistory
