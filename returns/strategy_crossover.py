@@ -44,12 +44,13 @@ class CrossoverStrategy:
         return trade_returns
 
     def plotSignalOverview(self): 
-        fig, ax = plt.subplots(2,2, sharex=True)
+        fig, ax = plt.subplots(2, sharex=True)
         fig.suptitle('Signal Overview')
         
         # tight layout
-        self.drawBaseAndSignal(ax[0,0])
-        self.drawSignalAndBounds(ax[1,0])
+        self.drawBaseAndSignal(ax[0])
+        self.drawSignalAndBounds(ax[1])
+        ax[0].legend(loc='upper left')
         
         fig.tight_layout()
 
@@ -93,7 +94,6 @@ class CrossoverStrategy:
 
 
         #ax.set_title('Signal Returns Heatmap')
-
 
     """
         Plots the base and signal timeseries on the provided axis
