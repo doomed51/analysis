@@ -96,7 +96,6 @@ def plotTermStructure(ts, symbol, ax, numDays=5):
 """
     Returns a plot of historical term structure contango for the last n periods
 """    
-
 def plotHistoricalTermstructure(ts_data, pxHistory_underlying, ax, contangoColName='default'):
     ts_data.reset_index(inplace=True)
     pxHistory_underlying.reset_index(inplace=True)
@@ -134,4 +133,24 @@ def plotTermstructureAutocorrelation(ts_data, ax, contangoColName='fourToSevenMo
 
     ax.grid(True, which='both', axis='both', linestyle='--')
 
+def plotTermstructureDistribution(ts_data, ax, contangoColName='fourToSevenMoContango'):
+    ts_data.reset_index(inplace=True)
+    sns.distplot(ts_data[contangoColName], ax=ax)
     
+    # add useful vlines 
+    ax.axvline(ts_data[contangoColName].mean(), color='black', linestyle='-', alpha=0.3)
+    ax.text(ts_data[contangoColName].mean(), 0.0001, 'mean: %0.2f'%(ts_data[contangoColName].mean()), color='black', fontsize=10)
+
+    # add 90th percentile
+    ax.axvline(ts_data[contangoColName].quantile(0.9), color='black', linestyle='--', alpha=0.3)
+    ax.axvline(ts_data[contangoColName].quantile(0.1), color='black', linestyle='--', alpha=0.3)
+    ax.text(ts_data[contangoColName].quantile(0.9), 0.12 , '90th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.9)), color='black', fontsize=10, horizontalalignment='right')
+    ax.text(ts_data[contangoColName].quantile(0.1), 0.11, '10th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.1)), color='black', fontsize=10)
+
+    
+
+
+    ax.set_title(f'{contangoColName} Distribution')
+    ax.set_xlabel('Contango')
+    ax.set_ylabel('Frequency')
+    ax.grid(True, which='both', axis='both', linestyle='--')
