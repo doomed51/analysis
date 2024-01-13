@@ -256,15 +256,17 @@ def plotHistoricalTermstructure(ts_data, pxHistory_underlying, contangoColName='
 """
 def plotTermstructureSpread_seaborn(ts_data, pxHistory_underlying, colName1:str, colName2:str): 
     pxHistory_underlying.reset_index(drop=True, inplace=True)
+    tscopy = ts_data#.copy()
     # add spread column
-    ts_data['spread'] = ts_data[colName2] - ts_data[colName1]
+    tscopy['spread'] = tscopy[colName2] - tscopy[colName1]
     # plot lineplots on 1 plot 
     fig, ax = plt.subplots()
-    sns.lineplot(x='date', y='spread', data=ts_data, ax=ax, label='spread', color='blue')
-    sns.lineplot(x='date', y=colName1, data=ts_data, ax=ax, label=colName1, color='green')
-    sns.lineplot(x='date', y=colName2, data=ts_data, ax=ax, label=colName2, color='red')
+
+    sns.lineplot(x='date', y='spread', data=tscopy, ax=ax, label='spread', color='blue')
+    sns.lineplot(x='date', y=colName1, data=tscopy, ax=ax, label=colName1, color='green')
+    sns.lineplot(x='date', y=colName2, data=tscopy, ax=ax, label=colName2, color='red')
     
-    px.line(ts_data, x='spread', y='date')
+    px.line(tscopy, x='spread', y='date')
 
     ax2 = ax.twinx()
     sns.lineplot(x='date', y='close', data=pxHistory_underlying, ax=ax2, label=pxHistory_underlying['symbol'][0], color='black', alpha=0.3)
@@ -277,8 +279,8 @@ def plotTermstructureSpread_seaborn(ts_data, pxHistory_underlying, colName1:str,
     ax2.grid(False)
     
     # add hlines at 90th and 10th percentile of spread 
-    ax.axhline(y=ts_data['spread'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
-    ax.axhline(y=ts_data['spread'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
+    ax.axhline(y=tscopy['spread'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
+    ax.axhline(y=tscopy['spread'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
 
     return fig
 
@@ -635,12 +637,12 @@ def plotScatter(pxHistory, targetColumn, forwardReturnPeriods=[1,2,3,4,5,6,7]):
     sidenote: this is an incredibly unnecessary abstraction but here we are 
 """
 def _filterDates(main, reference):
-    return main[main['date'].isin(reference['date'])]
+    return main[main['date'].isin(reference['date'])].copy()
 
 def plotTermStructureOverview(ts, ts_pctcontango, pxHistory_underlying, symbol):
     fig, ax = plt.subplots(2, 2)
 
-    tsutils.plotTermStructure(ts, symbol, ax=ax[0,0])
+    tsutils.plotTermStructure(ts, symbol, ax=ax[0,0], numDays=10)
     tsutils.plotHistoricalTermstructure(ts_pctcontango, pxHistory_underlying, ax[0,1])
     tsutils.plotTermstructureAutocorrelation(ts_pctcontango, ax=ax[1,0])
     #tsutils.plotTermstructureAutocorrelation(ts_pctcontango, ax=ax[1,1], contangoColName='currentToLastContango')
@@ -734,8 +736,8 @@ tpw.MainWindow.resize(2560, 1380)
 
 #tpw.addPlot('ts 1-2:4-7 spread', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
 #tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, uvxy_filtered, contangoColName='oneToTwoMoContango'))
-tpw.addPlot('VIX ts', plotTermStructureOverview(vix_ts_raw.iloc[:,:8],vix_ts_raw,vix, 'VIX'))
-tpw.addPlot('NG ts', plotTermStructureOverview(ng_ts_raw.iloc[:,:8], ng_ts_raw, boil_filtered, 'BOIL'))
+tpw.addPlot('VIX ts', plotTermStructureOverview(vix_ts_raw.iloc[:,:8].copy(),vix_ts_raw,vix, 'VIX'))
+tpw.addPlot('NG ts', plotTermStructureOverview(ng_ts_raw.iloc[:,:8].copy(), ng_ts_raw, boil_filtered, 'BOIL'))
 #tpw.addPlot('VIX historical ts', plotHistoricalTermstructure(vix_ts_pctContango, uvxy_filtered))
 tpw.addPlot('NG ts', plotHistoricalTermstructure(ng_ts_pctContango, boil_filtered))
 tpw.addPlot('NG vs ung ts', plotTermstructureSpread_seaborn(ng_ts_pctContango_filtered, ung_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
