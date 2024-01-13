@@ -16,6 +16,7 @@ def getRawTermStructure(termstructure_db_conn, symbol='VIX', interval='1day'):
 
     # convert date column to datetime
     vix_ts_raw['date'] = pd.to_datetime(vix_ts_raw['date'])
+    vix_ts_raw['symbol'] = symbol
 
     # set date as index
     vix_ts_raw.set_index('date', inplace=True)
@@ -32,9 +33,12 @@ Params:
 
 """
 def getTermStructurePctContango(ts_raw, oneToTwo=False, oneToThree=False, twoToThree = False, threeToFour= False, fourToSeven = False, currentToLast = False, averageContango = False):
-    
+    symbol = ts_raw['symbol'][0]
+    # drop columns that are not needed
+    # drop symbol column
+    ts_raw.drop(columns='symbol', inplace=True)
     # create a new df with the percent change between n and n+1 month futures
-    ts_pctContango = ts_raw.pct_change(axis='columns', periods=-1).drop(columns='month8')*-1
+    ts_pctContango = (ts_raw.pct_change(axis='columns', periods=-1).drop(columns='month8')*-1).copy()
     
     if fourToSeven:
         # add contango from the 4th to 7th month
@@ -70,6 +74,8 @@ def getTermStructurePctContango(ts_raw, oneToTwo=False, oneToThree=False, twoToT
         # add averageContango column 
         ts_pctContango['averageContango'] = ts_pctContango.mean(axis=1)
     
+    ts_pctContango['symbol'] = symbol
+    ts_raw['symbol'] = symbol
     ## sort by Date column
     ts_pctContango.sort_values(by='date', inplace=True)
     return ts_pctContango
@@ -78,7 +84,7 @@ def getTermStructurePctContango(ts_raw, oneToTwo=False, oneToThree=False, twoToT
     Returns a plot of term structure for the last n periods 
     ts: termstructure dataframe with columns: [date, month1, month2, ...]
 """
-def plotTermStructure(ts, symbol, ax, numDays=5):
+def plotTermStructure(ts, symbol_underlying, symbol_secondary, ax, numDays=5):
     ts.reset_index(inplace=True)
     # sort ts by date, and get the last 5 rows
     ts['date'] = pd.to_datetime(ts['date'])
@@ -88,6 +94,7 @@ def plotTermStructure(ts, symbol, ax, numDays=5):
     for i, color in zip(range(len(ts.tail(numDays))), colors):
         sns.lineplot(x=ts.columns[1:], y=ts.iloc[i, 1:], ax=ax, label=ts['date'].iloc[i].strftime('%Y-%m-%d'), color=color)
     
+    ax.set_title(f'{symbol_underlying} Term Structure for last {numDays} days')
     # set gridstyle
     ax.grid(True, which='both', axis='both', linestyle='--')
     sns.set_style('darkgrid')
@@ -106,11 +113,16 @@ def plotHistoricalTermstructure(ts_data, pxHistory_underlying, ax, contangoColNa
     #sns.lineplot(x='date', y='currentToLastContango', data=ts_data, ax=ax, label='currentToLastContango', color='red')
     #sns.lineplot(x='date', y='averageContango', data=ts_data, ax=ax, label='averageContango', color='orange')
     
+    # title
+    ax.set_title('Historical Contango')
+
     # format plot 
     ax.grid(True, which='both', axis='both', linestyle='--')
     ax.legend(loc='upper left')
+    
     ax2 = ax.twinx()
     sns.lineplot(x='date', y='close', data=pxHistory_underlying, ax=ax2, label=pxHistory_underlying['symbol'][0], color='black', alpha=0.3)
+    
     ax2.set_yscale('log')
     ax2.grid(False)
 
@@ -144,7 +156,7 @@ def plotTermstructureDistribution(ts_data, ax, contangoColName='fourToSevenMoCon
     # set vline labels 
     ax.text(ts_data[contangoColName].mean(), 0.5, 'mean: %0.2f'%(ts_data[contangoColName].mean()), color='black', fontsize=10, horizontalalignment='left')
     ax.text(ts_data[contangoColName].quantile(0.9) + 2, 10, '90th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.9)), color='red', fontsize=10, horizontalalignment='right')
-    ax.text(ts_data[contangoColName].quantile(0.1) - 5, 3, '10th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.1)), color='red', fontsize=10)
+    ax.text(ts_data[contangoColName].quantile(0.1) - 3, 3, '10th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.1)), color='red', fontsize=10)
 
     # format plot
     ax.set_title(f'{contangoColName} Distribution')
