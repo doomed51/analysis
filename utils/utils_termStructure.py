@@ -83,11 +83,10 @@ def plotTermStructure(ts, symbol, ax, numDays=5):
     # sort ts by date, and get the last 5 rows
     ts['date'] = pd.to_datetime(ts['date'])
     ts = ts.sort_values(by='date').tail(numDays)
-    print(ts)
-    
-    # iterate through the last numDays records in ts
-    for i in range(len(ts.tail(numDays))):
-        sns.lineplot(x=ts.columns[1:], y=ts.iloc[i, 1:], ax=ax, label=ts['date'].iloc[i].strftime('%Y-%m-%d'))
+
+    colors = sns.color_palette('YlGnBu', n_colors=numDays) # set color scheme of lineplots     
+    for i, color in zip(range(len(ts.tail(numDays))), colors):
+        sns.lineplot(x=ts.columns[1:], y=ts.iloc[i, 1:], ax=ax, label=ts['date'].iloc[i].strftime('%Y-%m-%d'), color=color)
     
     # set gridstyle
     ax.grid(True, which='both', axis='both', linestyle='--')
@@ -115,7 +114,7 @@ def plotHistoricalTermstructure(ts_data, pxHistory_underlying, ax, contangoColNa
     ax2.set_yscale('log')
     ax2.grid(False)
 
-def plotTermstructureAutocorrelation(ts_data, ax, contangoColName='fourToSevenMoContango', max_lag=100):
+def plotTermstructureAutocorrelation(ts_data, ax, contangoColName='fourToSevenMoContango', max_lag=60):
     ts_data.reset_index(inplace=True)
 
     # Calculate autocorrelations for different lags
@@ -124,7 +123,7 @@ def plotTermstructureAutocorrelation(ts_data, ax, contangoColName='fourToSevenMo
     # Create the 
 
     # plot stem of autocorrelation
-    ax.stem(range(max_lag), autocorrelations, use_line_collection=True)
+    ax.stem(range(max_lag), autocorrelations, use_line_collection=True, linefmt='--')
     ax.set_title(f'{contangoColName} Autocorrelation')
 
     # format plot
@@ -135,17 +134,17 @@ def plotTermstructureAutocorrelation(ts_data, ax, contangoColName='fourToSevenMo
 
 def plotTermstructureDistribution(ts_data, ax, contangoColName='fourToSevenMoContango'):
     ts_data.reset_index(inplace=True)
-    sns.distplot(ts_data[contangoColName], ax=ax)
+    sns.distplot(ts_data[contangoColName], ax=ax, bins=100)
     
     # add useful vlines 
     ax.axvline(ts_data[contangoColName].mean(), color='black', linestyle='-', alpha=0.3)
     ax.text(ts_data[contangoColName].mean(), 0.0001, 'mean: %0.2f'%(ts_data[contangoColName].mean()), color='black', fontsize=10)
 
     # add 90th percentile
-    ax.axvline(ts_data[contangoColName].quantile(0.9), color='black', linestyle='--', alpha=0.3)
-    ax.axvline(ts_data[contangoColName].quantile(0.1), color='black', linestyle='--', alpha=0.3)
-    ax.text(ts_data[contangoColName].quantile(0.9), 0.12 , '90th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.9)), color='black', fontsize=10, horizontalalignment='right')
-    ax.text(ts_data[contangoColName].quantile(0.1), 0.11, '10th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.1)), color='black', fontsize=10)
+    ax.axvline(ts_data[contangoColName].quantile(0.9), color='red', linestyle='--', alpha=0.3)
+    ax.axvline(ts_data[contangoColName].quantile(0.1), color='red', linestyle='--', alpha=0.3)
+    ax.text(ts_data[contangoColName].quantile(0.9), 0.12 , '90th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.9)), color='red', fontsize=10, horizontalalignment='right')
+    ax.text(ts_data[contangoColName].quantile(0.1), 0.11, '10th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.1)), color='red', fontsize=10)
 
     
 
