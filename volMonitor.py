@@ -637,11 +637,13 @@ def plotScatter(pxHistory, targetColumn, forwardReturnPeriods=[1,2,3,4,5,6,7]):
 def _filterDates(main, reference):
     return main[main['date'].isin(reference['date'])]
 
-def plotTermStructure(ts, ts_pctcontango, pxHistory_underlying, symbol):
+def plotTermStructureOverview(ts, ts_pctcontango, pxHistory_underlying, symbol):
     fig, ax = plt.subplots(2, 2)
 
     tsutils.plotTermStructure(ts, symbol, ax=ax[0,0])
     tsutils.plotHistoricalTermstructure(ts_pctcontango, pxHistory_underlying, ax[0,1])
+    tsutils.plotTermstructureAutocorrelation(ts_pctcontango, ax=ax[1,0])
+    tsutils.plotTermstructureAutocorrelation(ts_pctcontango, ax=ax[1,1], contangoColName='currentToLastContango')
     return fig
 
 
@@ -731,8 +733,8 @@ tpw.MainWindow.resize(2560, 1380)
 
 #tpw.addPlot('ts 1-2:4-7 spread', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
 #tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, uvxy_filtered, contangoColName='oneToTwoMoContango'))
-tpw.addPlot('VIX ts', plotTermStructure(vix_ts_raw.iloc[:,:8],vix_ts_raw,vix, 'VIX'))
-tpw.addPlot('NG ts', plotTermStructure(ng_ts_raw.iloc[:,:8], ng_ts_raw, boil_filtered, 'BOIL'))
+tpw.addPlot('VIX ts', plotTermStructureOverview(vix_ts_raw.iloc[:,:8],vix_ts_raw,vix, 'VIX'))
+tpw.addPlot('NG ts', plotTermStructureOverview(ng_ts_raw.iloc[:,:8], ng_ts_raw, boil_filtered, 'BOIL'))
 #tpw.addPlot('VIX historical ts', plotHistoricalTermstructure(vix_ts_pctContango, uvxy_filtered))
 tpw.addPlot('NG ts', plotHistoricalTermstructure(ng_ts_pctContango, boil_filtered))
 tpw.addPlot('NG vs ung ts', plotTermstructureSpread_seaborn(ng_ts_pctContango_filtered, ung_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
