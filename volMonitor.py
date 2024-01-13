@@ -643,7 +643,8 @@ def plotTermStructureOverview(ts, ts_pctcontango, pxHistory_underlying, symbol):
     tsutils.plotTermStructure(ts, symbol, ax=ax[0,0])
     tsutils.plotHistoricalTermstructure(ts_pctcontango, pxHistory_underlying, ax[0,1])
     tsutils.plotTermstructureAutocorrelation(ts_pctcontango, ax=ax[1,0])
-    tsutils.plotTermstructureAutocorrelation(ts_pctcontango, ax=ax[1,1], contangoColName='currentToLastContango')
+    #tsutils.plotTermstructureAutocorrelation(ts_pctcontango, ax=ax[1,1], contangoColName='currentToLastContango')
+    tsutils.plotTermstructureDistribution(ts_pctcontango, ax=ax[1,1])
     return fig
 
 
