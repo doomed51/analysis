@@ -639,13 +639,13 @@ def plotScatter(pxHistory, targetColumn, forwardReturnPeriods=[1,2,3,4,5,6,7]):
 def _filterDates(main, reference):
     return main[main['date'].isin(reference['date'])].copy()
 
-def plotTermStructureOverview(ts, ts_pctcontango, pxHistory_underlying, symbol):
+def plotTermStructureOverview(ts, ts_pctcontango, pxHistory_underlying, symbol_secondary):
+    symbol_underlying = ts_pctcontango['symbol'][0]
+    
     fig, ax = plt.subplots(2, 2)
-
-    tsutils.plotTermStructure(ts, symbol, ax=ax[0,0], numDays=10)
+    tsutils.plotTermStructure(ts, symbol_underlying, symbol_secondary, ax=ax[0,0], numDays=10)
     tsutils.plotHistoricalTermstructure(ts_pctcontango, pxHistory_underlying, ax[0,1])
     tsutils.plotTermstructureAutocorrelation(ts_pctcontango, ax=ax[1,0])
-    #tsutils.plotTermstructureAutocorrelation(ts_pctcontango, ax=ax[1,1], contangoColName='currentToLastContango')
     tsutils.plotTermstructureDistribution(ts_pctcontango, ax=ax[1,1])
     return fig
 
@@ -655,12 +655,11 @@ vvix_bottomPercentile = 0.1
 vvix_percentileLookbackDays = 252 ## 1 year lookback = 252 *trading* days
 
 #####################################
-## prepare vix term structure data 
+## prepare term structure data 
 #####################################
 with db.sqlite_connection(db_termstructure) as conn:
-    vix_ts_raw = tsutils.getRawTermStructure(termstructure_db_conn=conn)
+    vix_ts_raw = tsutils.getRawTermStructure(termstructure_db_conn=conn, symbol='VIX')
     ng_ts_raw = tsutils.getRawTermStructure(termstructure_db_conn=conn, symbol='NG')
-
 vix_ts_pctContango = tsutils.getTermStructurePctContango(vix_ts_raw, oneToTwo=True, oneToThree=True, twoToThree=True, threeToFour=True, fourToSeven=True, currentToLast=True, averageContango=True)
 ng_ts_pctContango = tsutils.getTermStructurePctContango(ng_ts_raw, oneToTwo=True, oneToThree=True, twoToThree=True, fourToSeven=True, threeToFour=True, currentToLast=True, averageContango=True)
 # print the first 9 columns 
@@ -688,64 +687,34 @@ vvix['percentileRank_60d'] = vvix['close'].rolling(60).apply(lambda x: pd.Series
 vvix = ut.calcLogReturns(vvix, 'close')
 vix = ut.calcLogReturns(vix, 'close')
 
-#################################################
-############## Filter dates 
 # reset index to eliminate duplicate indices resulting from joins 
 vix_ts_pctContango.reset_index(inplace=True)
 ng_ts_pctContango.reset_index(inplace=True)
 
-## from vix_ts_pctContango remove any dates that are not in vix and vvix
+## filter pctContango 
 vix_ts_pctContango = vix_ts_pctContango[vix_ts_pctContango['date'].isin(vix['date']) & vix_ts_pctContango['date'].isin(vvix['date'])]
 vix_ts_pctContango.drop_duplicates(subset=['date'], inplace=True)
+ng_ts_pctContango_filtered = _filterDates(ng_ts_pctContango, ung)
 
-# from vvix remove any dates that are not in vix and vix_ts_pctContango
-#vvix = vvix[vvix.index.isin(vix.index) & vvix.index.isin(vix_ts_pctContango['date'])]
-vvix = vvix[vvix['date'].isin(vix['date']) & vvix['date'].isin(vix_ts_pctContango['date'])]
-
-# from vix remove any dates that are not in vvix and vix_ts_pctContango
-vix = vix[vix['date'].isin(vvix['date']) & vix['date'].isin(vix_ts_pctContango['date'])]
-
-# from uvxy_filtered remove any dates not in contango 
-uvxy_filtered = uvxy[uvxy['date'].isin(vix_ts_pctContango['date'])].copy()
-vix_ts_pctContango_filtered = vix_ts_pctContango[vix_ts_pctContango['date'].isin(uvxy_filtered['date'])]
 # remove duplicates 
+vvix = vvix[vvix['date'].isin(vix['date']) & vvix['date'].isin(vix_ts_pctContango['date'])]
+vix = vix[vix['date'].isin(vvix['date']) & vix['date'].isin(vix_ts_pctContango['date'])]
+uvxy_filtered = uvxy[uvxy['date'].isin(vix_ts_pctContango['date'])].copy()
 uvxy_filtered.drop_duplicates(subset=['date'], inplace=True)
 spx_filtered = _filterDates(spx, vix_ts_pctContango)
-
-#print(ng_ts_pctContango.head(5))
-#print(vix_ts_pctContango.head(5))
-# filter ng
-ng_ts_pctContango_filtered = _filterDates(ng_ts_pctContango, ung)
 ung_filtered = _filterDates(ung, ng_ts_pctContango_filtered)
 boil_filtered = _filterDates(boil, ng_ts_pctContango_filtered)
-#print(ung.head(5))
-#print(ung_filtered.head(5))
-##################################################
-############### call plots  
-#sns.set()
-#sns.set_style('darkgrid')
 
-# get spx price history
 
 # initialize plot window for tabbed plots
 tpw = pltWindow.plotWindow()
 tpw.MainWindow.resize(2560, 1380)
 
-########## General Overview: 
-########## 
-
+########## Add plot tabs   
 #tpw.addPlot('ts 1-2:4-7 spread', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
 #tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, uvxy_filtered, contangoColName='oneToTwoMoContango'))
-tpw.addPlot('VIX ts', plotTermStructureOverview(vix_ts_raw.iloc[:,:8].copy(),vix_ts_raw,vix, 'VIX'))
-tpw.addPlot('NG ts', plotTermStructureOverview(ng_ts_raw.iloc[:,:8].copy(), ng_ts_raw, boil_filtered, 'BOIL'))
-#tpw.addPlot('VIX historical ts', plotHistoricalTermstructure(vix_ts_pctContango, uvxy_filtered))
-tpw.addPlot('NG ts', plotHistoricalTermstructure(ng_ts_pctContango, boil_filtered))
-tpw.addPlot('NG vs ung ts', plotTermstructureSpread_seaborn(ng_ts_pctContango_filtered, ung_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
-tpw.addPlot('NG vs boil ts', plotTermstructureSpread_seaborn(ng_ts_pctContango_filtered, boil_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
-tpw.addPlot('VVIX & VIX Autocorrelation', plotAutocorrelation(vvix, vix))
-#tpw.addPlot('Momentum - VVIX', volMomo.plotMomoScatter(vvix))
-#tpw.addPlot('Momentum - VIX', volMomo.plotMomoScatter(vix))
-
-#tpw.addPlot('Momentum - VIX vs. VVIX', plotMomentumComparison(vvix, vix))
+tpw.addPlot('VIX ts overview', plotTermStructureOverview(vix_ts_raw.iloc[:,:8].copy(),vix_ts_raw,vix, 'VIX'))
+tpw.addPlot('NG ts overview', plotTermStructureOverview(ng_ts_raw.iloc[:,:8].copy(), ng_ts_raw, boil_filtered, 'BOIL'))
+tpw.addPlot('NG historical ts', plotHistoricalTermstructure(ng_ts_pctContango, boil_filtered))
 
 tpw.show()
