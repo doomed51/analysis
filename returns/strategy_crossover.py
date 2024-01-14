@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
+from utils import utils_strategyAnalyzer as sa
+
 class CrossoverStrategy:
     def __init__(self, base_df, signal_df, target_column_name, signal_column_name):
         self.target_column_name = target_column_name
@@ -63,36 +65,38 @@ class CrossoverStrategy:
         return fig
 
     def drawSignalReturnsHeatmap(self, ax, maxperiod_fwdreturns):        
-        signal_rounding = 4 # how much to bucket together the signal column
-        signaldf = self.signal_df.copy()
+        signal_rounding = 2 # how much to bucket together the signal column
+        #signaldf = self.signal_df.copy()
         # drop rows where signal is nan
-        signaldf.dropna(subset=['signal'], inplace=True)
+        #signaldf.dropna(subset=['signal'], inplace=True)
         # add fwdreturn column for each fwdreturn period
-        for i in range(1, maxperiod_fwdreturns+1):
-            if 'fwdReturns%s'%(i) in signaldf.columns: # skip if col exists
-                continue
-            signaldf['fwdReturns%s'%(i)] = signaldf['close'].pct_change(i).shift(-i)
+        #for i in range(1, maxperiod_fwdreturns+1):
+            #if 'fwdReturns%s'%(i) in signaldf.columns: # skip if col exists
+            #    continue
+            #signaldf['fwdReturns%s'%(i)] = signaldf['close'].pct_change(i).shift(-i)
+        
         # x100 and round up to 2 decimals the signal column
-        signaldf['signal_normalized'] = signaldf['signal'].apply(lambda x: round(x, signal_rounding))
+        #signaldf['signal_normalized'] = signaldf['signal'].round(signal_rounding) #.apply(lambda x: round(x, signal_rounding))
         
         # 90th percentile of unique signals
-        p95 = signaldf['signal_normalized'].quantile(0.7)
-        p5 = signaldf['signal_normalized'].quantile(0.2)
+        #p95 = signaldf['signal_normalized'].quantile(0.7)
+        #p5 = signaldf['signal_normalized'].quantile(0.2)
         
         # List of column names for fwdReturns
-        fwd_returns_cols = ['fwdReturns{}'.format(i) for i in range(1, maxperiod_fwdreturns + 1)]
+        #fwd_returns_cols = ['fwdReturns{}'.format(i) for i in range(1, maxperiod_fwdreturns + 1)]
 
         # Perform the groupby and mean calculation in one step
         # This creates a DataFrame with means for each fwdReturns column
-        mean_values = signaldf.groupby('signal_normalized')[fwd_returns_cols].mean()
+        #mean_values = signaldf.groupby('signal_normalized')[fwd_returns_cols].mean()
         #sort mean values by index
-        mean_values.sort_index(inplace=True, ascending=False)
+        #mean_values.sort_index(inplace=True, ascending=False)
 
         #df.sort_index(inplace=True, ascending=False)
+        mean_values = sa.bucketAndCalcSignalReturns(self.signal_df, self.signal_column_name, signal_rounding, maxperiod_fwdreturns)
         sns.heatmap(mean_values, annot=False, cmap='RdYlGn', ax=ax)
         # add percentile hlines of signal 
-        ax.axhline(p95, color='black', linestyle='-', alpha=0.5)
-        ax.axhline(p5, color='black', linestyle='-', alpha=0.5)
+        #ax.axhline(p95, color='black', linestyle='-', alpha=0.5)
+        #ax.axhline(p5, color='black', linestyle='-', alpha=0.5)
 
     """
         Plots the base and signal timeseries on the provided axis
