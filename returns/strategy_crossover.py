@@ -75,25 +75,24 @@ class CrossoverStrategy:
         # x100 and round up to 2 decimals the signal column
         signaldf['signal_normalized'] = signaldf['signal'].apply(lambda x: round(x, signal_rounding))
         
-        unique_signals = signaldf['signal_normalized'].unique()
         # 90th percentile of unique signals
         p95 = signaldf['signal_normalized'].quantile(0.7)
         p5 = signaldf['signal_normalized'].quantile(0.2)
-        # create a dataframe with the unique signals as the index
-        df = pd.DataFrame(index=unique_signals)
+        
+        # List of column names for fwdReturns
+        fwd_returns_cols = ['fwdReturns{}'.format(i) for i in range(1, maxperiod_fwdreturns + 1)]
 
-        # for each fwdreturns column, get the avgfwdreturns for each unique signal
-        for i in range(1, maxperiod_fwdreturns+1):
-            df['fwdReturns%s'%(i)] = signaldf.groupby('signal_normalized')['fwdReturns%s'%(i)].mean()
-        df.sort_index(inplace=True, ascending=False)
+        # Perform the groupby and mean calculation in one step
+        # This creates a DataFrame with means for each fwdReturns column
+        mean_values = signaldf.groupby('signal_normalized')[fwd_returns_cols].mean()
+        #sort mean values by index
+        mean_values.sort_index(inplace=True, ascending=False)
 
-        sns.heatmap(df, annot=False, cmap='RdYlGn', ax=ax)
+        #df.sort_index(inplace=True, ascending=False)
+        sns.heatmap(mean_values, annot=False, cmap='RdYlGn', ax=ax)
         # add percentile hlines of signal 
-        ax.axhline(p95, color='black', linestyle='-', alpha=0.3)
-        ax.axhline(p5, color='black', linestyle='-', alpha=0.3)
-
-
-        #ax.set_title('Signal Returns Heatmap')
+        ax.axhline(p95, color='black', linestyle='-', alpha=0.5)
+        ax.axhline(p5, color='black', linestyle='-', alpha=0.5)
 
     """
         Plots the base and signal timeseries on the provided axis
