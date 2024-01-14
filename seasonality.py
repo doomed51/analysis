@@ -568,6 +568,5 @@ def seasonalAnalysis_intraday(symbol, interval, target='close'):
               'From %s to %s'%(pxHistory302['date'].min().date(), pxHistory302['date'].max().date()),
                'From %s to %s'%(pxHistory303['date'].min().date(), pxHistory303['date'].max().date()) ])
 
-
 if __name__ =='__main__':
     plotLogReturns_12months('xflt')
