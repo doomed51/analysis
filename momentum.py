@@ -12,8 +12,8 @@ from utils import utils
     This function calculates the momentum factor for a given pxhistory, lag, and shift 
     inputs:
         pxhistory: dataframe of px history that includes a logReturn column
-        lag: number of days to look back for pct change (momo)
-        shift: number of days to shift momo
+        lag: lookback period 
+        shift: (optional) number of periods to shift momo
 """
 def calcMomoFactor(universe, lag=1, shift=1, lagmomo=False):
     returns = universe.groupby('symbol', group_keys=False).apply(lambda group: (
@@ -109,3 +109,17 @@ def _calc_momo_ema_crossover(pxHistory, momoPeriod, emaPeriod):
     # calculate crossover
     pxHistory['momoEmaCrossover%s'%(momoPeriod)] = pxHistory['momo%s'%(momoPeriod)] - pxHistory['momoEma%s'%(momoPeriod)]
     return pxHistory
+
+def plotMomoOverview (pxHistory, momoPeriod, emaPeriod, ax):
+    # add momo and ema columns
+    pxHistory = calcMomoFactor(pxHistory, lag=momoPeriod)
+    pxHistory['momo%s'%(momoPeriod)] = pxHistory['momo%s'%(momoPeriod)].shift(1)
+    pxHistory['momoEma%s'%(momoPeriod)] = pxHistory['momo%s'%(momoPeriod)].ewm(span=emaPeriod).mean()
+    # calculate crossover
+    pxHistory['momoEmaCrossover%s'%(momoPeriod)] = pxHistory['momo%s'%(momoPeriod)] - pxHistory['momoEma%s'%(momoPeriod)]
+    # plot
+    sns.lineplot(x=pxHistory['date'], y=pxHistory['momo%s'%(momoPeriod)], ax=ax, label='momo%s'%(momoPeriod))
+    sns.lineplot(x=pxHistory['date'], y=pxHistory['momoEma%s'%(momoPeriod)], ax=ax, label='momoEma%s'%(momoPeriod))
+    ax.axhline(0, color='grey', linestyle='-', alpha=0.5)
+    ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
+    ax.set_title('momo%s'%(momoPeriod))
