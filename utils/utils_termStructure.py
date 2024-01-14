@@ -34,8 +34,7 @@ Params:
 """
 def getTermStructurePctContango(ts_raw, oneToTwo=False, oneToThree=False, twoToThree = False, threeToFour= False, fourToSeven = False, currentToLast = False, averageContango = False):
     symbol = ts_raw['symbol'][0]
-    # drop columns that are not needed
-    # drop symbol column
+
     ts_raw.drop(columns='symbol', inplace=True)
     # create a new df with the percent change between n and n+1 month futures
     ts_pctContango = (ts_raw.pct_change(axis='columns', periods=-1).drop(columns='month8')*-1).copy()
