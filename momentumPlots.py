@@ -645,13 +645,26 @@ def plotMomoOverview (pxHistory, momoPeriod, emaPeriod):
     print(pxHistory.columns) 
     # print the first 10 collumns  
     print(pxHistory.iloc[:, 0:15].head(5))
+    
     # plot heatmap 
     mean_fwdReturns = sa.bucketAndCalcSignalReturns(pxHistory, 'momo', 2, 50)
     sns.heatmap(mean_fwdReturns, annot=False, cmap='RdYlGn', ax=ax[0,0])
+    ax[0,0].set_title('momo vs. fwdreturns')
+    
     # plot momo and close 
+    sns.lineplot(ax=ax[0,1], data=pxHistory, x='date', y='close', color='grey') 
+    sns.lineplot(ax=ax[0,1].twinx(), data=pxHistory, x='date', y='momo', color='green', alpha=0.5)
+    ax[0,1].set_title('close and momo')
 
     # plot momo autocorrelation
+    autocorrelations = sa.calculateAutocorrelations(pxHistory, 'momo', 100)
+    ax[1,0].stem(autocorrelations, use_line_collection=True, linefmt='--')
+    ax[1,0].set_title('momo autocorrelation')
 
-    # plot momo distribution 
+    # plot momo distribution
+    sns.histplot(ax=ax[1,1], data=pxHistory, x='momo', bins=100)
+    ax[1,1].axvline(pxHistory['momo'].quantile(.9), color='red', linestyle='--')
+    ax[1,1].axvline(pxHistory['momo'].quantile(.1), color='red', linestyle='--') 
+    ax[1,1].set_title('momo distribution')
 
     return fig 
