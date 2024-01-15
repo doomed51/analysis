@@ -5,6 +5,14 @@
 # calculate means for each fwdreturn column grouped by signal column
 # 
 
+"""
+    Buckets by signal and calculates the mean fwdReturns for each period 
+    inputs:
+        signaldf: dataframe with a column to be used as the "signal", and close px to calculate fwd returrns
+        signal_col: identifies the column to be used as the signal 
+        signal_rounding: (optional) Round the signal column to n decimal places, default is 2
+        maxperiod_fwdreturns: (optional) number of fwd returns columns to add to the dataframe, default 2
+"""
 def bucketAndCalcSignalReturns(signaldf, signal_col, signal_rounding=2, maxperiod_fwdreturns=50):
     
     signaldf.dropna(subset=['signal'], inplace=True)
