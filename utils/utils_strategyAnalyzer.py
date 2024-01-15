@@ -6,6 +6,16 @@
 # 
 
 """
+    Calculates autocrrelations for a given dataframe and target column
+"""
+def calculateAutocorrelations(df, targetColName, max_lag=60):
+    # calculate autocorrelations
+    autocorrelations = []
+    for i in range(1, max_lag + 1):
+        autocorrelations.append(df[targetColName].autocorr(lag=i))
+    return autocorrelations
+
+"""
     Buckets by signal and calculates the mean fwdReturns for each period 
     inputs:
         signaldf: dataframe with a column to be used as the "signal", and close px to calculate fwd returrns
@@ -24,13 +34,13 @@ def bucketAndCalcSignalReturns(signaldf, signal_col, signal_rounding=2, maxperio
         signaldf['fwdReturns%s'%(i)] = signaldf['close'].pct_change(i).shift(-i)
     
     # round signal column to n decimal places, or otherwise bucket it to calculate the mean fwd returns on
-    signaldf['signal_normalized'] = signaldf[signal_col].round(signal_rounding) #.apply(lambda x: round(x, signal_rounding))
+    signaldf['%s_normalized'%(signal_col)] = signaldf[signal_col].round(signal_rounding) #.apply(lambda x: round(x, signal_rounding))
     
     # List of column names for fwdReturns
     fwd_returns_cols = ['fwdReturns{}'.format(i) for i in range(1, maxperiod_fwdreturns + 1)]
 
     # Perform the groupby and mean calculation in one step
-    signal_meanReturns = signaldf.groupby('signal_normalized')[fwd_returns_cols].mean()
+    signal_meanReturns = signaldf.groupby('%s_normalized'%(signal_col))[fwd_returns_cols].mean()
     signal_meanReturns.sort_index(inplace=True, ascending=False) # transpose so that fwdReturns are columns
 
 
