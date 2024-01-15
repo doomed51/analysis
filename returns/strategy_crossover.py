@@ -110,9 +110,9 @@ class CrossoverStrategy:
         #ax.plot(self.signal_df['date'], self.signal_df['signal'], label='signal')
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df['signal'], ax=ax, label='signal')
 
-        # plot percentile bounds
-        ax.axhline(self.signal_df['signal'].quantile(upperbound), color='red', linestyle='-', alpha=0.4)
-        ax.axhline(self.signal_df['signal'].quantile(lowerbound), color='red', linestyle='-', alpha=0.4)
+        # add rolling percentile lines
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df['signal'].rolling(252).quantile(upperbound), ax=ax, label='90th percentile', color='red', alpha=0.3)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df['signal'].rolling(252).quantile(lowerbound), ax=ax, label='10th percentile', color='red', alpha=0.3)
 
         # add percentile labels
         ax.text(self.signal_df['date'].iloc[0], self.signal_df['signal'].quantile(upperbound), '%s percentile: %0.5f'%(int(upperbound*100), self.signal_df['signal'].quantile(upperbound)), color='red', fontsize=10)
