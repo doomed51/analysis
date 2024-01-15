@@ -655,6 +655,8 @@ def plotMomoOverview (pxHistory, momoPeriod, emaPeriod):
     sns.lineplot(ax=ax[0,1], data=pxHistory, x='date', y='close', color='grey') 
     sns.lineplot(ax=ax[0,1].twinx(), data=pxHistory, x='date', y='momo', color='green', alpha=0.5)
     ax[0,1].set_title('close and momo')
+    ax[0,1].grid(True, which='both', axis='both', linestyle='-')
+    ax[0,1].legend()
 
     # plot momo autocorrelation
     autocorrelations = sa.calculateAutocorrelations(pxHistory, 'momo', 100)
@@ -666,5 +668,6 @@ def plotMomoOverview (pxHistory, momoPeriod, emaPeriod):
     ax[1,1].axvline(pxHistory['momo'].quantile(.9), color='red', linestyle='--')
     ax[1,1].axvline(pxHistory['momo'].quantile(.1), color='red', linestyle='--') 
     ax[1,1].set_title('momo distribution')
+    ax[1,1].grid(True, which='both', axis='both', linestyle='-')
 
     return fig 
