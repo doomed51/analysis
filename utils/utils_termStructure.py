@@ -101,22 +101,25 @@ def plotTermStructure(ts, symbol_underlying, symbol_secondary, ax, numDays=5):
 """
     Returns a plot of historical term structure contango for the last n periods
 """    
-def plotHistoricalTermstructure(ts_data, pxHistory_underlying, ax, contangoColName='default'):
+def plotHistoricalTermstructure(ts_data, pxHistory_underlying, ax, contangoColName='fourToSevenMoContango'):
     ts_data.reset_index(inplace=True)
     pxHistory_underlying.reset_index(inplace=True)
     #sns.lineplot(x='date', y='oneToTwoMoContango', data=ts_data, ax=ax, label='oneToTwoMoContango', color='blue')
     #sns.lineplot(x='date', y='oneToThreeMoContango', data=ts_data, ax=ax, label='oneToThreeMoContango', color='green')
     #sns.lineplot(x='date', y='twoToThreeMoContango', data=ts_data, ax=ax, label='twoToThreeMoContango', color='red')
     #sns.lineplot(x='date', y='threeToFourMoContango', data=ts_data, ax=ax, label='threeToFourMoContango', color='pink')
-    sns.lineplot(x='date', y='fourToSevenMoContango', data=ts_data, ax=ax, label='fourToSevenMoContango', color='green')
+    sns.lineplot(x='date', y=contangoColName, data=ts_data, ax=ax, label='fourToSevenMoContango', color='green')
+    # plot 90th percentile rolling 252 period contango
+    sns.lineplot(x='date', y=ts_data[contangoColName].rolling(252).quantile(0.9), data=ts_data, ax=ax, label='90th percentile', color='red', alpha=0.3)
+    sns.lineplot(x='date', y=ts_data[contangoColName].rolling(252).quantile(0.5), data=ts_data, ax=ax, label='10th percentile', color='brown', alpha=0.4)
+    sns.lineplot(x='date', y=ts_data[contangoColName].rolling(252).quantile(0.1), data=ts_data, ax=ax, label='10th percentile', color='red', alpha=0.3)
     #sns.lineplot(x='date', y='currentToLastContango', data=ts_data, ax=ax, label='currentToLastContango', color='red')
     #sns.lineplot(x='date', y='averageContango', data=ts_data, ax=ax, label='averageContango', color='orange')
-    
-    # title
-    ax.set_title('Historical Contango')
 
     # format plot 
+    ax.set_title('Historical Contango')
     ax.grid(True, which='both', axis='both', linestyle='--')
+    ax.axhline(0, color='black', linestyle='-', alpha=0.5)
     ax.legend(loc='upper left')
     
     ax2 = ax.twinx()
@@ -151,11 +154,14 @@ def plotTermstructureDistribution(ts_data, ax, contangoColName='fourToSevenMoCon
     ax.axvline(ts_data[contangoColName].mean(), color='black', linestyle='-', alpha=0.3)
     ax.axvline(ts_data[contangoColName].quantile(0.9), color='red', linestyle='--', alpha=0.3)
     ax.axvline(ts_data[contangoColName].quantile(0.1), color='red', linestyle='--', alpha=0.3)
+    # vline at last close 
+    ax.axvline(ts_data[contangoColName].iloc[-1], color='green', linestyle='-', alpha=0.6)
 
     # set vline labels 
     ax.text(ts_data[contangoColName].mean(), 0.5, 'mean: %0.2f'%(ts_data[contangoColName].mean()), color='black', fontsize=10, horizontalalignment='left')
     ax.text(ts_data[contangoColName].quantile(0.9) + 2, 10, '90th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.9)), color='red', fontsize=10, horizontalalignment='right')
     ax.text(ts_data[contangoColName].quantile(0.1) - 3, 3, '10th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.1)), color='red', fontsize=10)
+    ax.text(ts_data[contangoColName].iloc[-1], 0.5, 'last: %0.2f'%(ts_data[contangoColName].iloc[-1]), color='green', fontsize=10, horizontalalignment='left')
 
     # format plot
     ax.set_title(f'{contangoColName} Distribution')
