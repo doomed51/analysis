@@ -20,7 +20,7 @@ class CrossoverStrategy:
         # calculated as target column - signal column
         signal_df['signal'] = self.base_df[self.target_column_name] - signal_df[self.signal_column_name]
         # smooth signal column
-        signal_df['signal'] = signal_df['signal'].rolling(20).mean()        
+        #signal_df['signal'] = signal_df['signal'].rolling(20).mean()        
 
         return signal_df
 
@@ -49,16 +49,18 @@ class CrossoverStrategy:
         fig, ax = plt.subplots(2,2)
         fig.suptitle('Signal Overview')
         
-        self.drawBaseAndSignal(ax[0,0])
-        ax[0,0].legend(loc='upper left')
+        # plot signal returns heatmap
+        self.drawSignalReturnsHeatmap(ax[0,0], maxperiod_fwdreturns=100)
         
-        self.drawSignalAndBounds(ax[0,1])
+        self.drawBaseAndSignal(ax[0,1])
+        ax[0,1].legend(loc='upper left')
+        
 
         autocorrelations = sa.calculateAutocorrelations(self.signal_df, self.signal_column_name)
         ax[1,0].stem(autocorrelations, linefmt='--')
 
-        # plot signal returns heatmap
-        self.drawSignalReturnsHeatmap(ax[1,1], maxperiod_fwdreturns=100)
+        self.drawSignalAndBounds(ax[1,1])
+
         fig.tight_layout()
 
         return fig
