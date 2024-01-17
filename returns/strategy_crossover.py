@@ -68,7 +68,10 @@ class CrossoverStrategy:
         # change the signal column to be 1 if columnval >0, -1 if the columnval <0
         print('%s_normalized'%(self.signal_column_name))
         #self.signal_df['%s_normalized'%(self.signal_column_name)] = self.signal_df['%s_normalized'%(self.signal_column_name)].apply(lambda x: 1 if x > 0 else -1)
-        self.signal_df['sma_normalized']=self.signal_df['sma_normalized'].apply(lambda x: 1 if x > 0 else -1)
+        # sort sma_normalized into 5 quintiles
+        self.signal_df['sma_normalized'] = pd.qcut(self.signal_df['sma_normalized'], 5, labels=False)
+        #self.signal_df['sma_normalized']=self.signal_df['sma_normalized'].apply(lambda x: 1 if x > 0 else -1)
+        
         self.drawSignalReturnsHeatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='sma_normalized')
         
         fig.tight_layout()
@@ -125,12 +128,19 @@ class CrossoverStrategy:
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label='signal')
 
         # add rolling percentile lines
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(upperbound), ax=ax, label='90th percentile', color='red', alpha=0.3)
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(lowerbound), ax=ax, label='10th percentile', color='red', alpha=0.3)
+        #sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(upperbound), ax=ax, label='90th percentile', color='red', alpha=0.3)
+        #sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(lowerbound), ax=ax, label='10th percentile', color='red', alpha=0.3)
+
+        # plot 1000 day rolling quintile lines
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(1000).quantile(0.2), ax=ax, label='20th percentile', color='red', alpha=0.3)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(1000).quantile(0.4), ax=ax, label='40th percentile', color='red', alpha=0.3)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(1000).quantile(0.6), ax=ax, label='60th percentile', color='red', alpha=0.3)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(1000).quantile(0.8), ax=ax, label='80th percentile', color='red', alpha=0.3)
+
 
         # add percentile labels
         ax.text(self.signal_df['date'].iloc[0], self.signal_df[self.signal_column_name].quantile(upperbound), '%s percentile: %0.5f'%(int(upperbound*100), self.signal_df['signal'].quantile(upperbound)), color='red', fontsize=10)
-        ax.text(self.signal_df['date'].iloc[0], self.signal_df[self.signal_column_name].quantile(lowerbound), '%s percentile: %0.5f'%(int(lowerbound*100), self.signal_df['signal'].quantile(upperbound)), color='red', fontsize=10)
+        ax.text(self.signal_df['date'].iloc[0], self.signal_df[self.signal_column_name].quantile(lowerbound), '%s percentile: %0.5f'%(int(lowerbound*100), self.signal_df['signal'].quantile(lowerbound)), color='red', fontsize=10)
 
         # format plot
         ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
