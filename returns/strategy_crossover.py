@@ -63,7 +63,9 @@ class CrossoverStrategy:
 
         # plot the signal against its percentile bounds
         self.drawSignalAndBounds(ax[1,1])
-
+        # share x-axis iwht ax[0,1]
+        ax[1,1].get_shared_x_axes().join(ax[1,1], ax[0,1])
+        
         #signal_mod1 = self.signal_df.copy() 
         # change the signal column to be 1 if columnval >0, -1 if the columnval <0
         print('%s_normalized'%(self.signal_column_name))
