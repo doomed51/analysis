@@ -97,13 +97,20 @@ class CrossoverStrategy:
     """
         Plots the base and signal timeseries on the provided axis
     """
-    def drawBaseAndSignal(self, ax): 
+    def drawBaseAndSignal(self, ax, drawPercentiles=True, **kwargs): 
+        percentileWindow = kwargs.get('percentileWindow', 252)
         # set title
         ax.set_title('Underlying vs. Signal')
 
         # plot the base and signal timeseries 
         sns.lineplot(x=self.base_df['date'], y=self.base_df[self.target_column_name], ax=ax, label=self.target_column_name)
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label=self.signal_column_name)
+        # add percentile lines 
+        if drawPercentiles:
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(percentileWindow).quantile(0.8), ax=ax, label='90th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(percentileWindow).quantile(0.6), ax=ax, label='50th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(percentileWindow).quantile(0.4), ax=ax, label='10th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(percentileWindow).quantile(0.2), ax=ax, label='10th percentile', color='red', alpha=0.3)
         ax.legend(loc='upper left')
 
         # plot the underlying 
