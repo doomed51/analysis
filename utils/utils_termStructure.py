@@ -101,7 +101,8 @@ def plotTermStructure(ts, symbol_underlying, symbol_secondary, ax, numDays=5):
 """
     Returns a plot of historical term structure contango for the last n periods
 """    
-def plotHistoricalTermstructure(ts_data, pxHistory_underlying, ax, contangoColName='fourToSevenMoContango'):
+def plotHistoricalTermstructure(ts_data, pxHistory_underlying, ax, contangoColName='fourToSevenMoContango', **kwargs):
+    smaPeriod_contango = kwargs.get('smaPeriod_contango', 10)
     ts_data.reset_index(inplace=True)
     pxHistory_underlying.reset_index(inplace=True)
     #sns.lineplot(x='date', y='oneToTwoMoContango', data=ts_data, ax=ax, label='oneToTwoMoContango', color='blue')
@@ -113,6 +114,9 @@ def plotHistoricalTermstructure(ts_data, pxHistory_underlying, ax, contangoColNa
     sns.lineplot(x='date', y=ts_data[contangoColName].rolling(252).quantile(0.9), data=ts_data, ax=ax, label='90th percentile', color='red', alpha=0.3)
     sns.lineplot(x='date', y=ts_data[contangoColName].rolling(252).quantile(0.5), data=ts_data, ax=ax, label='10th percentile', color='brown', alpha=0.4)
     sns.lineplot(x='date', y=ts_data[contangoColName].rolling(252).quantile(0.1), data=ts_data, ax=ax, label='10th percentile', color='red', alpha=0.3)
+
+    # plot 5 period sma of contango
+    sns.lineplot(x='date', y=ts_data[contangoColName].rolling(smaPeriod_contango).mean(), data=ts_data, ax=ax, label='5 period sma', color='blue', alpha=0.4)
     #sns.lineplot(x='date', y='currentToLastContango', data=ts_data, ax=ax, label='currentToLastContango', color='red')
     #sns.lineplot(x='date', y='averageContango', data=ts_data, ax=ax, label='averageContango', color='orange')
 
