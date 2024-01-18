@@ -141,15 +141,15 @@ class CrossoverStrategy:
         #sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(lowerbound), ax=ax, label='10th percentile', color='red', alpha=0.3)
 
         # plot 1000 day rolling quintile lines
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(1000).quantile(0.2), ax=ax, label='20th percentile', color='red', alpha=0.3)
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(1000).quantile(0.4), ax=ax, label='40th percentile', color='red', alpha=0.3)
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(1000).quantile(0.6), ax=ax, label='60th percentile', color='red', alpha=0.3)
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(1000).quantile(0.8), ax=ax, label='80th percentile', color='red', alpha=0.3)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.2), ax=ax, label='20th percentile', color='red', alpha=0.3)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.4), ax=ax, label='40th percentile', color='red', alpha=0.3)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.6), ax=ax, label='60th percentile', color='red', alpha=0.3)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.8), ax=ax, label='80th percentile', color='red', alpha=0.3)
 
 
         # add percentile labels
-        ax.text(self.signal_df['date'].iloc[0], self.signal_df[self.signal_column_name].quantile(upperbound), '%s percentile: %0.5f'%(int(upperbound*100), self.signal_df['signal'].quantile(upperbound)), color='red', fontsize=10)
-        ax.text(self.signal_df['date'].iloc[0], self.signal_df[self.signal_column_name].quantile(lowerbound), '%s percentile: %0.5f'%(int(lowerbound*100), self.signal_df['signal'].quantile(lowerbound)), color='red', fontsize=10)
+        #ax.text(self.signal_df['date'].iloc[0], self.signal_df[self.signal_column_name].quantile(upperbound), '%s percentile: %0.5f'%(int(upperbound*100), self.signal_df['signal'].quantile(upperbound)), color='red', fontsize=10)
+        #ax.text(self.signal_df['date'].iloc[0], self.signal_df[self.signal_column_name].quantile(lowerbound), '%s percentile: %0.5f'%(int(lowerbound*100), self.signal_df['signal'].quantile(lowerbound)), color='red', fontsize=10)
 
         # format plot
         ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
