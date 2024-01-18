@@ -642,7 +642,7 @@ def _filterDates(main, reference):
 def plotTermStructureOverview(ts, ts_pctcontango, pxHistory_underlying, symbol_secondary):
     symbol_underlying = ts_pctcontango['symbol'][0]
     
-    fig, ax = plt.subplots(2, 2)
+    fig, ax = plt.subplots(2, 3)
     tsutils.plotTermStructure(ts, symbol_underlying, symbol_secondary, ax=ax[0,0], numDays=10)
     tsutils.plotHistoricalTermstructure(ts_pctcontango, pxHistory_underlying, ax[0,1])
     tsutils.plotTermstructureAutocorrelation(ts_pctcontango, ax=ax[1,0])
