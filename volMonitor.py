@@ -647,6 +647,18 @@ def plotTermStructureOverview(ts, ts_pctcontango, pxHistory_underlying, symbol_s
     tsutils.plotHistoricalTermstructure(ts_pctcontango, pxHistory_underlying, ax[0,1])
     tsutils.plotTermstructureAutocorrelation(ts_pctcontango, ax=ax[1,0])
     tsutils.plotTermstructureDistribution(ts_pctcontango, ax=ax[1,1])
+
+    # plot close px of underlying
+    ax[0,2].plot(pxHistory_underlying['date'], pxHistory_underlying['close'])
+    ax[0,2].set_title('%s Close'%(symbol_underlying))
+    ax[0,2].set_yscale('log')
+    ax[0,2].grid(True, which='both', axis='both', linestyle='--', alpha=0.5)
+    ax[0,2].set_xlabel('Date')
+    ax[0,2].set_ylabel('Close')
+
+    # share x-axis between 0,2 and 0,1
+    ax[0,2].get_shared_x_axes().join(ax[0,2], ax[0,1])
+
     return fig
 
 
@@ -713,7 +725,7 @@ tpw.MainWindow.resize(2560, 1380)
 ########## Add plot tabs   
 #tpw.addPlot('ts 1-2:4-7 spread', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
 #tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, uvxy_filtered, contangoColName='oneToTwoMoContango'))
-tpw.addPlot('VIX ts overview', plotTermStructureOverview(vix_ts_raw.iloc[:,:8].copy(),vix_ts_raw,vix, 'VIX'))
+tpw.addPlot('VIX ts overview', plotTermStructureOverview(vix_ts_raw.iloc[:,:8].copy(),vix_ts_raw,uvxy, 'UVXY'))
 tpw.addPlot('NG ts overview', plotTermStructureOverview(ng_ts_raw.iloc[:,:8].copy(), ng_ts_raw, boil_filtered, 'BOIL'))
 tpw.addPlot('NG historical ts', plotHistoricalTermstructure(ng_ts_pctContango, boil_filtered))
 
