@@ -112,7 +112,7 @@ def plotHistoricalTermstructure(ts_data, pxHistory_underlying, ax, contangoColNa
     sns.lineplot(x='date', y=contangoColName, data=ts_data, ax=ax, label='fourToSevenMoContango', color='green')
     # plot 90th percentile rolling 252 period contango
     sns.lineplot(x='date', y=ts_data[contangoColName].rolling(252).quantile(0.9), data=ts_data, ax=ax, label='90th percentile', color='red', alpha=0.3)
-    sns.lineplot(x='date', y=ts_data[contangoColName].rolling(252).quantile(0.5), data=ts_data, ax=ax, label='10th percentile', color='brown', alpha=0.4)
+    sns.lineplot(x='date', y=ts_data[contangoColName].rolling(252).quantile(0.5), data=ts_data, ax=ax, label='50th percentile', color='brown', alpha=0.4)
     sns.lineplot(x='date', y=ts_data[contangoColName].rolling(252).quantile(0.1), data=ts_data, ax=ax, label='10th percentile', color='red', alpha=0.3)
 
     # plot 5 period sma of contango
