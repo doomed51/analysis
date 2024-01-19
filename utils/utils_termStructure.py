@@ -165,7 +165,7 @@ def plotTermstructureDistribution(ts_data, ax, contangoColName='fourToSevenMoCon
     ax.text(ts_data[contangoColName].mean(), 0.5, 'mean: %0.2f'%(ts_data[contangoColName].mean()), color='black', fontsize=10, horizontalalignment='left')
     ax.text(ts_data[contangoColName].quantile(0.9) + 2, 10, '90th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.9)), color='red', fontsize=10, horizontalalignment='right')
     ax.text(ts_data[contangoColName].quantile(0.1) - 3, 3, '10th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.1)), color='red', fontsize=10)
-    ax.text(ts_data[contangoColName].iloc[-1], 0.5, 'last: %0.2f'%(ts_data[contangoColName].iloc[-1]), color='green', fontsize=10, horizontalalignment='left')
+    ax.text(ts_data[contangoColName].iloc[-1], 100, 'last: %0.2f'%(ts_data[contangoColName].iloc[-1]), color='green', fontsize=10, horizontalalignment='left')
 
     # format plot
     ax.set_title(f'{contangoColName} Distribution')
