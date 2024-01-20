@@ -140,9 +140,9 @@ def aggregate_by_timestamp(history, targetCol):
 def calcLogReturns(history, colName, lag=1, direction=1):
     # calculate log returns 
     if direction == 1:
-        history['logReturn'] = history[colName].apply(lambda x: math.log(x)) - history[colName].shift(lag).apply(lambda x: math.log(x))
+        history['logReturn'] = (history[colName].apply(lambda x: math.log(x)) - history[colName].shift(lag).apply(lambda x: math.log(x))).round(5)
     elif direction == -1:
-        history['logReturn'] = history[colName].apply(lambda x: math.log(x)) - history[colName].shift(lag).apply(lambda x: math.log(x))
+        history['logReturn'] = (history[colName].apply(lambda x: math.log(x)) - history[colName].shift(lag).apply(lambda x: math.log(x))).round(5)
         history['logReturn'] = history['logReturn'] * -1  
     return history.reset_index(drop=True)
 
