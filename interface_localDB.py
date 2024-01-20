@@ -17,7 +17,7 @@ sys.path.append('..')
 from utils import utils as ut
 
 """ Global vars """
-dbname_index = 'historicalData_index.db'
+dbname_index = config.dbname_stock
 
 index_list = config._indexList # global reference list of index symbols, this is some janky ass shit .... 
 
