@@ -9,7 +9,7 @@ from rich import print
 from utils import utils
 
 """
-    This function calculates the momentum factor for a given pxhistory, lag, and shift 
+    Calculates momentum factor for a given pxhistory, lag, and shift 
     inputs:
         pxhistory: dataframe of px history that includes a logReturn column
         lag: lookback period 
