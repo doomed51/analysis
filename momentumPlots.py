@@ -19,9 +19,6 @@ import interface_localDB as db
 from utils import utils_strategyAnalyzer as sa
 
 ###
-# set pandas to print all rows 
-pd.set_option('display.max_rows', None)
-###
 """ Calcultes exponential moving average given pxhistory and period """
 def ema(pxhistory, period): 
     return pxhistory.ewm(span=period, adjust=False).mean()
@@ -642,10 +639,7 @@ def plotMomoandPx_filteredByPercentile(pxHistory, momoAndFwdReturnsPeriods, momo
 def plotMomoOverview (pxHistory, momoPeriod, emaPeriod):
     fig, ax = plt.subplots(2, 2)
     fig.suptitle('Momo Overview')
-    print(pxHistory.columns) 
-    # print the first 10 collumns  
-    print(pxHistory.iloc[:, 0:15].head(5))
-    
+   
     # plot heatmap 
     mean_fwdReturns = sa.bucketAndCalcSignalReturns(pxHistory, 'momo', 2, 50)
     sns.heatmap(mean_fwdReturns, annot=False, cmap='RdYlGn', ax=ax[0,0])
