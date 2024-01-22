@@ -3,8 +3,10 @@
 
 """
 from sys import argv
+
+from utils import utils_tabbedPlotsWindow as pltWindow
 from utils import utils_strategyAnalyzer as sa
-from utils import utils_tabbedPlotsWindow as tpw
+from returns import strategy_crossover as sc
 
 import pandas as pd 
 import interface_localDB as db 
@@ -69,3 +71,11 @@ if __name__ == '__main__':
         ltf.addMomo(lookback=20)
         ltf.addMomo(lookback=40)
         print(ltf.df_momo.tail())
+
+        momoCrossover = sc.CrossoverStrategy(ltf.df_momo, ltf.df_momo, 'momo40', 'momo20')
+
+        print(momoCrossover.signal_df.tail())
+        tpw = pltWindow.plotWindow()
+        tpw.MainWindow.resize(2560, 1380)       
+        tpw.addPlot('MOMO crossover', momoCrossover.plotSignalOverview())
+        tpw.show()
