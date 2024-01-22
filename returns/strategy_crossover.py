@@ -24,33 +24,13 @@ class CrossoverStrategy:
 
         return signal_df
 
-    def get_trades(self, entry_signal, exit_signal):
-        # get entry and exit signals
-        entry_signals = self.signal_df[self.signal_df[self.signal_column_name] == entry_signal]
-        exit_signals = self.signal_df[self.signal_df[self.signal_column_name] == exit_signal]
-
-        # create a list of trades
-        trades = []
-        for i in range(len(entry_signals)):
-            entry_date = entry_signals.iloc[i]['date']
-            exit_date = exit_signals.iloc[i]['date']
-            trade = self.base_df[(self.base_df['date'] >= entry_date) & (self.base_df['date'] <= exit_date)]
-            trades.append(trade)
-        return trades
-
-    def get_trade_returns(self, entry_signal, exit_signal):
-        trades = self.get_trades(entry_signal, exit_signal)
-        trade_returns = []
-        for trade in trades:
-            trade_returns.append(trade['logReturn'].sum())
-        return trade_returns
-
     def plotSignalOverview(self): 
+        signal_rounding = 3
         fig, ax = plt.subplots(2,2)
         fig.suptitle('%s Signal Overview'%(self.base_df['symbol'][0]))
         
         # plot signal returns heatmap
-        self.drawSignalReturnsHeatmap(ax[0,0], maxperiod_fwdreturns=100, signal_columnName=self.signal_column_name)
+        self.drawSignalReturnsHeatmap(ax[0,0], maxperiod_fwdreturns=100, signal_columnName=self.signal_column_name, signal_rounding=signal_rounding)
         
         # plot the underlying, and the components of the signal
         self.drawBaseAndSignal(ax[0,1])
@@ -71,13 +51,14 @@ class CrossoverStrategy:
         print('%s_normalized'%(self.signal_column_name))
         #self.signal_df['%s_normalized'%(self.signal_column_name)] = self.signal_df['%s_normalized'%(self.signal_column_name)].apply(lambda x: 1 if x > 0 else -1)
         # sort sma_normalized into 5 quintiles
-        self.signal_df['sma_normalized'] = pd.qcut(self.signal_df['sma_normalized'], 5, labels=False)
+        print(self.signal_df.tail())
+        self.signal_df['%s_normalized'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 5, labels=False)
         #self.signal_df['sma_normalized']=self.signal_df['sma_normalized'].apply(lambda x: 1 if x > 0 else -1)
         
-        self.drawSignalReturnsHeatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='sma_normalized')
+        self.drawSignalReturnsHeatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='%s_normalized'%(self.signal_column_name), signal_rounding=signal_rounding)
         
         fig.tight_layout()
-
+        print(fig)
         return fig
     
     def plotSignalReturnsHeatmap(self, signal_columnName, maxperiod_fwdreturns=100):
@@ -86,8 +67,7 @@ class CrossoverStrategy:
         self.drawSignalReturnsHeatmap(ax, maxperiod_fwdreturns, signal_columnName)
         return fig
 
-    def drawSignalReturnsHeatmap(self, ax, signal_columnName, maxperiod_fwdreturns):        
-        signal_rounding = 2 # how much to bucket together the signal column
+    def drawSignalReturnsHeatmap(self, ax, signal_columnName, maxperiod_fwdreturns, signal_rounding = 2):        
         mean_fwdReturns = sa.bucketAndCalcSignalReturns(self.signal_df, signal_columnName, signal_rounding, maxperiod_fwdreturns)
         sns.heatmap(mean_fwdReturns, annot=False, cmap='RdYlGn', ax=ax)
 
@@ -116,6 +96,7 @@ class CrossoverStrategy:
         # plot the underlying 
         ax2 = ax.twinx()
         sns.lineplot(x=self.base_df['date'], y=self.base_df['close'], ax=ax2, color='black', label='close')
+        ax2.set_yscale('log')
 
         # set style & format plot
         ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
@@ -141,10 +122,12 @@ class CrossoverStrategy:
         #sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(lowerbound), ax=ax, label='10th percentile', color='red', alpha=0.3)
 
         # plot 1000 day rolling quintile lines
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.2), ax=ax, label='20th percentile', color='red', alpha=0.3)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.05), ax=ax, label='5th percentile', color='red', alpha=0.6)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.2), ax=ax, label='20th percentile', color='red', alpha=0.45)
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.4), ax=ax, label='40th percentile', color='red', alpha=0.3)
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.6), ax=ax, label='60th percentile', color='red', alpha=0.3)
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.8), ax=ax, label='80th percentile', color='red', alpha=0.3)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.8), ax=ax, label='80th percentile', color='red', alpha=0.45)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.95), ax=ax, label='95th percentile', color='red', alpha=0.6)
 
 
         # add percentile labels
@@ -159,4 +142,5 @@ class CrossoverStrategy:
         # plot undelying close on a secondary axis
         ax2 = ax.twinx()
         sns.lineplot(x=self.base_df['date'], y=self.base_df['close'], ax=ax2, color='black', label='%s close'%(self.base_df['symbol'][0]))
+        ax2.set_yscale('log')
         ax2.legend(loc='upper right')
