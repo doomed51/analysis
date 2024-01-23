@@ -115,9 +115,9 @@ class TermStructure:
         ax2.set_yscale('log')
         ax2.grid(False)
 
-    def plot_termstructure_autocorrelation(self, ts_data, ax, contangoColName='fourToSevenMoContango', max_lag=60):
+    def plot_termstructure_autocorrelation(self, ax, contangoColName='_4to7MoContango', max_lag=100):
         # Calculate autocorrelations for different lags
-        autocorrelations = [ts_data[contangoColName].autocorr(lag=i) for i in range(max_lag)]
+        autocorrelations = [self.ts_pctContango[contangoColName].autocorr(lag=i) for i in range(max_lag)]
 
         # Create the 
 
@@ -167,6 +167,7 @@ if __name__ == '__main__':
 
     vixts.plot_term_structure(symbol_underlying='UVXY', ax=ax[0,0], numDays=10)
     vixts.plot_historical_termstructure(ax=ax[0,1])
+    vixts.plot_termstructure_autocorrelation(ax=ax[1,0])
 
     tpw.addPlot('termstructure', fig)
 
