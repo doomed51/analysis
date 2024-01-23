@@ -12,7 +12,7 @@ class TermStructure:
 
         # load data from db 
         self.ts_raw = self.get_raw_term_structure()
-        self.ts_pctContango = self.get_term_structure_pct_contango(self.ts_raw, _1to2=True, _1to3=True, _2to3=True, _3to4=True, _4to7=True, _1to8=True, averageContango=True)
+        self.ts_pctContango = self.get_term_structure_pct_contango(_1to2=True, _1to3=True, _2to3=True, _3to4=True, _4to7=True, _1to8=True, averageContango=True)
         self.underlying_pxhistory = self.get_underlying_pxhistory()
 
     def get_raw_term_structure(self):
@@ -37,28 +37,23 @@ class TermStructure:
             underlying_pxhistory = pd.read_sql(f'SELECT * FROM {self.symbol_underlying}_{type}_{self.interval}', conn)
         underlying_pxhistory['date'] = pd.to_datetime(underlying_pxhistory['date'])
         underlying_pxhistory.set_index('date', inplace=True)
-        print(underlying_pxhistory.tail())
         return underlying_pxhistory
 
-    def get_term_structure_pct_contango(self, tsraw_deprecated, **kwargs):
+    def get_term_structure_pct_contango(self, **kwargs):
         symbol = self.ts_raw['symbol'][0]
         self.ts_raw.drop(columns='symbol', inplace=True)
         ts_pctContango = (self.ts_raw.pct_change(axis='columns', periods=-1).drop(columns='month8')*-1)
-        print(self.ts_raw.tail())
-        print(ts_pctContango.tail())
         for key, value in kwargs.items():
             if key == 'averageContango':
                 ts_pctContango['averageContango'] = ts_pctContango.mean(axis=1)
             elif value:
                 ts_pctContango[f'{key}MoContango'] = ((self.ts_raw[f'month{key[-1]}'] - self.ts_raw[f'month{key[1]}'])/self.ts_raw[f'month{key[1]}'])*100
-                #ts_pctContango = ts_pctContango.join(self.ts_raw[f'{key}MoContango'], on='date')
        
         ts_pctContango['symbol'] = symbol
         self.ts_raw['symbol'] = symbol
-        #ts_pctContango.sort_values(by='date', inplace=True)
         return ts_pctContango
 
-    def plot_term_structure(self, symbol_underlying, ax, numDays=5):
+    def plot_term_structure(self, ax, numDays=5):
         ts = self.ts_raw.reset_index()
         # drop symbol and interval columns 
         symbol = ts['symbol'][0]
@@ -131,22 +126,22 @@ class TermStructure:
 
         ax.grid(True, which='both', axis='both', linestyle='--')
 
-    def plot_termstructure_distribution(self, ts_data, ax, contangoColName='fourToSevenMoContango'):
-        ts_data.reset_index(inplace=True)
-        sns.histplot(ts_data[contangoColName], ax=ax, bins=100, kde=True)
+    def plot_termstructure_distribution(self, ax, contangoColName='_4to7MoContango'):
+        self.ts_pctContango.reset_index(inplace=True)
+        sns.histplot(self.ts_pctContango[contangoColName], ax=ax, bins=100, kde=True)
 
         # add vlines 
-        ax.axvline(ts_data[contangoColName].mean(), color='black', linestyle='-', alpha=0.3)
-        ax.axvline(ts_data[contangoColName].quantile(0.9), color='red', linestyle='--', alpha=0.3)
-        ax.axvline(ts_data[contangoColName].quantile(0.1), color='red', linestyle='--', alpha=0.3)
+        ax.axvline(self.ts_pctContango[contangoColName].mean(), color='black', linestyle='-', alpha=0.3)
+        ax.axvline(self.ts_pctContango[contangoColName].quantile(0.9), color='red', linestyle='--', alpha=0.3)
+        ax.axvline(self.ts_pctContango[contangoColName].quantile(0.1), color='red', linestyle='--', alpha=0.3)
         # vline at last close 
-        ax.axvline(ts_data[contangoColName].iloc[-1], color='green', linestyle='-', alpha=0.6)
+        ax.axvline(self.ts_pctContango[contangoColName].iloc[-1], color='green', linestyle='-', alpha=0.6)
 
         # set vline labels 
-        ax.text(ts_data[contangoColName].mean(), 0.5, 'mean: %0.2f'%(ts_data[contangoColName].mean()), color='black', fontsize=10, horizontalalignment='left')
-        ax.text(ts_data[contangoColName].quantile(0.9) + 2, 10, '90th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.9)), color='red', fontsize=10, horizontalalignment='right')
-        ax.text(ts_data[contangoColName].quantile(0.1) - 3, 3, '10th percentile: %0.2f'%(ts_data[contangoColName].quantile(0.1)), color='red', fontsize=10)
-        ax.text(ts_data[contangoColName].iloc[-1], 100, 'last: %0.2f'%(ts_data[contangoColName].iloc[-1]), color='green', fontsize=10, horizontalalignment='left')
+        ax.text(self.ts_pctContango[contangoColName].mean(), 0.5, 'mean: %0.2f'%(self.ts_pctContango[contangoColName].mean()), color='black', fontsize=10, horizontalalignment='left')
+        ax.text(self.ts_pctContango[contangoColName].quantile(0.9) + 2, 10, '90th percentile: %0.2f'%(self.ts_pctContango[contangoColName].quantile(0.9)), color='red', fontsize=10, horizontalalignment='right')
+        ax.text(self.ts_pctContango[contangoColName].quantile(0.1) - 3, 3, '10th percentile: %0.2f'%(self.ts_pctContango[contangoColName].quantile(0.1)), color='red', fontsize=10)
+        ax.text(self.ts_pctContango[contangoColName].iloc[-1], 100, 'last: %0.2f'%(self.ts_pctContango[contangoColName].iloc[-1]), color='green', fontsize=10, horizontalalignment='left')
 
         # format plot
         ax.set_title(f'{contangoColName} Distribution')
@@ -165,9 +160,10 @@ if __name__ == '__main__':
     tpw.MainWindow.resize(2560, 1380)
     fig, ax = plt.subplots(2,2)
 
-    vixts.plot_term_structure(symbol_underlying='UVXY', ax=ax[0,0], numDays=10)
+    vixts.plot_term_structure(ax=ax[0,0], numDays=10)
     vixts.plot_historical_termstructure(ax=ax[0,1])
     vixts.plot_termstructure_autocorrelation(ax=ax[1,0])
+    vixts.plot_termstructure_distribution(ax=ax[1,1])
 
     tpw.addPlot('termstructure', fig)
 
