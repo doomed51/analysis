@@ -6,6 +6,7 @@ import interface_localDB as db
 
 from utils import utils as ut
 from utils import utils_termStructure as tsutils
+from utils import utils_termStructureObject as tsobj
 from utils import utils_tabbedPlotsWindow as pltWindow
 import vol_momentum as volMomo
 
@@ -639,22 +640,23 @@ def plotScatter(pxHistory, targetColumn, forwardReturnPeriods=[1,2,3,4,5,6,7]):
 def _filterDates(main, reference):
     return main[main['date'].isin(reference['date'])].copy()
 
-def plotTermStructureOverview(ts, ts_pctcontango, pxHistory_underlying, symbol_secondary):
-    symbol_underlying = ts_pctcontango['symbol'][0]
-    
+def plotTermStructureOverview(termstructure):
+        
     fig, ax = plt.subplots(2, 3)
-    tsutils.plotTermStructure(ts, symbol_underlying, symbol_secondary, ax=ax[0,0], numDays=10)
-    tsutils.plotHistoricalTermstructure(ts_pctcontango, pxHistory_underlying, ax[0,1])
-    tsutils.plotTermstructureAutocorrelation(ts_pctcontango, ax=ax[1,0])
-    tsutils.plotTermstructureDistribution(ts_pctcontango, ax=ax[1,1])
-
+    termstructure.plot_term_structure(ax=ax[0,0], numDays=10)
+    termstructure.plot_historical_termstructure(ax=ax[0,1])
+    termstructure.plot_termstructure_autocorrelation(ax=ax[1,0])
+    termstructure.plot_termstructure_distribution(ax=ax[1,1])
+    termstructure.plot_underlying(ax=ax[0,2])
     # plot close px of underlying
-    ax[0,2].plot(pxHistory_underlying['date'], pxHistory_underlying['close'])
-    ax[0,2].set_title('%s Close'%(symbol_underlying))
-    ax[0,2].set_yscale('log')
-    ax[0,2].grid(True, which='both', axis='both', linestyle='--', alpha=0.5)
-    ax[0,2].set_xlabel('Date')
-    ax[0,2].set_ylabel('Close')
+    print(termstructure.underlying_pxhistory.head())
+
+    #ax[0,2].plot(termstructure.underlying_pxhistory['date'], termstructure.underlying_pxhistory['close'])
+    #ax[0,2].set_title('%s Close'%(termstructure.symbol_underlying))
+    #ax[0,2].set_yscale('log')
+    #ax[0,2].grid(True, which='both', axis='both', linestyle='--', alpha=0.5)
+    #ax[0,2].set_xlabel('Date')
+    #ax[0,2].set_ylabel('Close')
 
     # share x-axis between 0,2 and 0,1
     ax[0,2].get_shared_x_axes().join(ax[0,2], ax[0,1])
@@ -717,7 +719,8 @@ spx_filtered = _filterDates(spx, vix_ts_pctContango)
 ung_filtered = _filterDates(ung, ng_ts_pctContango_filtered)
 boil_filtered = _filterDates(boil, ng_ts_pctContango_filtered)
 
-
+vixts = tsobj.TermStructure('VIX', '1day', 'vix') 
+ngts = tsobj.TermStructure('NG', '1day', 'UNG')
 # initialize plot window for tabbed plots
 tpw = pltWindow.plotWindow()
 tpw.MainWindow.resize(2560, 1380)
@@ -725,8 +728,8 @@ tpw.MainWindow.resize(2560, 1380)
 ########## Add plot tabs   
 #tpw.addPlot('ts 1-2:4-7 spread', plotTermstructureSpread(vix_ts_pctContango, uvxy_filtered, 'oneToTwoMoContango', 'fourToSevenMoContango'))
 #tpw.addPlot('vol monitor', plotVixTermStructureMonitor(vix_ts_pctContango, vix, uvxy_filtered, contangoColName='oneToTwoMoContango'))
-tpw.addPlot('VIX ts overview', plotTermStructureOverview(vix_ts_raw.iloc[:,:8].copy(),vix_ts_raw,uvxy, 'UVXY'))
-tpw.addPlot('NG ts overview', plotTermStructureOverview(ng_ts_raw.iloc[:,:8].copy(), ng_ts_raw, boil_filtered, 'BOIL'))
+tpw.addPlot('VIX ts overview', plotTermStructureOverview(vixts))
+tpw.addPlot('NG ts overview', plotTermStructureOverview(ngts))
 tpw.addPlot('NG historical ts', plotHistoricalTermstructure(ng_ts_pctContango, boil_filtered))
 
 tpw.show()
