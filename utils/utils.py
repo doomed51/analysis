@@ -185,4 +185,10 @@ def mergeStrategyReturns(returns, strategyName='merged'):
 def calcCorrelation(pxHistory_, column1, column2, type='pearson'):
     if type == 'pearson':
         return pxHistory_[column1].corr(pxHistory_[column2], method='pearson')
-    #return pxHistory_[column1].corr(pxHistory_[column2])
+
+"""
+    Adds z-score of the target column
+"""
+def calcZScore(pxHistory, targetCol):
+    pxHistory['zscore_%s'%(targetCol)] = (pxHistory[targetCol] - pxHistory[targetCol].mean())/pxHistory[targetCol].std(ddof=0)
+    return pxHistory
