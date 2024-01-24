@@ -15,6 +15,8 @@ class TermStructure:
         self.ts_pctContango = self.get_term_structure_pct_contango(_1to2=True, _1to3=True, _2to3=True, _3to4=True, _4to7=True, _1to8=True, averageContango=True)
         self.underlying_pxhistory = self.get_underlying_pxhistory()
 
+        #sns.set_style('darkgrid')
+
     def get_raw_term_structure(self):
         symbol = self.symbol.upper()
         tablename = f'{symbol}_{self.interval}'
@@ -149,8 +151,18 @@ class TermStructure:
         ax.set_ylabel('Frequency')
         ax.grid(True, which='both', axis='both', linestyle='--')
 
+    def plot_termstructure_fowardreturn_heatmap(self, ax, contangoColName='_4to7MoContango'):
+        pass 
+
+    def plot_underlying(self, ax):
+        sns.lineplot(x=self.underlying_pxhistory['date'], y=self.underlying_pxhistory['close'], ax=ax, label=self.underlying_pxhistory['symbol'][0], color='black', alpha=0.6)
+        ax.set_yscale('log')
+        ax.grid(True, which='both', axis='both', linestyle='--')
+        ax.set_title(f'{self.symbol_underlying} Close Px')
+
 if __name__ == '__main__':
-    vixts = TermStructure('vix', '1day', symbol_underlying='UVXY')
+    #vixts = TermStructure('vix', '1day', symbol_underlying='UVXY')
+    vixts = TermStructure('ng', '1day', symbol_underlying='BOIL')
     print(vixts.ts_pctContango.tail())
     
     import utils_tabbedPlotsWindow as pltWindow
@@ -161,9 +173,12 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(2,2)
 
     vixts.plot_term_structure(ax=ax[0,0], numDays=10)
-    vixts.plot_historical_termstructure(ax=ax[0,1])
-    vixts.plot_termstructure_autocorrelation(ax=ax[1,0])
-    vixts.plot_termstructure_distribution(ax=ax[1,1])
+    vixts.plot_historical_termstructure(ax=ax[0,1], contangoColName='_2to3MoContango')
+    vixts.plot_termstructure_autocorrelation(ax=ax[1,0], contangoColName='_2to3MoContango')
+    #vixts.plot_termstructure_distribution(ax=ax[1,1], contangoColName='_2to3MoContango')
+    vixts.plot_underlying(ax=ax[1,1])
+    # share x axis is 0,1 and 1,1
+    ax[0,0].get_shared_x_axes().join(ax[0,1], ax[1,1])
 
     tpw.addPlot('termstructure', fig)
 
