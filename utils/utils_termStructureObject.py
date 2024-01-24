@@ -2,6 +2,7 @@ import pandas as pd
 import seaborn as sns
 import sqlite3
 import config
+import utils
 
 class TermStructure:
     def __init__(self, symbol, interval, symbol_underlying):
@@ -55,7 +56,7 @@ class TermStructure:
         self.ts_raw['symbol'] = symbol
         return ts_pctContango
 
-    def plot_term_structure(self, ax, numDays=5):
+    def plot_termstructure(self, ax, numDays=5):
         ts = self.ts_raw.reset_index()
         # drop symbol and interval columns 
         symbol = ts['symbol'][0]
@@ -151,8 +152,41 @@ class TermStructure:
         ax.set_ylabel('Frequency')
         ax.grid(True, which='both', axis='both', linestyle='--')
 
-    def plot_termstructure_fowardreturn_heatmap(self, ax, contangoColName='_4to7MoContango'):
-        pass 
+    def plot_termstructure_fowardreturn_heatmap(self, ax, contangoColName='_4to7MoContango', maxperiod_fwdreturns=100):
+        utils.calcZScore(self.ts_pctContango, contangoColName)
+        fwd_returns_cols = ['fwdReturns{}'.format(i) for i in range(1, maxperiod_fwdreturns + 1)]
+        print(self.underlying_pxhistory.tail())
+        print(self.ts_pctContango.tail(50))
+        # combine the zscore and fwd returns dataframes
+        fwdReturns_mean = pd.merge(self.ts_pctContango, self.underlying_pxhistory, how='inner', left_on='date', right_on='date')
+        
+        # add fwdreturn column for each fwdreturn period
+        for i in range(1, maxperiod_fwdreturns+1):
+            if f'fwdReturns{i}' in fwdReturns_mean:
+                continue
+            fwdReturns_mean[f'fwdReturns{i}'] = fwdReturns_mean['close'].pct_change(i).shift(-i)
+        
+        
+        # Perform the groupby and mean calculation in one step
+        fwdReturns_mean = fwdReturns_mean.groupby('zscore_%s_decile'%(contangoColName))[fwd_returns_cols].mean()
+        fwdReturns_mean.sort_index(inplace=True, ascending=False) 
+        print(fwdReturns_mean.tail())
+        #exit()
+        # plot the heatmap
+        sns.heatmap(fwdReturns_mean, annot=False, cmap='RdYlGn', ax=ax)
+
+        #lineplot of decile
+        #sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=self.ts_pctContango, ax=ax, label='zscore_%s_decile'%(contangoColName), color='red')
+        #sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=self.ts_pctContango, ax=ax, label='zscore_%s_decile'%(contangoColName), color='red')
+        #sns.lineplot(x='date', y='zscore_%s'%(contangoColName), data=fwdReturns_mean, ax=ax.twinx(), label='zscore_%s'%(contangoColName), color='blue')
+
+
+        #sns.lineplot(x='date', y=f'zscore_{contangoColName}', data=self.ts_pctContango, ax=ax, label=f'zscore_{contangoColName}', color='blue')
+
+        #ax.axhline(0, color='black', linestyle='-', alpha=0.5)
+        #ax.grid(True, which='both', axis='both', linestyle='--')
+
+        print(self.ts_pctContango.tail(50))
 
     def plot_underlying(self, ax):
         sns.lineplot(x=self.underlying_pxhistory['date'], y=self.underlying_pxhistory['close'], ax=ax, label=self.underlying_pxhistory['symbol'][0], color='black', alpha=0.6)
@@ -162,7 +196,7 @@ class TermStructure:
 
 if __name__ == '__main__':
     #vixts = TermStructure('vix', '1day', symbol_underlying='UVXY')
-    vixts = TermStructure('ng', '1day', symbol_underlying='BOIL')
+    vixts = TermStructure('vix', '1day', symbol_underlying='UVXY')
     print(vixts.ts_pctContango.tail())
     
     import utils_tabbedPlotsWindow as pltWindow
@@ -170,15 +204,17 @@ if __name__ == '__main__':
 
     tpw = pltWindow.plotWindow()
     tpw.MainWindow.resize(2560, 1380)
-    fig, ax = plt.subplots(2,2)
+    fig, ax = plt.subplots(2,3)
 
-    vixts.plot_term_structure(ax=ax[0,0], numDays=10)
-    vixts.plot_historical_termstructure(ax=ax[0,1], contangoColName='_2to3MoContango')
-    vixts.plot_termstructure_autocorrelation(ax=ax[1,0], contangoColName='_2to3MoContango')
+    vixts.plot_termstructure(ax=ax[0,0], numDays=10)
+    vixts.plot_historical_termstructure(ax=ax[0,1], contangoColName='_1to2MoContango')
+    vixts.plot_termstructure_autocorrelation(ax=ax[0,2], contangoColName='_1to2MoContango')
     #vixts.plot_termstructure_distribution(ax=ax[1,1], contangoColName='_2to3MoContango')
-    vixts.plot_underlying(ax=ax[1,1])
+    vixts.plot_underlying(ax=ax[1,0])
+
+    vixts.plot_termstructure_fowardreturn_heatmap(ax=ax[1,1], contangoColName='_1to2MoContango')
     # share x axis is 0,1 and 1,1
-    ax[0,0].get_shared_x_axes().join(ax[0,1], ax[1,1])
+    ax[0,0].get_shared_x_axes().join(ax[0,1], ax[1,0])
 
     tpw.addPlot('termstructure', fig)
 
