@@ -643,7 +643,7 @@ def _filterDates(main, reference):
 def plotTermStructureOverview(termstructure):
         
     fig, ax = plt.subplots(2, 3)
-    termstructure.plot_term_structure(ax=ax[0,0], numDays=10)
+    termstructure.plot_termstructure(ax=ax[0,0], numDays=10)
     termstructure.plot_historical_termstructure(ax=ax[0,1])
     termstructure.plot_termstructure_autocorrelation(ax=ax[1,0])
     termstructure.plot_termstructure_distribution(ax=ax[1,1])
@@ -666,6 +666,3 @@ tpw.addPlot('VIX ts overview', plotTermStructureOverview(vixts))
 tpw.addPlot('NG ts overview', plotTermStructureOverview(ngts))
 
 tpw.show()
-
-
-
