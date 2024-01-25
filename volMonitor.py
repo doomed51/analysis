@@ -1,14 +1,13 @@
-import sys
-sys.path.append('..')
+#import sys
+#sys.path.append('..')
 
 ## local libs
 import interface_localDB as db
 
 from utils import utils as ut
-from utils import utils_termStructure as tsutils
+#from utils import utils_termStructure as tsutils
 from utils import utils_termStructureObject as tsobj
 from utils import utils_tabbedPlotsWindow as pltWindow
-import vol_momentum as volMomo
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -640,21 +639,23 @@ def plotScatter(pxHistory, targetColumn, forwardReturnPeriods=[1,2,3,4,5,6,7]):
 def _filterDates(main, reference):
     return main[main['date'].isin(reference['date'])].copy()
 
-def plotTermStructureOverview(termstructure):
-        
+def plotTermStructureOverview(termstructure, contangoColName='_4to7MoContango'):
+    ut.calcZScore(termstructure.ts_pctContango, contangoColName)
+    #ut.calcZScore(termstructure.ts_pctContango, '_2to3MoContango')
     fig, ax = plt.subplots(2, 3)
     termstructure.plot_termstructure(ax=ax[0,0], numDays=10)
     termstructure.plot_historical_termstructure(ax=ax[0,1])
+    termstructure.plot_underlying(ax=ax[0,2])
     termstructure.plot_termstructure_autocorrelation(ax=ax[1,0])
     termstructure.plot_termstructure_distribution(ax=ax[1,1])
-    termstructure.plot_underlying(ax=ax[0,2])
+    termstructure.plot_termstructure_fowardreturn_heatmap(ax=ax[1,2], contangoColName=contangoColName)
 
     # share x-axis between term structure and underlying px plots 
     ax[0,2].get_shared_x_axes().join(ax[0,2], ax[0,1])
 
     return fig
 
-vixts = tsobj.TermStructure('VIX', '1day', 'vix') 
+vixts = tsobj.TermStructure('VIX', '1day', 'uvxy') 
 ngts = tsobj.TermStructure('NG', '1day', 'UNG')
 
 # initialize dashboard window
@@ -662,7 +663,7 @@ tpw = pltWindow.plotWindow()
 tpw.MainWindow.resize(2560, 1380)
 
 ########## Add analysis tabs   
-tpw.addPlot('VIX ts overview', plotTermStructureOverview(vixts))
-tpw.addPlot('NG ts overview', plotTermStructureOverview(ngts))
+tpw.addPlot('VIX ts overview', plotTermStructureOverview(vixts, '_1to2MoContango'))
+tpw.addPlot('NG ts overview', plotTermStructureOverview(ngts, '_1to3MoContango'))
 
 tpw.show()
