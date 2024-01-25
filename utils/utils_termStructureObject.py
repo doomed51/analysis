@@ -153,7 +153,7 @@ class TermStructure:
         ax.grid(True, which='both', axis='both', linestyle='--')
 
     def plot_termstructure_fowardreturn_heatmap(self, ax, contangoColName='_4to7MoContango', maxperiod_fwdreturns=100):
-        utils.calcZScore(self.ts_pctContango, contangoColName)
+        #utils.calcZScore(self.ts_pctContango, contangoColName)
         fwd_returns_cols = ['fwdReturns{}'.format(i) for i in range(1, maxperiod_fwdreturns + 1)]
         print(self.underlying_pxhistory.tail())
         print(self.ts_pctContango.tail(50))
@@ -170,23 +170,8 @@ class TermStructure:
         # Perform the groupby and mean calculation in one step
         fwdReturns_mean = fwdReturns_mean.groupby('zscore_%s_decile'%(contangoColName))[fwd_returns_cols].mean()
         fwdReturns_mean.sort_index(inplace=True, ascending=False) 
-        print(fwdReturns_mean.tail())
-        #exit()
         # plot the heatmap
         sns.heatmap(fwdReturns_mean, annot=False, cmap='RdYlGn', ax=ax)
-
-        #lineplot of decile
-        #sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=self.ts_pctContango, ax=ax, label='zscore_%s_decile'%(contangoColName), color='red')
-        #sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=self.ts_pctContango, ax=ax, label='zscore_%s_decile'%(contangoColName), color='red')
-        #sns.lineplot(x='date', y='zscore_%s'%(contangoColName), data=fwdReturns_mean, ax=ax.twinx(), label='zscore_%s'%(contangoColName), color='blue')
-
-
-        #sns.lineplot(x='date', y=f'zscore_{contangoColName}', data=self.ts_pctContango, ax=ax, label=f'zscore_{contangoColName}', color='blue')
-
-        #ax.axhline(0, color='black', linestyle='-', alpha=0.5)
-        #ax.grid(True, which='both', axis='both', linestyle='--')
-
-        print(self.ts_pctContango.tail(50))
 
     def plot_underlying(self, ax):
         sns.lineplot(x=self.underlying_pxhistory['date'], y=self.underlying_pxhistory['close'], ax=ax, label=self.underlying_pxhistory['symbol'][0], color='black', alpha=0.6)
