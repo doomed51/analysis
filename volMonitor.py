@@ -609,24 +609,15 @@ def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'):
     fig, ax = plt.subplots(2, 3)
     termstructure.plot_termstructure(ax=ax[0,0], numDays=10)
     termstructure.plot_historical_termstructure(ax=ax[0,1], contangoColName=contangoColName)
-    #termstructure.plot_underlying(ax=ax[0,2])
-    #termstructure.plot_termstructure_autocorrelation(ax=ax[1,0], contangoColName=contangoColName)
-    ax2 = ax[0,2]
-    #termstructure.ts_pctContango.sort_values(by='date', inplace=True)
-    # select where date > 10 days 
-    #termstructure.ts_pctContango = termstructure.ts_pctContango[termstructure.ts_pctContango['date'] > termstructure.ts_pctContango['date'].max() - pd.Timedelta(days=10)]
 
+    ax2 = ax[0,2]
     sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango[termstructure.ts_pctContango['date'] > termstructure.ts_pctContango['date'].max() - pd.Timedelta(days=40)], ax=ax2, color='black', alpha=0.3, marker='x', dashes=False)
-    # title 
     ax2.set_title('%s zscore decile for last 40 days'%(contangoColName))
-    #sort by date
-    print(termstructure.ts_pctContango.tail(30))
 
     termstructure.plot_termstructure_distribution(ax=ax[1,1], contangoColName=contangoColName)
     termstructure.plot_termstructure_fowardreturn_heatmap(ax=ax[1,2], contangoColName=contangoColName)
 
-    # plot decile as lineplot on ax[1,0]
-   #sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango, ax=ax[1,0])
+    # plot decile boxplot
     sns.boxplot(y=contangoColName, x='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango, ax=ax[1,0])
     ax[1,0].set_title('%s zscore decile & Pct Contango'%(contangoColName))
     # vline at last decile 
@@ -634,14 +625,8 @@ def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'):
     # add date as overlay text
     ax[1,0].text(termstructure.ts_pctContango['zscore_%s_decile'%(contangoColName)].iloc[-1], 0, '%s'%(termstructure.ts_pctContango['date'].iloc[-1]), color='red', fontsize=10)
 
-    # on secondary axis plot the decile over the last 10 days 
-
-    
-    
-    # share x-axis between term structure and underlying px plots 
-    #ax[0,2].get_shared_x_axes().join(ax[0,2], ax[0,1])
-
     return fig
+
 vixts = tsobj.TermStructure('VIX', '1day', 'uvxy') 
 ngts = tsobj.TermStructure('NG', '1day', 'UNG')
 
