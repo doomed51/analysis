@@ -610,8 +610,10 @@ def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'):
     termstructure.plot_termstructure(ax=ax[0,0], numDays=10)
     termstructure.plot_historical_termstructure(ax=ax[0,1], contangoColName=contangoColName)
 
+    # plot historical zscore decile for last n days 
+    numdays_for_historical_decile_plot = 40
     ax2 = ax[0,2]
-    sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango[termstructure.ts_pctContango['date'] > termstructure.ts_pctContango['date'].max() - pd.Timedelta(days=40)], ax=ax2, color='black', alpha=0.3, marker='x', dashes=False)
+    sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango[termstructure.ts_pctContango['date'] > termstructure.ts_pctContango['date'].max() - pd.Timedelta(days=numdays_for_historical_decile_plot)], ax=ax2, color='black', alpha=0.3, marker='x', dashes=False)
     ax2.set_title('%s zscore decile for last 40 days'%(contangoColName))
 
     termstructure.plot_termstructure_distribution(ax=ax[1,1], contangoColName=contangoColName)
