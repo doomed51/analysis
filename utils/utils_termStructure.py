@@ -139,8 +139,6 @@ def plotTermstructureAutocorrelation(ts_data, ax, contangoColName='fourToSevenMo
     # Calculate autocorrelations for different lags
     autocorrelations = [ts_data[contangoColName].autocorr(lag=i) for i in range(max_lag)]
 
-    # Create the 
-
     # plot stem of autocorrelation
     ax.stem(range(max_lag), autocorrelations, use_line_collection=True, linefmt='--')
     ax.set_title(f'{contangoColName} Autocorrelation')
