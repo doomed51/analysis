@@ -238,19 +238,6 @@ def plotVixTermStructureSeasonality(vix_ts_pctContango, contangoColName='fourToS
 
     return fig
 
-
-""" 
-    Plots term structure in one large plot 
-"""
-def plotHistoricalTermstructure(ts_data, pxHistory_underlying, contangoColName='default'):
-    pxHistory_underlying.reset_index(drop=True, inplace=True)
-    if contangoColName == 'default':
-        # plot lineplots on 1 plot 
-        fig, ax = plt.subplots()
-        tsutils.plotHistoricalTermstructure(ts_data, pxHistory_underlying, ax)
-    
-    return fig
-
 """
     Plots spread between two ts columns 
 """
@@ -340,44 +327,6 @@ def plotTermstructureSpread(ts_data, pxHistory_underlying, colName1, colName2):
         )
     )
     fig.show()
-    return fig
-
-""" 
-    plots symbol autocorrelation 
-"""
-def plotAutocorrelation(pxHistory_top, pxHistory_bottom, **kwargs):
-    max_lag = kwargs.get('max_lag', 40)
-    pxHistory_top.reset_index(drop=True, inplace=True)
-    pxHistory_bottom.reset_index(drop=True, inplace=True)
-
-    vixnormalizedclose = (pxHistory_bottom['close'] - pxHistory_bottom['close'].mean())/pxHistory_bottom['close'].std()
-    vvixnormalizedclose = (pxHistory_top['close'] - pxHistory_top['close'].mean())/pxHistory_top['close'].std()
-
-    # initialize autocrrelation
-    vixautocorrel = np.array([1.0] + [vixnormalizedclose.autocorr(lag) for lag in range(1, max_lag + 1)])
-    vvixautocorrel = np.array([1.0] + [vvixnormalizedclose.autocorr(lag) for lag in range(1, max_lag + 1)])
-
-    # create figure and axes, 2x2 grid
-    fig, ax = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle('%s & %s Autocorrelation'%(pxHistory_top['symbol'][0], pxHistory_bottom['symbol'][0]))
-
-    # plot autocorrelation of vix and vvix close px
-    ax[0,0].stem(vvixautocorrel, linefmt='--')
-    ax[0,0].set_title('%s Autocorrelation (close px)'%(pxHistory_top['symbol'][0]))
-
-    ax[1,0].stem(vixautocorrel, linefmt='--')
-    ax[1,0].set_title('%s Autocorrelation (close px)'%(pxHistory_bottom['symbol'][0]))
-
-    # plot autocorrelation of vix and vvix log returns 
-    vix_logReturnAutoCorrelation = np.array([1.0] + [pxHistory_bottom['logReturn'].autocorr(lag) for lag in range(1, max_lag + 1)])
-    vvix_logReturnAutoCorrelation = np.array([1.0] + [pxHistory_top['logReturn'].autocorr(lag) for lag in range(1, max_lag + 1)])
-
-    ax[0,1].stem(vix_logReturnAutoCorrelation, linefmt='--')
-    ax[0,1].set_title('%s Autocorrelation (logrtrn)'%(pxHistory_top['symbol'][0]))
-
-    ax[1,1].stem(vvix_logReturnAutoCorrelation, linefmt='--')
-    ax[1,1].set_title('%s Autocorrelation (logrtrn)'%(pxHistory_bottom['symbol'][0]))
-
     return fig
 
 """
@@ -644,10 +593,10 @@ def plotTermStructureOverview(termstructure, contangoColName='_4to7MoContango'):
     #ut.calcZScore(termstructure.ts_pctContango, '_2to3MoContango')
     fig, ax = plt.subplots(2, 3)
     termstructure.plot_termstructure(ax=ax[0,0], numDays=10)
-    termstructure.plot_historical_termstructure(ax=ax[0,1])
+    termstructure.plot_historical_termstructure(ax=ax[0,1], contangoColName=contangoColName)
     termstructure.plot_underlying(ax=ax[0,2])
-    termstructure.plot_termstructure_autocorrelation(ax=ax[1,0])
-    termstructure.plot_termstructure_distribution(ax=ax[1,1])
+    termstructure.plot_termstructure_autocorrelation(ax=ax[1,0], contangoColName=contangoColName)
+    termstructure.plot_termstructure_distribution(ax=ax[1,1], contangoColName=contangoColName)
     termstructure.plot_termstructure_fowardreturn_heatmap(ax=ax[1,2], contangoColName=contangoColName)
 
     # share x-axis between term structure and underlying px plots 
@@ -655,6 +604,44 @@ def plotTermStructureOverview(termstructure, contangoColName='_4to7MoContango'):
 
     return fig
 
+def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'): 
+    print(termstructure.ts_pctContango.head())
+    fig, ax = plt.subplots(2, 3)
+    termstructure.plot_termstructure(ax=ax[0,0], numDays=10)
+    termstructure.plot_historical_termstructure(ax=ax[0,1], contangoColName=contangoColName)
+    #termstructure.plot_underlying(ax=ax[0,2])
+    #termstructure.plot_termstructure_autocorrelation(ax=ax[1,0], contangoColName=contangoColName)
+    ax2 = ax[0,2]
+    #termstructure.ts_pctContango.sort_values(by='date', inplace=True)
+    # select where date > 10 days 
+    #termstructure.ts_pctContango = termstructure.ts_pctContango[termstructure.ts_pctContango['date'] > termstructure.ts_pctContango['date'].max() - pd.Timedelta(days=10)]
+
+    sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango[termstructure.ts_pctContango['date'] > termstructure.ts_pctContango['date'].max() - pd.Timedelta(days=40)], ax=ax2, color='black', alpha=0.3, marker='x', dashes=False)
+    # title 
+    ax2.set_title('%s zscore decile for last 40 days'%(contangoColName))
+    #sort by date
+    print(termstructure.ts_pctContango.tail(30))
+
+    termstructure.plot_termstructure_distribution(ax=ax[1,1], contangoColName=contangoColName)
+    termstructure.plot_termstructure_fowardreturn_heatmap(ax=ax[1,2], contangoColName=contangoColName)
+
+    # plot decile as lineplot on ax[1,0]
+   #sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango, ax=ax[1,0])
+    sns.boxplot(y=contangoColName, x='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango, ax=ax[1,0])
+    ax[1,0].set_title('%s zscore decile & Pct Contango'%(contangoColName))
+    # vline at last decile 
+    ax[1,0].axvline(x=termstructure.ts_pctContango['zscore_%s_decile'%(contangoColName)].iloc[-1], color='red', linestyle='--', alpha=0.5)
+    # add date as overlay text
+    ax[1,0].text(termstructure.ts_pctContango['zscore_%s_decile'%(contangoColName)].iloc[-1], 0, '%s'%(termstructure.ts_pctContango['date'].iloc[-1]), color='red', fontsize=10)
+
+    # on secondary axis plot the decile over the last 10 days 
+
+    
+    
+    # share x-axis between term structure and underlying px plots 
+    #ax[0,2].get_shared_x_axes().join(ax[0,2], ax[0,1])
+
+    return fig
 vixts = tsobj.TermStructure('VIX', '1day', 'uvxy') 
 ngts = tsobj.TermStructure('NG', '1day', 'UNG')
 
@@ -664,6 +651,8 @@ tpw.MainWindow.resize(2560, 1380)
 
 ########## Add analysis tabs   
 tpw.addPlot('VIX ts overview', plotTermStructureOverview(vixts, '_1to2MoContango'))
-tpw.addPlot('NG ts overview', plotTermStructureOverview(ngts, '_1to3MoContango'))
+tpw.addPlot('VIX ts monitor', plotTermStructureMonitor(vixts, '_1to2MoContango'))
+tpw.addPlot('NG ts overview', plotTermStructureOverview(ngts, '_3to4MoContango'))
+tpw.addPlot('NG ts monitor', plotTermStructureMonitor(ngts, '_3to4MoContango'))
 
 tpw.show()
