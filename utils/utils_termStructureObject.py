@@ -13,7 +13,7 @@ class TermStructure:
 
         # load data from db 
         self.ts_raw = self.get_raw_term_structure()
-        self.ts_pctContango = self.get_term_structure_pct_contango(_1to2=True, _1to3=True, _2to3=True, _3to4=True, _4to7=True, _1to8=True, averageContango=True)
+        self.ts_pctContango = self.get_term_structure_pct_contango(_1to2=True, _1to3=True, _2to3=True, _3to4=True, _3to6=True, _4to7=True, _1to8=True, averageContango=True)
         self.underlying_pxhistory = self.get_underlying_pxhistory()
 
         #sns.set_style('darkgrid')
@@ -130,7 +130,7 @@ class TermStructure:
         ax.grid(True, which='both', axis='both', linestyle='--')
 
     def plot_termstructure_distribution(self, ax, contangoColName='_4to7MoContango'):
-        self.ts_pctContango.reset_index(inplace=True)
+        self.ts_pctContango.reset_index(inplace=True, drop=True)
         sns.histplot(self.ts_pctContango[contangoColName], ax=ax, bins=100, kde=True)
 
         # add vlines 
@@ -155,8 +155,6 @@ class TermStructure:
     def plot_termstructure_fowardreturn_heatmap(self, ax, contangoColName='_4to7MoContango', maxperiod_fwdreturns=100):
         #utils.calcZScore(self.ts_pctContango, contangoColName)
         fwd_returns_cols = ['fwdReturns{}'.format(i) for i in range(1, maxperiod_fwdreturns + 1)]
-        print(self.underlying_pxhistory.tail())
-        print(self.ts_pctContango.tail(50))
         # combine the zscore and fwd returns dataframes
         fwdReturns_mean = pd.merge(self.ts_pctContango, self.underlying_pxhistory, how='inner', left_on='date', right_on='date')
         
@@ -166,12 +164,12 @@ class TermStructure:
                 continue
             fwdReturns_mean[f'fwdReturns{i}'] = fwdReturns_mean['close'].pct_change(i).shift(-i)
         
-        
         # Perform the groupby and mean calculation in one step
         fwdReturns_mean = fwdReturns_mean.groupby('zscore_%s_decile'%(contangoColName))[fwd_returns_cols].mean()
         fwdReturns_mean.sort_index(inplace=True, ascending=False) 
         # plot the heatmap
         sns.heatmap(fwdReturns_mean, annot=False, cmap='RdYlGn', ax=ax)
+        ax.set_title(f'{contangoColName} Decile vs. Fwd Returns')
 
     def plot_underlying(self, ax):
         sns.lineplot(x=self.underlying_pxhistory['date'], y=self.underlying_pxhistory['close'], ax=ax, label=self.underlying_pxhistory['symbol'][0], color='black', alpha=0.6)
