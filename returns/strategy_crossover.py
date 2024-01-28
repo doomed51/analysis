@@ -25,7 +25,7 @@ class CrossoverStrategy:
         return signal_df
 
     def plotSignalOverview(self): 
-        signal_rounding = 3
+        signal_rounding = 4
         fig, ax = plt.subplots(2,2)
         fig.suptitle('%s Signal Overview'%(self.base_df['symbol'][0]))
         
