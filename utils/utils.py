@@ -187,8 +187,10 @@ def calcCorrelation(pxHistory_, column1, column2, type='pearson'):
         return pxHistory_[column1].corr(pxHistory_[column2], method='pearson')
 
 """
-    Adds z-score of the target column
+    Adds z-score and z-score decile of the target column
 """
 def calcZScore(pxHistory, targetCol):
     pxHistory['zscore_%s'%(targetCol)] = (pxHistory[targetCol] - pxHistory[targetCol].mean())/pxHistory[targetCol].std(ddof=0)
-    return pxHistory
+    # add z-score decile 
+    pxHistory['zscore_%s_decile'%(targetCol)] = pd.qcut(pxHistory['zscore_%s'%(targetCol)], 10, labels=False)
+   #return pxHistory
