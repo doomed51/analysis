@@ -4,6 +4,8 @@
 ## local libs
 import interface_localDB as db
 
+from returns import strategy_crossover as sc
+
 from utils import utils as ut
 #from utils import utils_termStructure as tsutils
 from utils import utils_termStructureObject as tsobj
@@ -629,6 +631,18 @@ def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'):
 
     return fig
 
+def contango_sma_crossover_analysis(vixts, cantango_column_name = '_1to2MoContango', slow_sma = 50, fast_sma = 10, plot = True):
+    # calculate contango sma
+    vixts.ts_pctContango['slow_sma'] = vixts.ts_pctContango[cantango_column_name].rolling(slow_sma).mean()
+    vixts.ts_pctContango['fast_sma'] = vixts.ts_pctContango[cantango_column_name].rolling(fast_sma).mean()
+    vixts.ts_pctContango['sma_crossover'] = vixts.ts_pctContango['fast_sma'] - vixts.ts_pctContango['slow_sma']
+
+    contango_sma_crossover = sc.CrossoverStrategy(vixts.underlying_pxhistory, vixts.ts_pctContango, 'close', 'sma_crossover')
+    return(contango_sma_crossover.plotSignalOverview(signal_rounding=0))
+    print(contango_sma_crossover.tail())
+    exit()
+
+
 vixts = tsobj.TermStructure('VIX', '1day', 'uvxy') 
 ngts = tsobj.TermStructure('NG', '1day', 'UNG')
 
@@ -636,7 +650,10 @@ ngts = tsobj.TermStructure('NG', '1day', 'UNG')
 tpw = pltWindow.plotWindow()
 tpw.MainWindow.resize(2560, 1380)
 
+
+
 ########## Add analysis tabs   
+tpw.addPlot('contango sma-x overview', contango_sma_crossover_analysis(vixts, '_1to2MoContango', slow_sma=20))
 tpw.addPlot('VIX ts overview', plotTermStructureOverview(vixts, '_1to2MoContango'))
 tpw.addPlot('VIX ts monitor', plotTermStructureMonitor(vixts, '_1to2MoContango'))
 tpw.addPlot('NG ts overview', plotTermStructureOverview(ngts, '_3to4MoContango'))
