@@ -25,7 +25,7 @@ def calculateAutocorrelations(df, targetColName, max_lag=60):
 """
 def bucketAndCalcSignalReturns(signaldf, signal_col, signal_rounding=2, maxperiod_fwdreturns=50):
     
-    signaldf.dropna(subset=['signal'], inplace=True)
+    signaldf.dropna(subset=[signal_col], inplace=True)
     
     # add fwdreturn column for each fwdreturn period
     for i in range(1, maxperiod_fwdreturns+1):
