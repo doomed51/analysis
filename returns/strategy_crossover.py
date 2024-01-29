@@ -11,10 +11,33 @@ from utils import utils_strategyAnalyzer as sa
 
 class CrossoverStrategy:
     def __init__(self, base_df, signal_df, target_column_name, signal_column_name):
+        
         self.target_column_name = target_column_name
         self.signal_column_name = signal_column_name
-        self.base_df = base_df.reset_index(drop=True)
-        self.signal_df = self._calculateSignal(signal_df).reset_index(drop=True)
+        self.base_df = base_df.reset_index()
+        self.signal_df = signal_df.sort_index(ascending=True).reset_index()
+
+        # add close from base to signal joining on date 
+        self.signal_df = self.base_df[['date', 'close', 'symbol']].rename(
+            columns={'symbol': 'symbol_underlying'}).merge(
+                self.signal_df, on='date', how='inner')
+        #print(self.signal_df)
+        #exit()
+        #self._align_base_and_signal_()
+
+        # add the target column from basedf to signaldf based on the date
+
+    def _align_base_and_signal_(self):
+        # make sure date column in both dataframes is formatted the same 
+        self.base_df['date'] = pd.to_datetime(self.base_df['date'])
+        self.signal_df['date'] = pd.to_datetime(self.signal_df['date'])
+        # only include dates that are in both base and signal
+        self.base_df = self.base_df[self.base_df['date'].isin(self.signal_df['date'])]
+        self.signal_df = self.signal_df[self.signal_df['date'].isin(self.base_df['date'])]
+        #print(self.base_df)
+        #print(self.signal_df.sort_values(by='date'.drop(columns=['signal'])))
+        exit()
+
 
     def _calculateSignal(self, signal_df):
         # calculated as target column - signal column
@@ -24,8 +47,7 @@ class CrossoverStrategy:
 
         return signal_df
 
-    def plotSignalOverview(self): 
-        signal_rounding = 4
+    def plotSignalOverview(self, signal_rounding = 4):
         fig, ax = plt.subplots(2,2)
         fig.suptitle('%s Signal Overview'%(self.base_df['symbol'][0]))
         
@@ -46,25 +68,21 @@ class CrossoverStrategy:
         # share x-axis iwht ax[0,1]
         ax[1,1].get_shared_x_axes().join(ax[1,1], ax[0,1])
         
-        #signal_mod1 = self.signal_df.copy() 
-        # change the signal column to be 1 if columnval >0, -1 if the columnval <0
         print('%s_normalized'%(self.signal_column_name))
-        #self.signal_df['%s_normalized'%(self.signal_column_name)] = self.signal_df['%s_normalized'%(self.signal_column_name)].apply(lambda x: 1 if x > 0 else -1)
-        # sort sma_normalized into 5 quintiles
-        print(self.signal_df.tail())
-        self.signal_df['%s_normalized'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 5, labels=False)
-        #self.signal_df['sma_normalized']=self.signal_df['sma_normalized'].apply(lambda x: 1 if x > 0 else -1)
+        # sort sma_normalized into quintiles
+        self.signal_df['%s_quintile'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 5, labels=False)
         
-        self.drawSignalReturnsHeatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='%s_normalized'%(self.signal_column_name), signal_rounding=signal_rounding)
+        self.drawSignalReturnsHeatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='%s_quintile'%(self.signal_column_name), signal_rounding=signal_rounding)
         
         fig.tight_layout()
-        print(fig)
         return fig
     
-    def plotSignalReturnsHeatmap(self, signal_columnName, maxperiod_fwdreturns=100):
+    def plotSignalReturnsHeatmap(self, signal_columnName, maxperiod_fwdreturns=100, signal_rounding=2):
         fig, ax = plt.subplots()
         fig.suptitle('Signal Returns Heatmap')
-        self.drawSignalReturnsHeatmap(ax, maxperiod_fwdreturns, signal_columnName)
+        print(signal_columnName)
+        exit()
+        self.drawSignalReturnsHeatmap(ax, maxperiod_fwdreturns, signal_columnName, signal_rounding=signal_rounding)
         return fig
 
     def drawSignalReturnsHeatmap(self, ax, signal_columnName, maxperiod_fwdreturns, signal_rounding = 2):        
@@ -83,7 +101,7 @@ class CrossoverStrategy:
         ax.set_title('Underlying vs. Signal')
 
         # plot the base and signal timeseries 
-        sns.lineplot(x=self.base_df['date'], y=self.base_df[self.target_column_name], ax=ax, label=self.target_column_name)
+        #sns.lineplot(x=self.base_df['date'], y=self.base_df[self.target_column_name], ax=ax, label=self.target_column_name)
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label=self.signal_column_name)
         # add percentile lines 
         if drawPercentiles:
