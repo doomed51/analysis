@@ -81,7 +81,6 @@ class CrossoverStrategy:
         fig, ax = plt.subplots()
         fig.suptitle('Signal Returns Heatmap')
         print(signal_columnName)
-        exit()
         self.drawSignalReturnsHeatmap(ax, maxperiod_fwdreturns, signal_columnName, signal_rounding=signal_rounding)
         return fig
 
@@ -101,7 +100,6 @@ class CrossoverStrategy:
         ax.set_title('Underlying vs. Signal')
 
         # plot the base and signal timeseries 
-        #sns.lineplot(x=self.base_df['date'], y=self.base_df[self.target_column_name], ax=ax, label=self.target_column_name)
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label=self.signal_column_name)
         # add percentile lines 
         if drawPercentiles:
