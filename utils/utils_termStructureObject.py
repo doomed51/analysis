@@ -13,10 +13,8 @@ class TermStructure:
 
         # load data from db 
         self.ts_raw = self.get_raw_term_structure()
-        self.ts_pctContango = self.get_term_structure_pct_contango(_1to2=True, _1to3=True, _2to3=True, _3to4=True, _3to6=True, _4to7=True, _1to8=True, averageContango=True)
+        self.ts_pctContango = self.get_term_structure_pct_contango(_1to2=True, _1to3=True, _2to3=True, _3to4=True, _3to6=True, _4to7=True, _1to8=True, averageContango=True).sort_index(axis=1)
         self.underlying_pxhistory = self.get_underlying_pxhistory()
-
-        #sns.set_style('darkgrid')
 
     def get_raw_term_structure(self):
         symbol = self.symbol.upper()
@@ -27,8 +25,7 @@ class TermStructure:
         ts_raw['date'] = pd.to_datetime(ts_raw['date'])
         ts_raw['symbol'] = symbol
         ts_raw.set_index('date', inplace=True)
-        #ts_raw.reset_index(drop=True, inplace=True)
-        return ts_raw
+        return ts_raw.sort_index(axis=0)
 
     def get_underlying_pxhistory(self):
         # set type 
@@ -40,7 +37,7 @@ class TermStructure:
             underlying_pxhistory = pd.read_sql(f'SELECT * FROM {self.symbol_underlying}_{type}_{self.interval}', conn)
         underlying_pxhistory['date'] = pd.to_datetime(underlying_pxhistory['date'])
         underlying_pxhistory.set_index('date', inplace=True)
-        return underlying_pxhistory
+        return underlying_pxhistory.sort_index(axis=0)
 
     def get_term_structure_pct_contango(self, **kwargs):
         symbol = self.ts_raw['symbol'][0]
@@ -85,10 +82,6 @@ class TermStructure:
         smaPeriod_contango = kwargs.get('smaPeriod_contango', 20)
         self.ts_pctContango.reset_index(inplace=True)
         self.underlying_pxhistory.reset_index(inplace=True)
-        #sns.lineplot(x='date', y='oneToTwoMoContango', data=ts_data, ax=ax, label='oneToTwoMoContango', color='blue')
-        #sns.lineplot(x='date', y='oneToThreeMoContango', data=ts_data, ax=ax, label='oneToThreeMoContango', color='green')
-        #sns.lineplot(x='date', y='twoToThreeMoContango', data=ts_data, ax=ax, label='twoToThreeMoContango', color='red')
-        #sns.lineplot(x='date', y='threeToFourMoContango', data=ts_data, ax=ax, label='threeToFourMoContango', color='pink')
         sns.lineplot(x='date', y=contangoColName, data=self.ts_pctContango, ax=ax, label=contangoColName, color='green')
         # plot 90th percentile rolling 252 period contango
         sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(252).quantile(0.9), data=self.ts_pctContango, ax=ax, label='90th percentile', color='red', alpha=0.3)
@@ -98,8 +91,6 @@ class TermStructure:
         # plot 5 period sma of contango
         sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(smaPeriod_contango).mean(), data=self.ts_pctContango, ax=ax, label='%s period sma'%(smaPeriod_contango), color='blue', alpha=0.6)
         sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(int(smaPeriod_contango/2)).mean(), data=self.ts_pctContango, ax=ax, label='%s period sma'%(int(smaPeriod_contango/2)), color='red', alpha=0.6)
-        #sns.lineplot(x='date', y='currentToLastContango', data=ts_data, ax=ax, label='currentToLastContango', color='red')
-        #sns.lineplot(x='date', y='averageContango', data=ts_data, ax=ax, label='averageContango', color='orange')
 
         # format plot 
         ax.set_title('Historical Contango')
