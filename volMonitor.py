@@ -661,7 +661,7 @@ def plot_contango_sma_crossover(vixts, ax, cantango_column_name = '_1to2MoContan
         ax.text(vixts.ts_pctContango['date'].iloc[-1], 0, 'Today: %.2f'%(vixts.ts_pctContango['sma_crossover'].iloc[-1]), color='red', fontsize=10)
         ax.grid(True, which='both', axis='both', linestyle='--')
         ax.legend(loc='upper left')   
-        ax.set_title('Contango sma(%s)-sma(%s)'%(slow_sma, fast_sma)
+        ax.set_title('Contango sma(%s)-sma(%s)'%(slow_sma, fast_sma))
         
 
 
