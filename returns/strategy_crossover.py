@@ -21,11 +21,7 @@ class CrossoverStrategy:
         self.signal_df = self.base_df[['date', 'close', 'symbol']].rename(
             columns={'symbol': 'symbol_underlying'}).merge(
                 self.signal_df, on='date', how='inner')
-        #print(self.signal_df)
-        #exit()
-        #self._align_base_and_signal_()
 
-        # add the target column from basedf to signaldf based on the date
 
     def _align_base_and_signal_(self):
         # make sure date column in both dataframes is formatted the same 
@@ -34,9 +30,7 @@ class CrossoverStrategy:
         # only include dates that are in both base and signal
         self.base_df = self.base_df[self.base_df['date'].isin(self.signal_df['date'])]
         self.signal_df = self.signal_df[self.signal_df['date'].isin(self.base_df['date'])]
-        #print(self.base_df)
-        #print(self.signal_df.sort_values(by='date'.drop(columns=['signal'])))
-        exit()
+
 
 
     def _calculateSignal(self, signal_df):
@@ -59,9 +53,9 @@ class CrossoverStrategy:
         #ax[0,1].legend(loc='upper left')
         
         # plot autocorrelation of signal 
-        ##autocorrelations = sa.calculateAutocorrelations(self.signal_df, self.signal_column_name)
-        ##ax[1,0].stem(autocorrelations, linefmt='--')
-        ##ax[1,0].set_title('Signal Autocorrelation')
+        #autocorrelations = sa.calculateAutocorrelations(self.signal_df, self.signal_column_name)
+        #ax[1,0].stem(autocorrelations, linefmt='--')
+        #ax[1,0].set_title('Signal Autocorrelation')
 
         # plot the signal against its percentile bounds
         self.drawSignalAndBounds(ax[1,1])
@@ -80,7 +74,6 @@ class CrossoverStrategy:
     def plotSignalReturnsHeatmap(self, signal_columnName, maxperiod_fwdreturns=100, signal_rounding=2):
         fig, ax = plt.subplots()
         fig.suptitle('Signal Returns Heatmap')
-        print(signal_columnName)
         self.drawSignalReturnsHeatmap(ax, maxperiod_fwdreturns, signal_columnName, signal_rounding=signal_rounding)
         return fig
 
