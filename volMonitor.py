@@ -607,40 +607,62 @@ def plotTermStructureOverview(termstructure, contangoColName='_4to7MoContango'):
     return fig
 
 def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'): 
-    print(termstructure.ts_pctContango.head())
-    fig, ax = plt.subplots(2, 3)
+    ut.calcZScore(termstructure.ts_pctContango, contangoColName) #to be plotted later 
+    fig, ax = plt.subplots(2, 4)
+    
+    # 0,0
     termstructure.plot_termstructure(ax=ax[0,0], numDays=10)
+    
+    # 0,1
     termstructure.plot_historical_termstructure(ax=ax[0,1], contangoColName=contangoColName)
+    
+    # 0,2
+    plot_contango_sma_crossover(vixts, ax=ax[0,2], cantango_column_name='_1to2MoContango', slow_sma=20)
 
-    # plot historical zscore decile for last n days 
-    numdays_for_historical_decile_plot = 40
-    ax2 = ax[0,2]
+    # 0,3
+    numdays_for_historical_decile_plot = 80
+    ax2 = ax[0,3]
     sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango[termstructure.ts_pctContango['date'] > termstructure.ts_pctContango['date'].max() - pd.Timedelta(days=numdays_for_historical_decile_plot)], ax=ax2, color='black', alpha=0.3, marker='x', dashes=False)
     ax2.set_title('%s zscore decile for last 40 days'%(contangoColName))
-
-    termstructure.plot_termstructure_distribution(ax=ax[1,1], contangoColName=contangoColName)
-    termstructure.plot_termstructure_fowardreturn_heatmap(ax=ax[1,2], contangoColName=contangoColName)
-
-    # plot decile boxplot
+    ax2.grid(True, which='both', axis='both', linestyle='--')
+    
+    ##########
+    
+    # 1,0
     sns.boxplot(y=contangoColName, x='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango, ax=ax[1,0])
-    ax[1,0].set_title('%s zscore decile & Pct Contango'%(contangoColName))
-    # vline at last decile 
     ax[1,0].axvline(x=termstructure.ts_pctContango['zscore_%s_decile'%(contangoColName)].iloc[-1], color='red', linestyle='--', alpha=0.5)
     # add date as overlay text
     ax[1,0].text(termstructure.ts_pctContango['zscore_%s_decile'%(contangoColName)].iloc[-1], 0, '%s'%(termstructure.ts_pctContango['date'].iloc[-1]), color='red', fontsize=10)
+    ax[1,0].set_title('%s zscore decile & Pct Contango'%(contangoColName))
+    
+    # 1,1
+    ##----
+
+    # 1,2
+    termstructure.plot_termstructure_distribution(ax=ax[1,2], contangoColName=contangoColName)
+
+    # 1,3
+    termstructure.plot_termstructure_fowardreturn_heatmap(ax=ax[1,3], contangoColName=contangoColName)    
 
     return fig
 
-def contango_sma_crossover_analysis(vixts, cantango_column_name = '_1to2MoContango', slow_sma = 50, fast_sma = 10, plot = True):
+def plot_contango_sma_crossover(vixts, ax, cantango_column_name = '_1to2MoContango', slow_sma = 50, fast_sma = 10, plot = True):
     # calculate contango sma
     vixts.ts_pctContango['slow_sma'] = vixts.ts_pctContango[cantango_column_name].rolling(slow_sma).mean()
     vixts.ts_pctContango['fast_sma'] = vixts.ts_pctContango[cantango_column_name].rolling(fast_sma).mean()
     vixts.ts_pctContango['sma_crossover'] = vixts.ts_pctContango['fast_sma'] - vixts.ts_pctContango['slow_sma']
-
-    contango_sma_crossover = sc.CrossoverStrategy(vixts.underlying_pxhistory, vixts.ts_pctContango, 'close', 'sma_crossover')
-    return(contango_sma_crossover.plotSignalOverview(signal_rounding=0))
-    print(contango_sma_crossover.tail())
-    exit()
+    # stepped lineplot of sma crossover
+    if plot:
+        sns.lineplot(x='date', y='sma_crossover', data=vixts.ts_pctContango, ax=ax, label='sma_crossover')
+        ax.axhline(y=0, color='grey', linestyle='-')
+        ax.axhline(y=vixts.ts_pctContango['sma_crossover'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
+        ax.axhline(y=vixts.ts_pctContango['sma_crossover'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
+        #ax.axvline(x=vixts.ts_pctContango['date'].iloc[-1], color='red', linestyle='-', alpha=0.9)
+        ax.text(vixts.ts_pctContango['date'].iloc[-1], 0, 'Today: %.2f'%(vixts.ts_pctContango['sma_crossover'].iloc[-1]), color='red', fontsize=10)
+        ax.grid(True, which='both', axis='both', linestyle='--')
+        ax.legend(loc='upper left')   
+        ax.set_title('Contango sma(%s)-sma(%s)'%(slow_sma, fast_sma)
+        
 
 
 vixts = tsobj.TermStructure('VIX', '1day', 'uvxy') 
@@ -653,9 +675,8 @@ tpw.MainWindow.resize(2560, 1380)
 
 
 ########## Add analysis tabs   
-tpw.addPlot('contango sma-x overview', contango_sma_crossover_analysis(vixts, '_1to2MoContango', slow_sma=20))
-tpw.addPlot('VIX ts overview', plotTermStructureOverview(vixts, '_1to2MoContango'))
 tpw.addPlot('VIX ts monitor', plotTermStructureMonitor(vixts, '_1to2MoContango'))
+tpw.addPlot('VIX ts overview', plotTermStructureOverview(vixts, '_1to2MoContango'))
 tpw.addPlot('NG ts overview', plotTermStructureOverview(ngts, '_3to4MoContango'))
 tpw.addPlot('NG ts monitor', plotTermStructureMonitor(ngts, '_3to4MoContango'))
 
