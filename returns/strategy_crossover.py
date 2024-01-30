@@ -144,9 +144,3 @@ class CrossoverStrategy:
         ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
         ax.axhline(0, color='grey', linestyle='-', alpha=0.5)
         ax.legend(loc='upper left')
-
-        # plot undelying close on a secondary axis
-        ax2 = ax.twinx()
-        sns.lineplot(x=self.base_df['date'], y=self.base_df['close'], ax=ax2, color='black', label='%s close'%(self.base_df['symbol'][0]))
-        ax2.set_yscale('log')
-        ax2.legend(loc='upper right')
