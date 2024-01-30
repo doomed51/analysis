@@ -81,7 +81,6 @@ class TermStructure:
     def plot_historical_termstructure(self, ax, contangoColName='_4to7MoContango', **kwargs):
         smaPeriod_contango = kwargs.get('smaPeriod_contango', 20)
         self.ts_pctContango.reset_index(inplace=True)
-        self.underlying_pxhistory.reset_index(inplace=True)
         sns.lineplot(x='date', y=contangoColName, data=self.ts_pctContango, ax=ax, label=contangoColName, color='green')
         # plot 90th percentile rolling 252 period contango
         sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(252).quantile(0.9), data=self.ts_pctContango, ax=ax, label='90th percentile', color='red', alpha=0.3)
@@ -97,12 +96,6 @@ class TermStructure:
         ax.grid(True, which='both', axis='both', linestyle='--')
         ax.axhline(0, color='black', linestyle='-', alpha=0.5)
         ax.legend(loc='upper left')
-
-        ax2 = ax.twinx()
-        sns.lineplot(x='date', y='close', data=self.underlying_pxhistory, ax=ax2, label=self.underlying_pxhistory['symbol'][0], color='black', alpha=0.3)
-
-        ax2.set_yscale('log')
-        ax2.grid(False)
 
     def plot_termstructure_autocorrelation(self, ax, contangoColName='_4to7MoContango', max_lag=100):
         # Calculate autocorrelations for different lags
