@@ -81,7 +81,9 @@ class TermStructure:
     def plot_historical_termstructure(self, ax, contangoColName='_4to7MoContango', **kwargs):
         smaPeriod_contango = kwargs.get('smaPeriod_contango', 20)
         self.ts_pctContango.reset_index(inplace=True)
+        self.underlying_pxhistory.reset_index(inplace=True)
         sns.lineplot(x='date', y=contangoColName, data=self.ts_pctContango, ax=ax, label=contangoColName, color='green')
+        
         # plot 90th percentile rolling 252 period contango
         sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(252).quantile(0.9), data=self.ts_pctContango, ax=ax, label='90th percentile', color='red', alpha=0.3)
         sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(252).quantile(0.5), data=self.ts_pctContango, ax=ax, label='50th percentile', color='brown', alpha=0.4)
@@ -92,7 +94,7 @@ class TermStructure:
         sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(int(smaPeriod_contango/2)).mean(), data=self.ts_pctContango, ax=ax, label='%s period sma'%(int(smaPeriod_contango/2)), color='red', alpha=0.6)
 
         # format plot 
-        ax.set_title('Historical Contango')
+        ax.set_title('Historical Contango - %s'%(contangoColName))
         ax.grid(True, which='both', axis='both', linestyle='--')
         ax.axhline(0, color='black', linestyle='-', alpha=0.5)
         ax.legend(loc='upper left')
