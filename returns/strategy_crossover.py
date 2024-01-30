@@ -16,11 +16,15 @@ class CrossoverStrategy:
         self.signal_column_name = signal_column_name
         self.base_df = base_df.reset_index()
         self.signal_df = signal_df.sort_index(ascending=True).reset_index()
-
+        
+        if 'close' in self.signal_df.columns:
+            self.signal_df = self.signal_df.drop(columns=['close'])
+        
         # add close from base to signal joining on date 
         self.signal_df = self.base_df[['date', 'close', 'symbol']].rename(
             columns={'symbol': 'symbol_underlying'}).merge(
                 self.signal_df, on='date', how='inner')
+        print(self.signal_df)
 
 
     def _align_base_and_signal_(self):
@@ -42,7 +46,7 @@ class CrossoverStrategy:
         return signal_df
 
     def plotSignalOverview(self, signal_rounding = 4):
-        fig, ax = plt.subplots(2,2)
+        fig, ax = plt.subplots(2,4)
         fig.suptitle('%s Signal Overview'%(self.base_df['symbol'][0]))
         
         # plot signal returns heatmap
@@ -102,18 +106,11 @@ class CrossoverStrategy:
             sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(percentileWindow).quantile(0.2), ax=ax, label='10th percentile', color='red', alpha=0.3)
         ax.legend(loc='upper left')
 
-        # plot the underlying 
-        ax2 = ax.twinx()
-        sns.lineplot(x=self.base_df['date'], y=self.base_df['close'], ax=ax2, color='black', label='close')
-        ax2.set_yscale('log')
-
         # set style & format plot
         ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
         ax.axhline(0, color='grey', linestyle='-', alpha=0.5)
         ax.set_ylabel(self.target_column_name)
         ax.set_xlabel('date')
-        ax2.set_ylabel('close')
-        ax2.legend(loc='upper right')
 
     """
         Plots the signal and percentile bounds on the provided axis
