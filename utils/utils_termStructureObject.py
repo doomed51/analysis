@@ -139,12 +139,11 @@ class TermStructure:
         ax.grid(True, which='both', axis='both', linestyle='--')
 
     def plot_termstructure_fowardreturn_heatmap(self, ax, contangoColName='_4to7MoContango', maxperiod_fwdreturns=100):
-        #utils.calcZScore(self.ts_pctContango, contangoColName)
-        fwd_returns_cols = ['fwdReturns{}'.format(i) for i in range(1, maxperiod_fwdreturns + 1)]
-        # combine the zscore and fwd returns dataframes
+        #compute fwd returns
         fwdReturns_mean = pd.merge(self.ts_pctContango, self.underlying_pxhistory, how='inner', left_on='date', right_on='date')
-        
-        # add fwdreturn column for each fwdreturn period
+        fwd_returns_cols = ['fwdReturns{}'.format(i) for i in range(1, maxperiod_fwdreturns + 1)]
+        fwdReturns_mean.dropna(subset=[contangoColName], inplace=True)
+
         for i in range(1, maxperiod_fwdreturns+1):
             if f'fwdReturns{i}' in fwdReturns_mean:
                 continue
@@ -153,9 +152,10 @@ class TermStructure:
         # Perform the groupby and mean calculation in one step
         fwdReturns_mean = fwdReturns_mean.groupby('zscore_%s_decile'%(contangoColName))[fwd_returns_cols].mean()
         fwdReturns_mean.sort_index(inplace=True, ascending=False) 
+
         # plot the heatmap
         sns.heatmap(fwdReturns_mean, annot=False, cmap='RdYlGn', ax=ax)
-        ax.set_title(f'{contangoColName} Decile vs. Fwd Returns')
+        ax.set_title(f'{contangoColName} z-score Decile vs. Fwd Returns')
 
     def plot_underlying(self, ax):
         sns.lineplot(x=self.underlying_pxhistory['date'], y=self.underlying_pxhistory['close'], ax=ax, label=self.underlying_pxhistory['symbol'][0], color='black', alpha=0.6)
