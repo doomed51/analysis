@@ -47,28 +47,30 @@ class CrossoverStrategy:
 
     def plotSignalOverview(self, signal_rounding = 4):
         fig, ax = plt.subplots(2,4)
-        fig.suptitle('%s Signal Overview'%(self.base_df['symbol'][0]))
-        
+        fig.suptitle('%s Signal Overview: %s'%(self.base_df['symbol'][0], self.signal_column_name))
+        print(self.signal_column_name)
+
         # 0,0
         self.drawSignalReturnsHeatmap(ax[0,0], maxperiod_fwdreturns=100, signal_columnName=self.signal_column_name, signal_rounding=signal_rounding)
         
         # 0,1        
         autocorrelations = sa.calculateAutocorrelations(self.signal_df, self.signal_column_name)
         ax[0,1].stem(autocorrelations, linefmt='--')
-        ax[0,1].set_title('Signal Autocorrelation')
+        ax[0,1].set_title('%s Autocorrelation'%(self.signal_column_name))
 
         # 0,2 signal distribution 
         self._plot_histogram_with_pctile_vlines(ax=ax[0,2], data=self.signal_df, x_col_name=self.signal_column_name)
 
         # 0,3
+        self.drawSignalAndBounds(ax[0,3])
 
         # 1,0
         self.signal_df['%s_quintile'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 5, labels=False)
         self.drawSignalReturnsHeatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='%s_quintile'%(self.signal_column_name), signal_rounding=signal_rounding)
+        # override title
+        ax[1,0].set_title('%s Quintiles vs. fwd returns'%(self.signal_column_name))
 
         # 1,1
-        self.drawSignalAndBounds(ax[1,1])
-        ax[1,1].get_shared_x_axes().join(ax[1,1], ax[0,1])
 
         # 1,2
 
@@ -81,15 +83,19 @@ class CrossoverStrategy:
             data = data.set_index('date')
         # set index to date
         sns.histplot(data=data, x=x_col_name, ax=ax, bins=bins)
-        ax.set_title('Signal Distribution')
+        ax.set_title('%s Distribution'%(x_col_name))
         # vlines: pctile 10, pctile 90, mean 
+        ax.axvline(data[x_col_name].quantile(0.95), color='red', alpha=0.5)
         ax.axvline(data[x_col_name].quantile(0.9), color='red', alpha=0.5)
         ax.axvline(data[x_col_name].quantile(0.1), color='red', alpha=0.5)
+        ax.axvline(data[x_col_name].quantile(0.05), color='red', alpha=0.5)
         ax.axvline(data[x_col_name].mean(), color='black', alpha=0.5)
 
         # vline text labels 
+        ax.text(data[x_col_name].quantile(0.95), ax.get_ylim()[1], '95th percentile: %s'%(round(data[x_col_name].quantile(0.95), 5)), rotation=90, verticalalignment='top', fontsize=12)
         ax.text(data[x_col_name].quantile(0.9), ax.get_ylim()[1], '90th percentile: %s'%(round(data[x_col_name].quantile(0.9), 5)), rotation=90, verticalalignment='top', fontsize=12)
         ax.text(data[x_col_name].quantile(0.1), ax.get_ylim()[1], '10th percentile: %s'%(round(data[x_col_name].quantile(0.1), 5)), rotation=90, verticalalignment='top', fontsize=12)
+        ax.text(data[x_col_name].quantile(0.05), ax.get_ylim()[1], '5th percentile: %s'%(round(data[x_col_name].quantile(0.05), 5)), rotation=90, verticalalignment='top', fontsize=12)
         ax.text(data[x_col_name].mean(), ax.get_ylim()[1], 'mean: %s'%(round(data[x_col_name].mean(),5)), rotation=90, verticalalignment='top', fontsize=16, color='black')
 
     def plotSignalReturnsHeatmap(self, signal_columnName, maxperiod_fwdreturns=100, signal_rounding=2):
@@ -102,8 +108,11 @@ class CrossoverStrategy:
         mean_fwdReturns = sa.bucketAndCalcSignalReturns(self.signal_df, signal_columnName, signal_rounding, maxperiod_fwdreturns)
         sns.heatmap(mean_fwdReturns, annot=False, cmap='RdYlGn', ax=ax)
 
-        # set title
-        ax.set_title('Signal vs. Fwd. Returns')
+        # plot formatting
+        ax.set_xticklabels([int(x.get_text().replace('fwdReturns', '')) for x in ax.get_xticklabels()])
+        ax.tick_params(axis='x', rotation=0)
+        ax.set_title('%s vs. Fwd. Returns'%(signal_columnName))
+        ax.set_ylabel(signal_columnName)
 
 
     """
@@ -134,7 +143,7 @@ class CrossoverStrategy:
         Plots the signal and percentile bounds on the provided axis
     """
     def drawSignalAndBounds(self, ax, upperbound = 0.95, lowerbound = 0.05):
-        ax.set_title('Signal with Percentile Bounds')
+        ax.set_title('%s with Percentile Bounds'%(self.signal_column_name))
 
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label='signal')
 
