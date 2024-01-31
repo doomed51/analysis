@@ -617,7 +617,10 @@ def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'):
     termstructure.plot_historical_termstructure(ax=ax[0,1], contangoColName=contangoColName)
     
     # 0,2
-    plot_contango_sma_crossover(vixts, ax=ax[0,2], cantango_column_name='_1to2MoContango', slow_sma=20)
+    plot_contango_sma_crossover(termstructure, ax=ax[0,2], cantango_column_name='_1to2MoContango', slow_sma=20)
+
+    # join 01, and 02
+    ax[0,2].get_shared_x_axes().join(ax[0,2], ax[0,1])
 
     # 0,3
     numdays_for_historical_decile_plot = 80
@@ -636,29 +639,32 @@ def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'):
     ax[1,0].set_title('%s zscore decile & Pct Contango'%(contangoColName))
     
     # 1,1
-    ##----
+    termstructure.plot_termstructure_distribution(ax=ax[1,1], contangoColName=contangoColName)
 
-    # 1,2
-    termstructure.plot_termstructure_distribution(ax=ax[1,2], contangoColName=contangoColName)
+    # 1,2  
+    #print(vixts.ts_pctContango)
+    termstructure.plot_termstructure_fowardreturn_heatmap(ax=ax[1,2], contangoColName='sma_crossover')    
 
     # 1,3
     termstructure.plot_termstructure_fowardreturn_heatmap(ax=ax[1,3], contangoColName=contangoColName)    
 
     return fig
 
-def plot_contango_sma_crossover(vixts, ax, cantango_column_name = '_1to2MoContango', slow_sma = 50, fast_sma = 10, plot = True):
+def plot_contango_sma_crossover(termstructure, ax, cantango_column_name = '_1to2MoContango', slow_sma = 50, fast_sma = 10, plot = True):
     # calculate contango sma
-    vixts.ts_pctContango['slow_sma'] = vixts.ts_pctContango[cantango_column_name].rolling(slow_sma).mean()
-    vixts.ts_pctContango['fast_sma'] = vixts.ts_pctContango[cantango_column_name].rolling(fast_sma).mean()
-    vixts.ts_pctContango['sma_crossover'] = vixts.ts_pctContango['fast_sma'] - vixts.ts_pctContango['slow_sma']
+    termstructure.ts_pctContango['slow_sma'] = termstructure.ts_pctContango[cantango_column_name].rolling(slow_sma).mean()
+    termstructure.ts_pctContango['fast_sma'] = termstructure.ts_pctContango[cantango_column_name].rolling(fast_sma).mean()
+    termstructure.ts_pctContango['sma_crossover'] = termstructure.ts_pctContango['fast_sma'] - termstructure.ts_pctContango['slow_sma']
+    ut.calcZScore(termstructure.ts_pctContango, 'sma_crossover')
+
     # stepped lineplot of sma crossover
     if plot:
-        sns.lineplot(x='date', y='sma_crossover', data=vixts.ts_pctContango, ax=ax, label='sma_crossover')
+        sns.lineplot(x='date', y='sma_crossover', data=termstructure.ts_pctContango, ax=ax, label='sma_crossover')
         ax.axhline(y=0, color='grey', linestyle='-')
-        ax.axhline(y=vixts.ts_pctContango['sma_crossover'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
-        ax.axhline(y=vixts.ts_pctContango['sma_crossover'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
+        ax.axhline(y=termstructure.ts_pctContango['sma_crossover'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
+        ax.axhline(y=termstructure.ts_pctContango['sma_crossover'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
         #ax.axvline(x=vixts.ts_pctContango['date'].iloc[-1], color='red', linestyle='-', alpha=0.9)
-        ax.text(vixts.ts_pctContango['date'].iloc[-1], 0, 'Today: %.2f'%(vixts.ts_pctContango['sma_crossover'].iloc[-1]), color='red', fontsize=10)
+        ax.text(termstructure.ts_pctContango['date'].iloc[-1], 0, 'Today: %.2f'%(termstructure.ts_pctContango['sma_crossover'].iloc[-1]), color='red', fontsize=10)
         ax.grid(True, which='both', axis='both', linestyle='--')
         ax.legend(loc='upper left')   
         ax.set_title('Contango sma(%s)-sma(%s)'%(slow_sma, fast_sma))
