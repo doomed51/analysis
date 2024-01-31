@@ -49,32 +49,49 @@ class CrossoverStrategy:
         fig, ax = plt.subplots(2,4)
         fig.suptitle('%s Signal Overview'%(self.base_df['symbol'][0]))
         
-        # plot signal returns heatmap
+        # 0,0
         self.drawSignalReturnsHeatmap(ax[0,0], maxperiod_fwdreturns=100, signal_columnName=self.signal_column_name, signal_rounding=signal_rounding)
         
-        # plot the underlying, and the components of the signal
-        self.drawBaseAndSignal(ax[0,1])
-        #ax[0,1].legend(loc='upper left')
-        
-        # plot autocorrelation of signal 
-        #autocorrelations = sa.calculateAutocorrelations(self.signal_df, self.signal_column_name)
-        #ax[1,0].stem(autocorrelations, linefmt='--')
-        #ax[1,0].set_title('Signal Autocorrelation')
+        # 0,1        
+        autocorrelations = sa.calculateAutocorrelations(self.signal_df, self.signal_column_name)
+        ax[0,1].stem(autocorrelations, linefmt='--')
+        ax[0,1].set_title('Signal Autocorrelation')
 
-        # plot the signal against its percentile bounds
-        self.drawSignalAndBounds(ax[1,1])
-        # share x-axis iwht ax[0,1]
-        ax[1,1].get_shared_x_axes().join(ax[1,1], ax[0,1])
-        
-        print('%s_normalized'%(self.signal_column_name))
-        # sort sma_normalized into quintiles
+        # 0,2 signal distribution 
+        self._plot_histogram_with_pctile_vlines(ax=ax[0,2], data=self.signal_df, x_col_name=self.signal_column_name)
+
+        # 0,3
+
+        # 1,0
         self.signal_df['%s_quintile'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 5, labels=False)
-        
         self.drawSignalReturnsHeatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='%s_quintile'%(self.signal_column_name), signal_rounding=signal_rounding)
-        
-        fig.tight_layout()
+
+        # 1,1
+        self.drawSignalAndBounds(ax[1,1])
+        ax[1,1].get_shared_x_axes().join(ax[1,1], ax[0,1])
+
+        # 1,2
+
+        # 1,3
         return fig
     
+    def _plot_histogram_with_pctile_vlines(self, ax, data, x_col_name, bins=50):
+        # if index is not set as date, set it 
+        if data.index.name != 'date':
+            data = data.set_index('date')
+        # set index to date
+        sns.histplot(data=data, x=x_col_name, ax=ax, bins=bins)
+        ax.set_title('Signal Distribution')
+        # vlines: pctile 10, pctile 90, mean 
+        ax.axvline(data[x_col_name].quantile(0.9), color='red', alpha=0.5)
+        ax.axvline(data[x_col_name].quantile(0.1), color='red', alpha=0.5)
+        ax.axvline(data[x_col_name].mean(), color='black', alpha=0.5)
+
+        # vline text labels 
+        ax.text(data[x_col_name].quantile(0.9), ax.get_ylim()[1], '90th percentile: %s'%(round(data[x_col_name].quantile(0.9), 5)), rotation=90, verticalalignment='top', fontsize=12)
+        ax.text(data[x_col_name].quantile(0.1), ax.get_ylim()[1], '10th percentile: %s'%(round(data[x_col_name].quantile(0.1), 5)), rotation=90, verticalalignment='top', fontsize=12)
+        ax.text(data[x_col_name].mean(), ax.get_ylim()[1], 'mean: %s'%(round(data[x_col_name].mean(),5)), rotation=90, verticalalignment='top', fontsize=16, color='black')
+
     def plotSignalReturnsHeatmap(self, signal_columnName, maxperiod_fwdreturns=100, signal_rounding=2):
         fig, ax = plt.subplots()
         fig.suptitle('Signal Returns Heatmap')
@@ -87,6 +104,7 @@ class CrossoverStrategy:
 
         # set title
         ax.set_title('Signal vs. Fwd. Returns')
+
 
     """
         Plots the base and signal timeseries on the provided axis
@@ -116,29 +134,17 @@ class CrossoverStrategy:
         Plots the signal and percentile bounds on the provided axis
     """
     def drawSignalAndBounds(self, ax, upperbound = 0.95, lowerbound = 0.05):
-        # set title
         ax.set_title('Signal with Percentile Bounds')
 
-        # plot signal on bottom plot
-        #ax.plot(self.signal_df['date'], self.signal_df['signal'], label='signal')
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label='signal')
 
-        # add rolling percentile lines
-        #sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(upperbound), ax=ax, label='90th percentile', color='red', alpha=0.3)
-        #sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(lowerbound), ax=ax, label='10th percentile', color='red', alpha=0.3)
-
-        # plot 1000 day rolling quintile lines
+        # plot 252 day rolling quintile lines
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.05), ax=ax, label='5th percentile', color='red', alpha=0.6)
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.2), ax=ax, label='20th percentile', color='red', alpha=0.45)
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.4), ax=ax, label='40th percentile', color='red', alpha=0.3)
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.6), ax=ax, label='60th percentile', color='red', alpha=0.3)
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.8), ax=ax, label='80th percentile', color='red', alpha=0.45)
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.95), ax=ax, label='95th percentile', color='red', alpha=0.6)
-
-
-        # add percentile labels
-        #ax.text(self.signal_df['date'].iloc[0], self.signal_df[self.signal_column_name].quantile(upperbound), '%s percentile: %0.5f'%(int(upperbound*100), self.signal_df['signal'].quantile(upperbound)), color='red', fontsize=10)
-        #ax.text(self.signal_df['date'].iloc[0], self.signal_df[self.signal_column_name].quantile(lowerbound), '%s percentile: %0.5f'%(int(lowerbound*100), self.signal_df['signal'].quantile(lowerbound)), color='red', fontsize=10)
 
         # format plot
         ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
