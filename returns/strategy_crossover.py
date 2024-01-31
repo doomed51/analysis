@@ -65,16 +65,28 @@ class CrossoverStrategy:
         self.drawSignalAndBounds(ax[0,3])
 
         # 1,0
-        self.signal_df['%s_quintile'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 5, labels=False)
-        self.drawSignalReturnsHeatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='%s_quintile'%(self.signal_column_name), signal_rounding=signal_rounding)
+        self.signal_df['%s_decile'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 10, labels=False)
+        self.drawSignalReturnsHeatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='%s_decile'%(self.signal_column_name), signal_rounding=signal_rounding)
         # override title
-        ax[1,0].set_title('%s Quintiles vs. fwd returns'%(self.signal_column_name))
+        ax[1,0].set_title('%s Deciles vs. fwd returns'%(self.signal_column_name))
 
-        # 1,1
+        # 1,1 decile vs 'signal' column
+        sns.violinplot(data=self.signal_df, x='%s_decile'%(self.signal_column_name), y=self.signal_column_name, ax=ax[1,1])
+        ax[1,1].set_title('%s Deciles vs. %s'%(self.signal_column_name, self.target_column_name))
+        # format plot 
+        ax[1,1].grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
 
         # 1,2
 
-        # 1,3
+        # 1,3 plot underlying on log plot 
+        ax[1,3].set_yscale('log')
+        sns.lineplot(data=self.signal_df, x='date', y='close', ax=ax[1,3])
+        ax[1,3].set_title('Underlying close')
+        ax[1,3].grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
+
+        # Link underlying and signal x-axis 
+        ax[0,3].get_shared_x_axes().join(ax[0,3], ax[1,3])
+
         return fig
     
     def _plot_histogram_with_pctile_vlines(self, ax, data, x_col_name, bins=50):
@@ -158,4 +170,4 @@ class CrossoverStrategy:
         # format plot
         ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
         ax.axhline(0, color='grey', linestyle='-', alpha=0.5)
-        ax.legend(loc='upper left')
+        #ax.legend(loc='upper left')
