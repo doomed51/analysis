@@ -624,7 +624,7 @@ def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'):
     ax2.grid(True, which='both', axis='both', linestyle='--')
 
     # 0,3
-    plot_contango_sma_crossover(termstructure, ax=ax[0,3], cantango_column_name='_1to2MoContango', slow_sma=20)
+    plot_contango_sma_crossover(termstructure, ax=ax[0,3], cantango_column_name='_1to2MoContango', slow_sma=50)
     ax[0,2].get_shared_x_axes().join(ax[0,3], ax[0,1])
     
     ##########
@@ -664,7 +664,7 @@ def plot_contango_sma_crossover(termstructure, ax, cantango_column_name = '_1to2
         ax.text(termstructure.ts_pctContango['date'].iloc[-1], 0, 'Today: %.2f'%(termstructure.ts_pctContango['sma_crossover'].iloc[-1]), color='red', fontsize=10)
         ax.grid(True, which='both', axis='both', linestyle='--')
         ax.legend(loc='upper left')   
-        ax.set_title('Contango sma(%s)-sma(%s)'%(slow_sma, fast_sma))
+        ax.set_title('Contango sma(%s,%s)'%(slow_sma, fast_sma))
         
 
 
