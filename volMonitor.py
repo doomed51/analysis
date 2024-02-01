@@ -630,7 +630,7 @@ def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'):
     ##########
     
     # 1,0
-    sns.boxplot(y=contangoColName, x='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango, ax=ax[1,0])
+    sns.violinplot(y=contangoColName, x='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango, ax=ax[1,0])
     ax[1,0].axvline(x=termstructure.ts_pctContango['zscore_%s_decile'%(contangoColName)].iloc[-1], color='red', linestyle='--', alpha=0.5)
     # add date as overlay text
     ax[1,0].text(termstructure.ts_pctContango['zscore_%s_decile'%(contangoColName)].iloc[-1], 0, '%s'%(termstructure.ts_pctContango['date'].iloc[-1]), color='red', fontsize=10)
