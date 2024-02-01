@@ -617,17 +617,15 @@ def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'):
     termstructure.plot_historical_termstructure(ax=ax[0,1], contangoColName=contangoColName)
     
     # 0,2
-    plot_contango_sma_crossover(termstructure, ax=ax[0,2], cantango_column_name='_1to2MoContango', slow_sma=20)
-
-    # join 01, and 02
-    ax[0,2].get_shared_x_axes().join(ax[0,2], ax[0,1])
-
-    # 0,3
     numdays_for_historical_decile_plot = 80
-    ax2 = ax[0,3]
+    ax2 = ax[0,2]
     sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango[termstructure.ts_pctContango['date'] > termstructure.ts_pctContango['date'].max() - pd.Timedelta(days=numdays_for_historical_decile_plot)], ax=ax2, color='black', alpha=0.3, marker='x', dashes=False)
     ax2.set_title('%s zscore decile for last 40 days'%(contangoColName))
     ax2.grid(True, which='both', axis='both', linestyle='--')
+
+    # 0,3
+    plot_contango_sma_crossover(termstructure, ax=ax[0,3], cantango_column_name='_1to2MoContango', slow_sma=20)
+    ax[0,2].get_shared_x_axes().join(ax[0,3], ax[0,1])
     
     ##########
     
@@ -642,11 +640,10 @@ def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'):
     termstructure.plot_termstructure_distribution(ax=ax[1,1], contangoColName=contangoColName)
 
     # 1,2  
-    #print(vixts.ts_pctContango)
-    termstructure.plot_termstructure_fowardreturn_heatmap(ax=ax[1,2], contangoColName='sma_crossover')    
+    termstructure.plot_termstructure_fowardreturn_heatmap(ax=ax[1,2], contangoColName=contangoColName)    
 
     # 1,3
-    termstructure.plot_termstructure_fowardreturn_heatmap(ax=ax[1,3], contangoColName=contangoColName)    
+    termstructure.plot_termstructure_fowardreturn_heatmap(ax=ax[1,3], contangoColName='sma_crossover')    
 
     return fig
 
