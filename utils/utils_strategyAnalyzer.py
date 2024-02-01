@@ -8,7 +8,7 @@
 """
     Calculates autocrrelations for a given dataframe and target column
 """
-def calculateAutocorrelations(df, targetColName, max_lag=60):
+def calculateAutocorrelations(df, targetColName, max_lag=100):
     # calculate autocorrelations
     autocorrelations = []
     for i in range(1, max_lag + 1):
