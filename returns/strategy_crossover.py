@@ -75,6 +75,10 @@ class CrossoverStrategy:
         ax[1,1].set_title('%s Deciles vs. %s'%(self.signal_column_name, self.target_column_name))
         # format plot 
         ax[1,1].grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
+        ax[1,1].axvline(self.signal_df['%s_decile'%(self.signal_column_name)].iloc[-1], color='red', alpha=0.5)
+        # add text label
+        ax[1,1].text(self.signal_df['%s_decile'%(self.signal_column_name)].iloc[-1], ax[1,1].get_ylim()[1], 'current signal value: %s'%(round(self.signal_df['%s'%(self.signal_column_name)].iloc[-1], 5)), rotation=90, verticalalignment='top', fontsize=10)
+
 
         # 1,2
 
