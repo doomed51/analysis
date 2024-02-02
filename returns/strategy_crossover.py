@@ -58,7 +58,6 @@ class CrossoverStrategy(Strategy):
         self.draw_signal_autocorrelation(ax[0,1])
 
         # 0,2 signal distribution 
-        #self._plot_histogram_with_pctile_vlines(ax=ax[0,2], data=self.signal_df, x_col_name=self.signal_column_name)
         self.draw_signal_histogram(ax[0,2])
 
         # 0,3
@@ -92,27 +91,6 @@ class CrossoverStrategy(Strategy):
         ax[0,3].get_shared_x_axes().join(ax[0,3], ax[1,3])
 
         return fig
-    
-    def _plot_histogram_with_pctile_vlines(self, ax, data, x_col_name, bins=50):
-        # if index is not set as date, set it 
-        if data.index.name != 'date':
-            data = data.set_index('date')
-        # set index to date
-        sns.histplot(data=data, x=x_col_name, ax=ax, bins=bins)
-        ax.set_title('%s Distribution'%(x_col_name))
-        # vlines: pctile 10, pctile 90, mean 
-        ax.axvline(data[x_col_name].quantile(0.95), color='red', alpha=0.5)
-        ax.axvline(data[x_col_name].quantile(0.9), color='red', alpha=0.5)
-        ax.axvline(data[x_col_name].quantile(0.1), color='red', alpha=0.5)
-        ax.axvline(data[x_col_name].quantile(0.05), color='red', alpha=0.5)
-        ax.axvline(data[x_col_name].mean(), color='black', alpha=0.5)
-
-        # vline text labels 
-        ax.text(data[x_col_name].quantile(0.95), ax.get_ylim()[1], '95th percentile: %s'%(round(data[x_col_name].quantile(0.95), 5)), rotation=90, verticalalignment='top', fontsize=12)
-        ax.text(data[x_col_name].quantile(0.9), ax.get_ylim()[1], '90th percentile: %s'%(round(data[x_col_name].quantile(0.9), 5)), rotation=90, verticalalignment='top', fontsize=12)
-        ax.text(data[x_col_name].quantile(0.1), ax.get_ylim()[1], '10th percentile: %s'%(round(data[x_col_name].quantile(0.1), 5)), rotation=90, verticalalignment='top', fontsize=12)
-        ax.text(data[x_col_name].quantile(0.05), ax.get_ylim()[1], '5th percentile: %s'%(round(data[x_col_name].quantile(0.05), 5)), rotation=90, verticalalignment='top', fontsize=12)
-        ax.text(data[x_col_name].mean(), ax.get_ylim()[1], 'mean: %s'%(round(data[x_col_name].mean(),5)), rotation=90, verticalalignment='top', fontsize=16, color='black')
 
     def plotSignalReturnsHeatmap(self, signal_columnName, maxperiod_fwdreturns=100, signal_rounding=2):
         fig, ax = plt.subplots()
