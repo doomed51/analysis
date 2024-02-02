@@ -8,20 +8,21 @@ import pandas as pd
 import seaborn as sns
 
 from utils import utils_strategyAnalyzer as sa
+from returns.strategy import Strategy
 
-class CrossoverStrategy:
+class CrossoverStrategy(Strategy):
     def __init__(self, base_df, signal_df, target_column_name, signal_column_name):
         
         self.target_column_name = target_column_name
         self.signal_column_name = signal_column_name
-        self.base_df = base_df.reset_index()
+        self.target_df = base_df.reset_index()
         self.signal_df = signal_df.sort_index(ascending=True).reset_index()
-        
+        self._align_target_and_signal_()
         if 'close' in self.signal_df.columns:
             self.signal_df = self.signal_df.drop(columns=['close'])
         
         # add close from base to signal joining on date 
-        self.signal_df = self.base_df[['date', 'close', 'symbol']].rename(
+        self.signal_df = self.target_df[['date', 'close', 'symbol']].rename(
             columns={'symbol': 'symbol_underlying'}).merge(
                 self.signal_df, on='date', how='inner')
         print(self.signal_df)
@@ -29,17 +30,17 @@ class CrossoverStrategy:
 
     def _align_base_and_signal_(self):
         # make sure date column in both dataframes is formatted the same 
-        self.base_df['date'] = pd.to_datetime(self.base_df['date'])
+        self.target_df['date'] = pd.to_datetime(self.target_df['date'])
         self.signal_df['date'] = pd.to_datetime(self.signal_df['date'])
         # only include dates that are in both base and signal
-        self.base_df = self.base_df[self.base_df['date'].isin(self.signal_df['date'])]
-        self.signal_df = self.signal_df[self.signal_df['date'].isin(self.base_df['date'])]
+        self.target_df = self.target_df[self.target_df['date'].isin(self.signal_df['date'])]
+        self.signal_df = self.signal_df[self.signal_df['date'].isin(self.target_df['date'])]
 
 
 
     def _calculateSignal(self, signal_df):
         # calculated as target column - signal column
-        signal_df['signal'] = self.base_df[self.target_column_name] - signal_df[self.signal_column_name]
+        signal_df['signal'] = self.target_df[self.target_column_name] - signal_df[self.signal_column_name]
         # smooth signal column
         #signal_df['signal'] = signal_df['signal'].rolling(20).mean()        
 
@@ -47,22 +48,21 @@ class CrossoverStrategy:
 
     def plotSignalOverview(self, signal_rounding = 4):
         fig, ax = plt.subplots(2,4)
-        fig.suptitle('%s Signal Overview: %s'%(self.base_df['symbol'][0], self.signal_column_name))
+        fig.suptitle('%s Signal Overview: %s'%(self.target_df['symbol'][0], self.signal_column_name))
         print(self.signal_column_name)
 
         # 0,0
         self.drawSignalReturnsHeatmap(ax[0,0], maxperiod_fwdreturns=100, signal_columnName=self.signal_column_name, signal_rounding=signal_rounding)
         
         # 0,1        
-        autocorrelations = sa.calculateAutocorrelations(self.signal_df, self.signal_column_name)
-        ax[0,1].stem(autocorrelations, linefmt='--')
-        ax[0,1].set_title('%s Autocorrelation'%(self.signal_column_name))
+        self.draw_signal_autocorrelation(ax[0,1])
 
         # 0,2 signal distribution 
-        self._plot_histogram_with_pctile_vlines(ax=ax[0,2], data=self.signal_df, x_col_name=self.signal_column_name)
+        #self._plot_histogram_with_pctile_vlines(ax=ax[0,2], data=self.signal_df, x_col_name=self.signal_column_name)
+        self.draw_signal_histogram(ax[0,2])
 
         # 0,3
-        self.drawSignalAndBounds(ax[0,3])
+        self.draw_signal_and_percentiles(ax[0,3])
 
         # 1,0
         self.signal_df['%s_decile'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 10, labels=False)
@@ -130,12 +130,11 @@ class CrossoverStrategy:
         ax.set_title('%s vs. Fwd. Returns'%(signal_columnName))
         ax.set_ylabel(signal_columnName)
 
-
     """
         Plots the base and signal timeseries on the provided axis
     """
     def drawBaseAndSignal(self, ax, drawPercentiles=True, **kwargs): 
-        percentileWindow = kwargs.get('percentileWindow', 252)
+        precentile_rolling_window = kwargs.get('percentileWindow', 252)
         # set title
         ax.set_title('Underlying vs. Signal')
 
@@ -143,10 +142,17 @@ class CrossoverStrategy:
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label=self.signal_column_name)
         # add percentile lines 
         if drawPercentiles:
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(percentileWindow).quantile(0.8), ax=ax, label='90th percentile', color='red', alpha=0.3)
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(percentileWindow).quantile(0.6), ax=ax, label='50th percentile', color='red', alpha=0.3)
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(percentileWindow).quantile(0.4), ax=ax, label='10th percentile', color='red', alpha=0.3)
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(percentileWindow).quantile(0.2), ax=ax, label='10th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.95), ax=ax, label='95th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.9), ax=ax, label='90th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.8), ax=ax, label='80th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.7), ax=ax, label='70th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.6), ax=ax, label='60th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.5), ax=ax, label='50th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.4), ax=ax, label='40th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.3), ax=ax, label='30th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.2), ax=ax, label='20th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.1), ax=ax, label='10th percentile', color='red', alpha=0.3)
+            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.05), ax=ax, label='5th percentile', color='red', alpha=0.3)
         ax.legend(loc='upper left')
 
         # set style & format plot
