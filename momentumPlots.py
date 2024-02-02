@@ -10,6 +10,7 @@ import momentum
 
 import statsmodels.api as sm 
 import statsmodels.formula.api as smf
+import matplotlib.pyplot as plt
 
 import pandas as pd
 import seaborn as sns
@@ -179,14 +180,19 @@ def plotMomoQuintiles(pxHistory, momoPeriods=[], fwdReturnPeriods=[], **kwargs):
     numQuintileBins = kwargs.get('numQuintileBins', 15) # number of quintile bins to use
     # get momo for each ? in momoPeriods
     for period in momoPeriods:
-        pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
-        pxHistory.rename(columns={'momo': 'momo%s'%(period)}, inplace=True)
+        # skip if momo already in pxHistory
+        if 'momo%s'%(period) not in pxHistory.columns:
+            pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
+            pxHistory.rename(columns={'momo': 'momo%s'%(period)}, inplace=True)
 
     # get forward returns for each ? in fwdReturnPeriods
     for period in fwdReturnPeriods:
         pxHistory['fwdReturns%s'%(period)] = pxHistory['close'].pct_change(period).shift(-period)
 
     # put momo in 5 quintiles
+    """
+        TODO: move this to previous for loop
+    """
     for period in momoPeriods:
         pxHistory['momo%sQuintile'%(period)] = pd.qcut(pxHistory['momo%s'%(period)], numQuintileBins, labels=False)
     
@@ -563,15 +569,15 @@ def plotMomoandpx(pxHistory, momoPeriod1, momoPeriod2, momoPercentile=0.1, perce
 def plotMomoAndFwdReturns(pxHistory, momoAndFwdReturnsPeriods):
 
     # create figure with 2 rows and 3 columns
-    sns.set_theme(style="darkgrid")
     fig, ax = plt.subplots(2,5, figsize=(20, 10), sharex=True, sharey=True)
-    sns.set()
     # set figure title
     fig.suptitle('Momo vs Fwd Returns with Top r2')
     # get momo for each unique momoperiod in momoAndFwdReturnsPeriods
     for period in momoAndFwdReturnsPeriods['momoPeriod'].unique():
-        pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
-        pxHistory.rename(columns={'momo': 'momo%s'%(period)}, inplace=True)
+        # skip if momo already in pxHistory
+        if 'momo%s'%(period) not in pxHistory.columns:
+            pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
+            pxHistory.rename(columns={'momo': 'momo%s'%(period)}, inplace=True)
     
     # get forward returns for each unique fwdReturnPeriod in momoAndFwdReturnsPeriods
     for period in momoAndFwdReturnsPeriods['fwdReturnPeriod'].unique():
@@ -609,8 +615,10 @@ def plotMomoandPx_filteredByPercentile(pxHistory, momoAndFwdReturnsPeriods, momo
     
     # get momo for each unique momoperiod in momoAndFwdReturnsPeriods
     for period in momoAndFwdReturnsPeriods['momoPeriod'].unique():
-        pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
-        pxHistory.rename(columns={'momo': 'momo%s'%(period)}, inplace=True)
+        # skip if momo already in pxHistory
+        if 'momo%s'%(period) not in pxHistory.columns:
+            pxHistory = momentum.calcMomoFactor(pxHistory, lag=period)
+            pxHistory.rename(columns={'momo': 'momo%s'%(period)}, inplace=True)
     
     # get forward returns for each unique fwdReturnPeriod in momoAndFwdReturnsPeriods
     for period in momoAndFwdReturnsPeriods['fwdReturnPeriod'].unique():
@@ -638,30 +646,37 @@ def plotMomoandPx_filteredByPercentile(pxHistory, momoAndFwdReturnsPeriods, momo
 
 def plotMomoOverview (pxHistory, momoPeriod, emaPeriod):
     fig, ax = plt.subplots(2, 2)
-    fig.suptitle('Momo Overview')
+    fig.suptitle('Momo%s Overview'%(momoPeriod))
    
     # plot heatmap 
     mean_fwdReturns = sa.bucketAndCalcSignalReturns(pxHistory, 'momo', 2, 50)
     sns.heatmap(mean_fwdReturns, annot=False, cmap='RdYlGn', ax=ax[0,0])
-    ax[0,0].set_title('momo vs. fwdreturns')
+    ax[0,0].set_title('momo%s vs. fwdreturns'%(momoPeriod))
     
     # plot momo and close 
-    sns.lineplot(ax=ax[0,1], data=pxHistory, x='date', y='close', color='grey') 
-    sns.lineplot(ax=ax[0,1].twinx(), data=pxHistory, x='date', y='momo', color='green', alpha=0.5)
-    ax[0,1].set_title('close and momo')
+    sns.lineplot(ax=ax[0,1], data=pxHistory, x='date', y='momo', color='green', alpha=0.5)
+    sns.lineplot(ax=ax[0,1].twinx(), data=pxHistory, x='date', y='close', color='grey') 
+    ax[0,1].set_title('close and momo%s'%(momoPeriod))
     ax[0,1].grid(True, which='both', axis='both', linestyle='-')
+    # add hline at 0
+    ax[0,1].axhline(0, color='black', alpha=0.5)
     ax[0,1].legend()
+
 
     # plot momo autocorrelation
     autocorrelations = sa.calculateAutocorrelations(pxHistory, 'momo', 100)
     ax[1,0].stem(autocorrelations, use_line_collection=True, linefmt='--')
-    ax[1,0].set_title('momo autocorrelation')
+    ax[1,0].set_title('momo%s autocorrelation'%(momoPeriod))
 
     # plot momo distribution
     sns.histplot(ax=ax[1,1], data=pxHistory, x='momo', bins=100)
     ax[1,1].axvline(pxHistory['momo'].quantile(.9), color='red', linestyle='--')
     ax[1,1].axvline(pxHistory['momo'].quantile(.1), color='red', linestyle='--') 
-    ax[1,1].set_title('momo distribution')
+    ax[1,1].set_title('momo%s distribution'%(momoPeriod))
     ax[1,1].grid(True, which='both', axis='both', linestyle='-')
+    ax[1,1].axvline(pxHistory['momo'].mean(), color='black', alpha=0.2)
+
+    # adjust right hand margins
+    plt.subplots_adjust(right=5)
 
     return fig 
