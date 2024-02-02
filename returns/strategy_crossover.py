@@ -25,7 +25,6 @@ class CrossoverStrategy(Strategy):
         self.signal_df = self.target_df[['date', 'close', 'symbol']].rename(
             columns={'symbol': 'symbol_underlying'}).merge(
                 self.signal_df, on='date', how='inner')
-        print(self.signal_df)
 
 
     def _align_base_and_signal_(self):
@@ -49,7 +48,6 @@ class CrossoverStrategy(Strategy):
     def plotSignalOverview(self, signal_rounding = 4):
         fig, ax = plt.subplots(2,4)
         fig.suptitle('%s Signal Overview: %s'%(self.target_df['symbol'][0], self.signal_column_name))
-        print(self.signal_column_name)
 
         # 0,0
         self.drawSignalReturnsHeatmap(ax[0,0], maxperiod_fwdreturns=100, signal_columnName=self.signal_column_name, signal_rounding=signal_rounding)
