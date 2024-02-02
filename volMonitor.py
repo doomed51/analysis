@@ -617,14 +617,23 @@ def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'):
     termstructure.plot_historical_termstructure(ax=ax[0,1], contangoColName=contangoColName)
     
     # 0,2
-    numdays_for_historical_decile_plot = 80
+    numdays_for_historical_decile_plot = 120
     ax2 = ax[0,2]
-    sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango[termstructure.ts_pctContango['date'] > termstructure.ts_pctContango['date'].max() - pd.Timedelta(days=numdays_for_historical_decile_plot)], ax=ax2, color='black', alpha=0.3, marker='x', dashes=False)
-    ax2.set_title('%s zscore decile for last 40 days'%(contangoColName))
+    sns.lineplot(x='date', y='zscore_%s_decile'%(contangoColName), data=termstructure.ts_pctContango[termstructure.ts_pctContango['date'] > termstructure.ts_pctContango['date'].max() - pd.Timedelta(days=numdays_for_historical_decile_plot)], ax=ax2, alpha=0.5, marker='x', dashes=False)
+    ax2.set_title('%s zscore decile for last %s days'%(contangoColName, numdays_for_historical_decile_plot))
     ax2.grid(True, which='both', axis='both', linestyle='--')
+
+    # plot underlying on ax2
+    ax2b = ax2.twinx()
+    sns.lineplot(x='date', y='close', data=termstructure.underlying_pxhistory[termstructure.underlying_pxhistory['date'] > termstructure.underlying_pxhistory['date'].max() - pd.Timedelta(days=numdays_for_historical_decile_plot)], ax=ax2b, color='black', alpha=0.3)
+    ax2b.set_yscale('log')
 
     # 0,3
     plot_contango_sma_crossover(termstructure, ax=ax[0,3], cantango_column_name='_1to2MoContango', slow_sma=50)
+    # plot underlying on secondary axis 
+    ax2c = ax[0,3].twinx()
+    sns.lineplot(x='date', y='close', data=termstructure.underlying_pxhistory, ax=ax2c, color='black', alpha=0.3)
+    ax2c.set_yscale('log')
     ax[0,2].get_shared_x_axes().join(ax[0,3], ax[0,1])
     
     ##########
@@ -678,7 +687,8 @@ tpw.MainWindow.resize(2560, 1380)
 
 
 ########## Add analysis tabs   
-tpw.addPlot('VIX ts monitor', plotTermStructureMonitor(vixts, '_1to2MoContango'))
+tpw.addPlot('VIX ts(1-2) monitor', plotTermStructureMonitor(vixts, '_1to2MoContango'))
+tpw.addPlot('VIX ts(4-7) monitor', plotTermStructureMonitor(vixts, '_4to7MoContango'))
 tpw.addPlot('VIX ts overview', plotTermStructureOverview(vixts, '_1to2MoContango'))
 tpw.addPlot('NG ts overview', plotTermStructureOverview(ngts, '_3to4MoContango'))
 tpw.addPlot('NG ts monitor', plotTermStructureMonitor(ngts, '_3to4MoContango'))
