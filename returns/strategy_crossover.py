@@ -62,10 +62,12 @@ class CrossoverStrategy(Strategy):
         self.draw_signal_and_percentiles(ax[0,3])
 
         # 1,0
-        self.signal_df['%s_decile'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 10, labels=False)
-        self.drawSignalReturnsHeatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='%s_decile'%(self.signal_column_name), signal_rounding=signal_rounding)
+        #self.signal_df['%s_decile'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 10, labels=False)
+        #self.draw_signal_vs_fwdReturn_heatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='%s_decile'%(self.signal_column_name), signal_rounding=signal_rounding)
+        #self.drawSignalReturnsHeatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='%s_decile'%(self.signal_column_name), signal_rounding=signal_rounding)
         # override title
-        ax[1,0].set_title('%s Deciles vs. fwd returns'%(self.signal_column_name))
+        #ax[1,0].set_title('%s Deciles vs. fwd returns'%(self.signal_column_name))
+        self.draw_signal_decile_vs_fwdReturn_heatmap(ax[1,0], signal_rounding=signal_rounding)
 
         # 1,1 decile vs 'signal' column
         sns.violinplot(data=self.signal_df, x='%s_decile'%(self.signal_column_name), y=self.signal_column_name, ax=ax[1,1])
