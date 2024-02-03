@@ -74,6 +74,18 @@ class Strategy:
         ax.set_ylabel('count')
         ax.set_xlabel(self.signal_column_name)
 
+    def draw_violin_signal_and_deciles(self, ax, **kwargs):
+        # plot the violin plot 
+        sns.violinplot(x=self.signal_df['%s_decile'%(self.signal_column_name)], y=self.signal_df[self.signal_column_name], ax=ax)
+        
+        # additional plot formatting
+        ax.set_title('Distribution of %s vs Deciles'%(self.signal_column_name), fontsize=14, fontweight='bold')
+        ax.set_xlabel('%s decile'%(self.signal_column_name))
+        ax.set_ylabel(self.signal_column_name)
+        ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
+        ax.axvline(self.signal_df['%s_decile'%(self.signal_column_name)].iloc[-1], color='red', alpha=0.5)
+        ax.text(self.signal_df['%s_decile'%(self.signal_column_name)].iloc[-1], ax.get_ylim()[1], 'current %s value: %s'%(self.signal_column_name, round(self.signal_df['%s'%(self.signal_column_name)].iloc[-1], 5)), rotation=90, verticalalignment='top', fontsize=10)
+
     def draw_signal_decile_vs_fwdReturn_heatmap(self, ax, maxperiod_fwdreturns=100, signal_rounding=4):
         
         signal_colname = '%s_decile'%(self.signal_column_name)
@@ -82,7 +94,6 @@ class Strategy:
             self.signal_df['%s_decile'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 10, labels=False)
         # calculate the heatmap 
         heatmap = sa.bucketAndCalcSignalReturns(self.signal_df, signal_colname, maxperiod_fwdreturns=maxperiod_fwdreturns)
-        print(heatmap)
         # plot the heatmap 
         sns.heatmap(heatmap, ax=ax, cmap='RdYlGn', center=0, annot=False, fmt='.2f')
         # set title
