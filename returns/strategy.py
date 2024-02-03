@@ -41,6 +41,9 @@ class Strategy:
         ax.set_ylabel('autocorrelation')
         ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
 
+    """
+        Plots distribution of the signal with percentiles 
+    """
     def draw_signal_histogram(self, ax, drawPercetiles=True, **kwargs):
         bins = kwargs.get('bins', 50)
         # set title
@@ -71,11 +74,29 @@ class Strategy:
         ax.set_ylabel('count')
         ax.set_xlabel(self.signal_column_name)
 
+    def draw_signal_decile_vs_fwdReturn_heatmap(self, ax, maxperiod_fwdreturns=100, signal_rounding=4):
+        
+        signal_colname = '%s_decile'%(self.signal_column_name)
+        # if the column '%s_decile'%(self.signal_column_name) doesn't exist, create it
+        if signal_colname not in self.signal_df.columns:
+            self.signal_df['%s_decile'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 10, labels=False)
+        # calculate the heatmap 
+        heatmap = sa.bucketAndCalcSignalReturns(self.signal_df, signal_colname, maxperiod_fwdreturns=maxperiod_fwdreturns)
+        print(heatmap)
+        # plot the heatmap 
+        sns.heatmap(heatmap, ax=ax, cmap='RdYlGn', center=0, annot=False, fmt='.2f')
+        # set title
+        ax.set_title('%s decile vs. fwd returns'%(self.signal_column_name), fontsize=14, fontweight='bold')
+        # additional plot formatting
+        ax.set_xlabel('fwd returns')
+        ax.set_ylabel('%s decile'%(self.signal_column_name))
+
     """
         Plots the base and signal timeseries on the provided axis
     """
     def draw_signal_and_percentiles(self, ax, drawPercentiles=True, **kwargs): 
-        precentile_rolling_window = kwargs.get('percentileWindow', 252)
+        # max rolling window is entire dataset 
+        precentile_rolling_window = kwargs.get('percentileWindow', 400)
         # set title
         ax.set_title('Signal and Percentiles of %s'%(self.signal_column_name), fontsize=14, fontweight='bold')
 
@@ -100,6 +121,7 @@ class Strategy:
         # additional plot formatting
         ax.axhline(0, color='grey', linestyle='-', alpha=0.5)
         ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
-        ax.legend(loc='upper left')
+        # hide legend
+        ax.get_legend().remove()
         ax.set_ylabel(self.target_column_name)
         ax.set_xlabel('date')
