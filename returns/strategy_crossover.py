@@ -11,13 +11,14 @@ from utils import utils_strategyAnalyzer as sa
 from returns.strategy import Strategy
 
 class CrossoverStrategy(Strategy):
-    def __init__(self, base_df, signal_df, target_column_name, signal_column_name):
-        
+    def __init__(self, symbol, base_df, signal_df, target_column_name, signal_column_name):
+        self.symbol = symbol
         self.target_column_name = target_column_name
         self.signal_column_name = signal_column_name
         self.target_df = base_df.reset_index()
         self.signal_df = signal_df.sort_index(ascending=True).reset_index()
         self._align_target_and_signal_()
+        self.underlying_pxhistory = self._load_underlying_pxhistory()
         if 'close' in self.signal_df.columns:
             self.signal_df = self.signal_df.drop(columns=['close'])
         
@@ -62,11 +63,6 @@ class CrossoverStrategy(Strategy):
         self.draw_signal_and_percentiles(ax[0,3])
 
         # 1,0
-        self.signal_df['%s_decile'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 10, labels=False)
-        #self.draw_signal_vs_fwdReturn_heatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='%s_decile'%(self.signal_column_name), signal_rounding=signal_rounding)
-        #self.drawSignalReturnsHeatmap(ax[1,0], maxperiod_fwdreturns=100, signal_columnName='%s_decile'%(self.signal_column_name), signal_rounding=signal_rounding)
-        # override title
-        #ax[1,0].set_title('%s Deciles vs. fwd returns'%(self.signal_column_name))
         self.draw_signal_decile_vs_fwdReturn_heatmap(ax[1,0], signal_rounding=signal_rounding)
 
         # 1,1 decile vs 'signal' column
@@ -75,10 +71,11 @@ class CrossoverStrategy(Strategy):
         # 1,2
 
         # 1,3 plot underlying on log plot 
-        ax[1,3].set_yscale('log')
-        sns.lineplot(data=self.signal_df, x='date', y='close', ax=ax[1,3])
-        ax[1,3].set_title('Underlying close')
-        ax[1,3].grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
+        #ax[1,3].set_yscale('log')
+        #sns.lineplot(data=self.signal_df, x='date', y='close', ax=ax[1,3])
+        #ax[1,3].set_title('Underlying close')
+        #ax[1,3].grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
+        self.draw_underlying_close(ax[1,3])
 
         # Link underlying and signal x-axis 
         ax[0,3].get_shared_x_axes().join(ax[0,3], ax[1,3])
