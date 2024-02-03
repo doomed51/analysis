@@ -126,12 +126,6 @@ def plotHistoricalTermstructure(ts_data, pxHistory_underlying, ax, contangoColNa
     ax.grid(True, which='both', axis='both', linestyle='--')
     ax.axhline(0, color='black', linestyle='-', alpha=0.5)
     ax.legend(loc='upper left')
-    
-    ax2 = ax.twinx()
-    sns.lineplot(x='date', y='close', data=pxHistory_underlying, ax=ax2, label=pxHistory_underlying['symbol'][0], color='black', alpha=0.3)
-    
-    ax2.set_yscale('log')
-    ax2.grid(False)
 
 def plotTermstructureAutocorrelation(ts_data, ax, contangoColName='fourToSevenMoContango', max_lag=60):
     ts_data.reset_index(inplace=True)
