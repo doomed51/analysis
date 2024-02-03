@@ -6,8 +6,10 @@
     - a target: str column name of what the signal is targeting (e.g. sma crossover) 
     - a target dataframe : pd.DataFrame containing the col. being targeted by the signal 
 """
+import config
 import pandas as pd 
 import seaborn as sns
+import interface_localDB as db
 
 from utils import utils_strategyAnalyzer as sa
 
@@ -18,6 +20,7 @@ class Strategy:
         self.signal_df = signal_df.sort_index(ascending=True).reset_index()
         self.target_column_name = target
         self.target_df = target_df
+        self.underlying_pxhistory = None
 
     """
         Makes sure date column in target and signal are formatted the same 
@@ -29,6 +32,11 @@ class Strategy:
 
         self.target_df = self.target_df[self.target_df['date'].isin(self.signal_df['date'])]
         self.signal_df = self.signal_df[self.signal_df['date'].isin(self.target_df['date'])]
+
+    # load underlying history from db 
+    def _load_underlying_pxhistory(self):
+        with db.sqlite_connection(config.dbname_stock) as conn:
+            return db.getPriceHistory(conn, self.symbol, '1day')
 
     """
         Plots autocorrelation of the signal 
@@ -74,6 +82,9 @@ class Strategy:
         ax.set_ylabel('count')
         ax.set_xlabel(self.signal_column_name)
 
+    """
+        Plots the violin plot of the signal vs it's deciles
+    """
     def draw_violin_signal_and_deciles(self, ax, **kwargs):
         # plot the violin plot 
         sns.violinplot(x=self.signal_df['%s_decile'%(self.signal_column_name)], y=self.signal_df[self.signal_column_name], ax=ax)
@@ -86,6 +97,9 @@ class Strategy:
         ax.axvline(self.signal_df['%s_decile'%(self.signal_column_name)].iloc[-1], color='red', alpha=0.5)
         ax.text(self.signal_df['%s_decile'%(self.signal_column_name)].iloc[-1], ax.get_ylim()[1], 'current %s value: %s'%(self.signal_column_name, round(self.signal_df['%s'%(self.signal_column_name)].iloc[-1], 5)), rotation=90, verticalalignment='top', fontsize=10)
 
+    """
+        Plots the heatmap of the signal's decile vs fwd returns
+    """
     def draw_signal_decile_vs_fwdReturn_heatmap(self, ax, maxperiod_fwdreturns=100, signal_rounding=4):
         
         signal_colname = '%s_decile'%(self.signal_column_name)
@@ -101,6 +115,12 @@ class Strategy:
         # additional plot formatting
         ax.set_xlabel('fwd returns')
         ax.set_ylabel('%s decile'%(self.signal_column_name))
+
+    def draw_underlying_close(self, ax):
+        ax.set_yscale('log')
+        sns.lineplot(data=self.underlying_pxhistory, x='date', y='close', ax=ax)
+        ax.set_title('%s close'%(self.symbol))
+        ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
 
     """
         Plots the base and signal timeseries on the provided axis
