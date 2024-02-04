@@ -116,6 +116,18 @@ class Strategy:
         ax.set_xlabel('fwd returns')
         ax.set_ylabel('%s decile'%(self.signal_column_name))
 
+    def draw_signal_vs_fwdReturn_heatmap(self, ax, maxperiod_fwdreturns=100, signal_rounding=4):
+        # calculate the heatmap 
+        heatmap = sa.bucketAndCalcSignalReturns(self.signal_df, self.signal_column_name, maxperiod_fwdreturns=maxperiod_fwdreturns, signal_rounding=signal_rounding)
+        # plot the heatmap 
+        sns.heatmap(heatmap, ax=ax, cmap='RdYlGn', center=0, annot=False, fmt='.2f')
+
+        # additional plot formatting
+        ax.set_title('%s vs. fwd returns'%(self.signal_column_name), fontsize=14, fontweight='bold')
+        ax.set_xticklabels([int(x.get_text().replace('fwdReturns', '')) for x in ax.get_xticklabels()])
+        ax.set_xlabel('fwd returns')
+        ax.set_ylabel(self.signal_column_name)
+
     def draw_underlying_close(self, ax):
         ax.set_yscale('log')
         sns.lineplot(data=self.underlying_pxhistory, x='date', y='close', ax=ax)
