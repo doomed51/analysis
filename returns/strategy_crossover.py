@@ -51,7 +51,7 @@ class CrossoverStrategy(Strategy):
         fig.suptitle('%s Signal Overview: %s'%(self.target_df['symbol'][0], self.signal_column_name))
 
         # 0,0
-        self.drawSignalReturnsHeatmap(ax[0,0], maxperiod_fwdreturns=100, signal_columnName=self.signal_column_name, signal_rounding=signal_rounding)
+        self.draw_signal_vs_fwdReturn_heatmap(ax[0,0], signal_rounding=signal_rounding)
         
         # 0,1        
         self.draw_signal_autocorrelation(ax[0,1])
@@ -77,13 +77,13 @@ class CrossoverStrategy(Strategy):
 
         return fig
 
-    def plotSignalReturnsHeatmap(self, signal_columnName, maxperiod_fwdreturns=100, signal_rounding=2):
+    def DEPRECATED_plotSignalReturnsHeatmap(self, signal_columnName, maxperiod_fwdreturns=100, signal_rounding=2):
         fig, ax = plt.subplots()
         fig.suptitle('Signal Returns Heatmap')
         self.drawSignalReturnsHeatmap(ax, maxperiod_fwdreturns, signal_columnName, signal_rounding=signal_rounding)
         return fig
 
-    def drawSignalReturnsHeatmap(self, ax, signal_columnName, maxperiod_fwdreturns, signal_rounding = 2):        
+    def DEPRECATED_drawSignalReturnsHeatmap(self, ax, signal_columnName, maxperiod_fwdreturns, signal_rounding = 2):        
         mean_fwdReturns = sa.bucketAndCalcSignalReturns(self.signal_df, signal_columnName, signal_rounding, maxperiod_fwdreturns)
         sns.heatmap(mean_fwdReturns, annot=False, cmap='RdYlGn', ax=ax)
 
