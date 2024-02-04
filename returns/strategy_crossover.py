@@ -69,12 +69,7 @@ class CrossoverStrategy(Strategy):
         self.draw_violin_signal_and_deciles(ax[1,1])
 
         # 1,2
-
         # 1,3 plot underlying on log plot 
-        #ax[1,3].set_yscale('log')
-        #sns.lineplot(data=self.signal_df, x='date', y='close', ax=ax[1,3])
-        #ax[1,3].set_title('Underlying close')
-        #ax[1,3].grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
         self.draw_underlying_close(ax[1,3])
 
         # Link underlying and signal x-axis 
@@ -97,55 +92,3 @@ class CrossoverStrategy(Strategy):
         ax.tick_params(axis='x', rotation=0)
         ax.set_title('%s vs. Fwd. Returns'%(signal_columnName))
         ax.set_ylabel(signal_columnName)
-
-    """
-        Plots the base and signal timeseries on the provided axis
-    """
-    def drawBaseAndSignal(self, ax, drawPercentiles=True, **kwargs): 
-        precentile_rolling_window = kwargs.get('percentileWindow', 252)
-        # set title
-        ax.set_title('Underlying vs. Signal')
-
-        # plot the base and signal timeseries 
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label=self.signal_column_name)
-        # add percentile lines 
-        if drawPercentiles:
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.95), ax=ax, label='95th percentile', color='red', alpha=0.3)
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.9), ax=ax, label='90th percentile', color='red', alpha=0.3)
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.8), ax=ax, label='80th percentile', color='red', alpha=0.3)
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.7), ax=ax, label='70th percentile', color='red', alpha=0.3)
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.6), ax=ax, label='60th percentile', color='red', alpha=0.3)
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.5), ax=ax, label='50th percentile', color='red', alpha=0.3)
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.4), ax=ax, label='40th percentile', color='red', alpha=0.3)
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.3), ax=ax, label='30th percentile', color='red', alpha=0.3)
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.2), ax=ax, label='20th percentile', color='red', alpha=0.3)
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.1), ax=ax, label='10th percentile', color='red', alpha=0.3)
-            sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.05), ax=ax, label='5th percentile', color='red', alpha=0.3)
-        ax.legend(loc='upper left')
-
-        # set style & format plot
-        ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
-        ax.axhline(0, color='grey', linestyle='-', alpha=0.5)
-        ax.set_ylabel(self.target_column_name)
-        ax.set_xlabel('date')
-
-    """
-        Plots the signal and percentile bounds on the provided axis
-    """
-    def drawSignalAndBounds(self, ax, upperbound = 0.95, lowerbound = 0.05):
-        ax.set_title('%s with Percentile Bounds'%(self.signal_column_name))
-
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label='signal')
-
-        # plot 252 day rolling quintile lines
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.05), ax=ax, label='5th percentile', color='red', alpha=0.6)
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.2), ax=ax, label='20th percentile', color='red', alpha=0.45)
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.4), ax=ax, label='40th percentile', color='red', alpha=0.3)
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.6), ax=ax, label='60th percentile', color='red', alpha=0.3)
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.8), ax=ax, label='80th percentile', color='red', alpha=0.45)
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(252).quantile(0.95), ax=ax, label='95th percentile', color='red', alpha=0.6)
-
-        # format plot
-        ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
-        ax.axhline(0, color='grey', linestyle='-', alpha=0.5)
-        #ax.legend(loc='upper left')
