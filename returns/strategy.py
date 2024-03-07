@@ -100,7 +100,7 @@ class Strategy:
     """
         Plots the heatmap of the signal's decile vs fwd returns
     """
-    def draw_signal_decile_vs_fwdReturn_heatmap(self, ax, maxperiod_fwdreturns=100, signal_rounding=4):
+    def draw_signal_decile_vs_fwdReturn_heatmap(self, ax, maxperiod_fwdreturns=35, signal_rounding=4):
         
         signal_colname = '%s_decile'%(self.signal_column_name)
         # if the column '%s_decile'%(self.signal_column_name) doesn't exist, create it
@@ -116,7 +116,7 @@ class Strategy:
         ax.set_xlabel('fwd returns')
         ax.set_ylabel('%s decile'%(self.signal_column_name))
 
-    def draw_signal_vs_fwdReturn_heatmap(self, ax, maxperiod_fwdreturns=50, signal_rounding=4):
+    def draw_signal_vs_fwdReturn_heatmap(self, ax, maxperiod_fwdreturns=35, signal_rounding=4):
         # calculate the heatmap 
         heatmap = sa.bucketAndCalcSignalReturns(self.signal_df, self.signal_column_name, maxperiod_fwdreturns=maxperiod_fwdreturns, signal_rounding=signal_rounding)
         # plot the heatmap 
