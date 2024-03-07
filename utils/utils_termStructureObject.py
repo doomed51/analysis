@@ -13,7 +13,7 @@ class TermStructure:
 
         # load data from db 
         self.ts_raw = self.get_raw_term_structure()
-        self.ts_pctContango = self.get_term_structure_pct_contango(_1to2=True, _1to3=True, _2to3=True, _3to4=True, _3to6=True, _4to7=True, _1to8=True, averageContango=True).sort_index(axis=1)
+        self.ts_pctContango = self.get_term_structure_pct_contango(_1to2=True, _1to3=True, _1to5=True, _2to3=True, _3to4=True, _3to6=True, _4to7=True, _1to8=True, averageContango=True).sort_index(axis=1)
         self.underlying_pxhistory = self.get_underlying_pxhistory()
 
     def get_raw_term_structure(self):
@@ -85,9 +85,13 @@ class TermStructure:
         sns.lineplot(x='date', y=contangoColName, data=self.ts_pctContango, ax=ax, label=contangoColName, color='green')
         
         # plot 90th percentile rolling 252 period contango
+        sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(252).quantile(0.99), data=self.ts_pctContango, ax=ax, label='99th percentile', color='red', alpha=0.5)
+        sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(252).quantile(0.95), data=self.ts_pctContango, ax=ax, label='95th percentile', color='red', alpha=0.3)
         sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(252).quantile(0.9), data=self.ts_pctContango, ax=ax, label='90th percentile', color='red', alpha=0.3)
         sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(252).quantile(0.5), data=self.ts_pctContango, ax=ax, label='50th percentile', color='brown', alpha=0.4)
         sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(252).quantile(0.1), data=self.ts_pctContango, ax=ax, label='10th percentile', color='red', alpha=0.3)
+        sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(252).quantile(0.05), data=self.ts_pctContango, ax=ax, label='5th percentile', color='red', alpha=0.3)
+        sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(252).quantile(0.01), data=self.ts_pctContango, ax=ax, label='1st percentile', color='red', alpha=0.5)
 
         # plot 5 period sma of contango
         sns.lineplot(x='date', y=self.ts_pctContango[contangoColName].rolling(smaPeriod_contango).mean(), data=self.ts_pctContango, ax=ax, label='%s period sma'%(smaPeriod_contango), color='blue', alpha=0.6)
@@ -97,7 +101,9 @@ class TermStructure:
         ax.set_title('Historical Contango - %s'%(contangoColName))
         ax.grid(True, which='both', axis='both', linestyle='--')
         ax.axhline(0, color='black', linestyle='-', alpha=0.5)
-        ax.legend(loc='upper left')
+        #ax.legend(loc='upper left')
+        # hide legend
+        ax.legend().remove()
 
     def plot_termstructure_autocorrelation(self, ax, contangoColName='_4to7MoContango', max_lag=100):
         # Calculate autocorrelations for different lags
@@ -138,7 +144,7 @@ class TermStructure:
         ax.set_ylabel('Frequency')
         ax.grid(True, which='both', axis='both', linestyle='--')
 
-    def plot_termstructure_fowardreturn_heatmap(self, ax, contangoColName='_4to7MoContango', maxperiod_fwdreturns=100):
+    def plot_termstructure_fowardreturn_heatmap(self, ax, contangoColName='_4to7MoContango', maxperiod_fwdreturns=30):
         #compute fwd returns
         fwdReturns_mean = pd.merge(self.ts_pctContango, self.underlying_pxhistory, how='inner', left_on='date', right_on='date')
         fwd_returns_cols = ['fwdReturns{}'.format(i) for i in range(1, maxperiod_fwdreturns + 1)]
@@ -154,7 +160,7 @@ class TermStructure:
         fwdReturns_mean.sort_index(inplace=True, ascending=False) 
 
         # plot the heatmap
-        sns.heatmap(fwdReturns_mean, annot=False, cmap='RdYlGn', ax=ax)
+        sns.heatmap(fwdReturns_mean, annot=False, cmap='RdYlGn', ax=ax, center=0)
         ax.set_title(f'{contangoColName} z-score Decile vs. Fwd Returns')
 
     def plot_underlying(self, ax):
