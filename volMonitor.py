@@ -615,6 +615,10 @@ def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'):
     
     # 0,1
     termstructure.plot_historical_termstructure(ax=ax[0,1], contangoColName=contangoColName)
+    # plot underlying on secondary axis
+    ax1b = ax[0,1].twinx()
+    sns.lineplot(x='date', y='close', data=termstructure.underlying_pxhistory, ax=ax1b, color='black', alpha=0.3)
+    ax1b.set_yscale('log')
     
     # 0,2
     numdays_for_historical_decile_plot = 120
@@ -629,7 +633,7 @@ def plotTermStructureMonitor(termstructure, contangoColName='_4to7MoContango'):
     ax2b.set_yscale('log')
 
     # 0,3
-    plot_contango_sma_crossover(termstructure, ax=ax[0,3], cantango_column_name='_1to2MoContango', slow_sma=50)
+    plot_contango_sma_crossover(termstructure, ax=ax[0,3], cantango_column_name=contangoColName, slow_sma=50)
     # plot underlying on secondary axis 
     ax2c = ax[0,3].twinx()
     sns.lineplot(x='date', y='close', data=termstructure.underlying_pxhistory, ax=ax2c, color='black', alpha=0.3)
@@ -667,8 +671,13 @@ def plot_contango_sma_crossover(termstructure, ax, cantango_column_name = '_1to2
     if plot:
         sns.lineplot(x='date', y='sma_crossover', data=termstructure.ts_pctContango, ax=ax, label='sma_crossover')
         ax.axhline(y=0, color='grey', linestyle='-')
-        ax.axhline(y=termstructure.ts_pctContango['sma_crossover'].quantile(0.9), color='grey', linestyle='--', alpha=0.5)
-        ax.axhline(y=termstructure.ts_pctContango['sma_crossover'].quantile(0.1), color='grey', linestyle='--', alpha=0.5)
+        ax.axhline(y=termstructure.ts_pctContango['sma_crossover'].quantile(0.99), color='red', linestyle='-', alpha=0.5)
+        ax.axhline(y=termstructure.ts_pctContango['sma_crossover'].quantile(0.95), color='red', linestyle='-', alpha=0.3)
+        ax.axhline(y=termstructure.ts_pctContango['sma_crossover'].quantile(0.9), color='red', linestyle='-', alpha=0.3)
+        ax.axhline(y=termstructure.ts_pctContango['sma_crossover'].quantile(0.5), color='brown', linestyle='-', alpha=0.5)
+        ax.axhline(y=termstructure.ts_pctContango['sma_crossover'].quantile(0.1), color='red', linestyle='-', alpha=0.3)
+        ax.axhline(y=termstructure.ts_pctContango['sma_crossover'].quantile(0.05), color='red', linestyle='-', alpha=0.3)
+        ax.axhline(y=termstructure.ts_pctContango['sma_crossover'].quantile(0.01), color='red', linestyle='-', alpha=0.5)
         #ax.axvline(x=vixts.ts_pctContango['date'].iloc[-1], color='red', linestyle='-', alpha=0.9)
         ax.text(termstructure.ts_pctContango['date'].iloc[-1], 0, 'Today: %.2f'%(termstructure.ts_pctContango['sma_crossover'].iloc[-1]), color='red', fontsize=10)
         ax.grid(True, which='both', axis='both', linestyle='--')
@@ -678,7 +687,7 @@ def plot_contango_sma_crossover(termstructure, ax, cantango_column_name = '_1to2
 
 
 vixts = tsobj.TermStructure('VIX', '1day', 'uvxy') 
-ngts = tsobj.TermStructure('NG', '1day', 'UNG')
+ngts = tsobj.TermStructure('NG', '1day', 'BOIL')
 
 # initialize dashboard window
 tpw = pltWindow.plotWindow()
@@ -692,5 +701,6 @@ tpw.addPlot('VIX ts(4-7) monitor', plotTermStructureMonitor(vixts, '_4to7MoConta
 tpw.addPlot('VIX ts overview', plotTermStructureOverview(vixts, '_1to2MoContango'))
 tpw.addPlot('NG ts overview', plotTermStructureOverview(ngts, '_3to4MoContango'))
 tpw.addPlot('NG ts monitor', plotTermStructureMonitor(ngts, '_3to4MoContango'))
+tpw.addPlot('NG ts monitor', plotTermStructureMonitor(ngts, '_1to5MoContango'))
 
 tpw.show()
