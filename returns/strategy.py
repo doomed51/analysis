@@ -168,3 +168,29 @@ class Strategy:
         ax.get_legend().remove()
         ax.set_ylabel(self.target_column_name)
         ax.set_xlabel('date')
+    
+    """
+        Plots the signals negative & positive persistence. That is, when the signal crosses 0, how long does it stay positive or negative. Autocorrelation of signal where signal < 0, and signal > 0. 
+    """
+    def draw_crossover_negative_positive_persistence(self, ax, **kwargs):
+        print(self.signal_df)
+        
+        # set title
+        ax.set_title('Crossover Negative & Positive Persistence of %s'%(self.signal_column_name), fontsize=14, fontweight='bold')
+        signal_negative = pd.DataFrame()
+        # plot autocorrelation of signal where signal < 0
+        signal_negative['signal_negative'] = self.signal_df[self.signal_column_name].apply(lambda x: x if x < 0 else None)
+        signal_negative = signal_negative.dropna()
+
+        autocorrelations = sa.calculateAutocorrelations(signal_negative, 'signal_negative', max_lag=100)
+        ax.stem(autocorrelations, linefmt='--', label='signal < 0')
+
+        signal_positive = pd.DataFrame()
+        # plot autocorrelation of signal where signal > 0
+        signal_positive['signal_positive'] = self.signal_df[self.signal_column_name].apply(lambda x: x if x > 0 else None)
+        signal_positive = signal_positive.dropna()
+        autocorrelations2 = sa.calculateAutocorrelations(signal_positive, 'signal_positive', max_lag=100)
+        ax.stem(autocorrelations2, linefmt='-', label='signal > 0')
+
+        #add legend 
+        ax.legend()
