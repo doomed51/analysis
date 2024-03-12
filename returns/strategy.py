@@ -172,9 +172,7 @@ class Strategy:
     """
         Plots the signals negative & positive persistence. That is, when the signal crosses 0, how long does it stay positive or negative. Autocorrelation of signal where signal < 0, and signal > 0. 
     """
-    def draw_crossover_negative_positive_persistence(self, ax, **kwargs):
-        print(self.signal_df)
-        
+    def draw_crossover_negative_positive_persistence(self, ax, **kwargs):      
         # set title
         ax.set_title('Crossover Negative & Positive Persistence of %s'%(self.signal_column_name), fontsize=14, fontweight='bold')
         signal_negative = pd.DataFrame()
@@ -194,3 +192,29 @@ class Strategy:
 
         #add legend 
         ax.legend()
+
+
+    def draw_signal_crossover_static_level_returns_heatmap(self, ax, level=0, maxperiod_fwdreturns=15, signal_rounding=4, **kwargs):
+        #signal_column = kwargs.get('signal_column', self.signal_column_name)
+
+        # col interim_signal_a = 1 if self.signal_column_name > level, =-1 where self.signal_column_name < level; else 0
+        self.signal_df['interim_signal_a'] = self.signal_df[self.signal_column_name].apply(lambda x: 1 if x > level else (-1 if x < level else 0))
+
+        # final_signal = 1 if interimsig > interimsign[previous period]; -1 if interimsig < interimsign[previous period]; else 0
+        self.signal_df['final_signal'] = self.signal_df['interim_signal_a'].diff()
+        self.signal_df['final_signal'] = self.signal_df['final_signal'].apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))
+        
+        # drop rows where final_signal = 0
+        signal_df_truncated = self.signal_df[self.signal_df['final_signal'] != 0].reset_index(drop=True).copy()
+    
+        # where signal crosses 0,  
+        heatmap = sa.bucketAndCalcSignalReturns(signal_df_truncated, 'final_signal', maxperiod_fwdreturns=maxperiod_fwdreturns, signal_rounding=signal_rounding)
+        # plot the heatmap 
+        sns.heatmap(heatmap, ax=ax, cmap='RdYlGn', center=0, annot=False, fmt='.2f')
+
+        # additional plot formatting
+        ax.set_title('%s 0 crossover returns'%(self.signal_column_name), fontsize=14, fontweight='bold')
+        ax.set_xticklabels([int(x.get_text().replace('fwdReturns', '')) for x in ax.get_xticklabels()])
+        ax.set_xlabel('fwd returns')
+
+        return heatmap
