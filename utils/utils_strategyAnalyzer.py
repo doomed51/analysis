@@ -4,7 +4,7 @@
 # round signal column to n decimal places, or otherwise bucket it to calculate the mean fwd returns on
 # calculate means for each fwdreturn column grouped by signal column
 # 
-
+import numpy as np
 """
     Calculates autocrrelations for a given dataframe and target column
 """
@@ -35,7 +35,7 @@ def bucketAndCalcSignalReturns(signaldf, signal_col, signal_rounding=2, maxperio
     # strip 'fwdReturns' from the column names
     
     # round signal column to n decimal places, or otherwise bucket it to calculate the mean fwd returns on
-    signaldf['%s_normalized'%(signal_col)] = signaldf[signal_col].round(signal_rounding) #.apply(lambda x: round(x, signal_rounding))
+    signaldf['%s_normalized'%(signal_col)] = signaldf[signal_col].round(signal_rounding) 
     
     # List of column names for fwdReturns
     fwd_returns_cols = ['fwdReturns{}'.format(i) for i in range(1, maxperiod_fwdreturns + 1)]
