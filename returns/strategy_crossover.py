@@ -69,7 +69,7 @@ class CrossoverStrategy(Strategy):
         self.draw_violin_signal_and_deciles(ax[1,1])
 
         # 1,2
-        self.draw_crossover_negative_positive_persistence(ax[1,2])
+        self.draw_signal_crossover_static_level_returns_heatmap(ax[1,2])
 
         # 1,3 plot underlying on log plot 
         self.draw_underlying_close(ax[1,3])
