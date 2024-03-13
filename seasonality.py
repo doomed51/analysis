@@ -376,7 +376,7 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdli
     # select only the last 30 days
     pivot_logReturn_5mins_restricted = pivot_logReturn_5mins_restricted[pivot_logReturn_5mins_restricted.columns[-30:]]
     # plot heatmap of pivot_logReturn_5mins
-    sns.heatmap(pivot_logReturn_5mins_restricted, ax=axes[1,2])
+    sns.heatmap(pivot_logReturn_5mins_restricted, ax=axes[1,2], center=0, cmap='RdYlGn')
     axes[1,2].set_title('Intra-Day log returns for last 30 days') # set title for subplot
 
     plt.tight_layout()
