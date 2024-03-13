@@ -24,7 +24,6 @@ def calcMomoFactor(universe, lag=1, shift=1, lagmomo=False):
     ).reset_index(drop=True)
     if lagmomo == False:
         returns.drop(columns=['lagmomo'], inplace=True)
-    
     return returns
 
 """
