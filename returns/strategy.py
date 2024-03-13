@@ -144,7 +144,9 @@ class Strategy:
         ax.set_title('Signal and Percentiles of %s'%(self.signal_column_name), fontsize=14, fontweight='bold')
 
         # plot the base and signal timeseries 
-        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label=self.signal_column_name)
+        sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label=self.signal_column_name, marker='o', markersize=5)
+        # plot the base and signal timeseries with markers 
+        #sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label=self.signal_column_name, marker='o', markersize=2, color='black')
         # add percentile lines 
         if drawPercentiles:
             sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.99), ax=ax, label='99th percentile', color='red', alpha=0.6)
