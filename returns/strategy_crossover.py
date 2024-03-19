@@ -1,5 +1,5 @@
 """
-    Class that implements a crossover strategy. initialized with base_df, signal_df, and signal_column_name.
+    Class that implements a crossover strategy between a target, and signal column. initialized with base_df, signal_df, and signal_column_name.
 """
 import math
 
@@ -27,7 +27,6 @@ class CrossoverStrategy(Strategy):
             columns={'symbol': 'symbol_underlying'}).merge(
                 self.signal_df, on='date', how='inner')
 
-
     def _align_base_and_signal_(self):
         # make sure date column in both dataframes is formatted the same 
         self.target_df['date'] = pd.to_datetime(self.target_df['date'])
@@ -35,8 +34,6 @@ class CrossoverStrategy(Strategy):
         # only include dates that are in both base and signal
         self.target_df = self.target_df[self.target_df['date'].isin(self.signal_df['date'])]
         self.signal_df = self.signal_df[self.signal_df['date'].isin(self.target_df['date'])]
-
-
 
     def _calculateSignal(self, signal_df):
         # calculated as target column - signal column
