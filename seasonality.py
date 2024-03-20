@@ -274,7 +274,7 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdli
     ax4 = ax3.twinx()
     # plot the mean and sd 
     sns.barplot(x=aggregate_day_of_month.index, y='std', data=aggregate_day_of_month, ax=ax3, color='grey', alpha=0.5)
-    sns.barplot(x=aggregate_day_of_month.index, y='mean', data=aggregate_day_of_month, ax=ax4, color='red', alpha=1)
+    sns.barplot(x=aggregate_day_of_month.index, y='mean', data=aggregate_day_of_month, ax=ax4, color='red', alpha=0.6)
     axes[0,1].set_title('Day of Month Seasonality') # set title for subplot
     axes[0,1].set_xlabel('Day of Month')
     # show every second x tick label
