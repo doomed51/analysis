@@ -1,5 +1,6 @@
 import math
 import pandas as pd 
+import numpy as np
 
 """ 
     This function returns the last business day for the given year and month
@@ -68,7 +69,11 @@ def aggregate_by_dayOfMonth(history, targetCol):
     history = history.sort_values(by='date')
 
     # add month column
-    history['dayOfMonth'] = history['date'].dt.day
+    #history['dayOfMonth'] = history['date'].dt.day
+
+    # add column business_day_of_month, which is the business day of the month represented by the date
+    # Apply the function to each row
+    history['dayOfMonth'] = history.apply(lambda row: calculate_business_day_of_month(row, holidays=[]), axis=1)
 
     # group by month and get mean and sd of volume
     aggregate_by_dayOfMonth = history.groupby('dayOfMonth')[targetCol].agg(['mean', 'std']).reset_index()
@@ -145,6 +150,20 @@ def calcLogReturns(history, colName, lag=1, direction=1):
         history['logReturn'] = (history[colName].apply(lambda x: math.log(x)) - history[colName].shift(lag).apply(lambda x: math.log(x))).round(5)
         history['logReturn'] = history['logReturn'] * -1  
     return history.reset_index(drop=True)
+
+# Function to calculate business days of the month
+def calculate_business_day_of_month(row, holidays=[]):
+    # Start and end of month
+    start_of_month = row['date'].replace(day=1)
+    end_of_month = start_of_month + pd.offsets.MonthEnd(1)
+    
+    # Generate business days for the month, excluding weekends and optionally holidays
+    business_days = pd.bdate_range(start=start_of_month, end=end_of_month, freq='B', holidays=holidays)
+    
+    # Calculate business day of the month
+    business_day_of_month = np.where(business_days == row['date'])[0] + 1  # +1 because we want the count to start from 1
+    return business_day_of_month[0] if business_day_of_month.size > 0 else np.nan
+
 
 """
     For timeseries data with gaps (e.g., only has business days), this function returns the closest date in pxHistory to the targetDay 
