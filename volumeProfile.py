@@ -32,7 +32,6 @@ tableName = db._constructTableName(symbol, '1day')
 with db.sqlite_connection(dbname_stocks) as conn:
     symbolRecord = db.getPriceHistoryWithTablename(conn, tableName)
 
-# 
 
 ## function that plots a lineplot of volume over the available date range 
 def plotVolume(symbolRecord, numDays = 0):
@@ -121,7 +120,7 @@ def plotVolumeProfileMonitor(symbolRecord):
     plt.tight_layout()
     # make plot fullscreen
     mng = plt.get_current_fig_manager()
-    mng.window.state('zoomed')
+    #mng.window.state('zoomed')
 
     plt.show()
 
