@@ -168,7 +168,7 @@ class Strategy:
         ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
         # hide legend
         ax.get_legend().remove()
-        ax.set_ylabel(self.target_column_name)
+        ax.set_ylabel(self.signal_column_name)
         ax.set_xlabel('date')
     
     """
