@@ -145,19 +145,16 @@ class Strategy:
 
         # plot the base and signal timeseries 
         sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label=self.signal_column_name, marker='o', markersize=5)
-        # plot the base and signal timeseries with markers 
-        #sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name], ax=ax, label=self.signal_column_name, marker='o', markersize=2, color='black')
+
         # add percentile lines 
         if drawPercentiles:
             sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.99), ax=ax, label='99th percentile', color='red', alpha=0.6)
             sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.95), ax=ax, label='95th percentile', color='red', alpha=0.3)
             sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.9), ax=ax, label='90th percentile', color='red', alpha=0.3)
             sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.8), ax=ax, label='80th percentile', color='red', alpha=0.3)
-            #sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.7), ax=ax, label='70th percentile', color='red', alpha=0.3)
-            #sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.6), ax=ax, label='60th percentile', color='red', alpha=0.2)
+
             sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.5), ax=ax, label='50th percentile', color='brown', alpha=0.5)
-            #sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.4), ax=ax, label='40th percentile', color='red', alpha=0.2)
-            #sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.3), ax=ax, label='30th percentile', color='red', alpha=0.3)
+
             sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.2), ax=ax, label='20th percentile', color='red', alpha=0.3)
             sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.1), ax=ax, label='10th percentile', color='red', alpha=0.3)
             sns.lineplot(x=self.signal_df['date'], y=self.signal_df[self.signal_column_name].rolling(precentile_rolling_window).quantile(0.05), ax=ax, label='5th percentile', color='red', alpha=0.3)
@@ -198,16 +195,19 @@ class Strategy:
     def draw_signal_crossover_static_level_returns_heatmap(self, ax, level=0, maxperiod_fwdreturns=15, signal_rounding=4, **kwargs):
         #signal_column = kwargs.get('signal_column', self.signal_column_name)
 
-        # col interim_signal_a = 1 if self.signal_column_name > level, =-1 where self.signal_column_name < level; else 0
+        # define an binary interim sinal that is positive above a level, and negative below a level
         self.signal_df['interim_signal_a'] = self.signal_df[self.signal_column_name].apply(lambda x: 1 if x > level else (-1 if x < level else 0))
 
-        # final_signal = 1 if interimsig > interimsign[previous period]; -1 if interimsig < interimsign[previous period]; else 0
+        # the final signal indicates when the interim signal crosses the level
         self.signal_df['final_signal'] = self.signal_df['interim_signal_a'].diff()
         self.signal_df['final_signal'] = self.signal_df['final_signal'].apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))
         
+        print(self.signal_df.head(20))
         # drop rows where final_signal = 0
         signal_df_truncated = self.signal_df[self.signal_df['final_signal'] != 0].reset_index(drop=True).copy()
-    
+
+        print(signal_df_truncated.head(20))
+
         # where signal crosses 0,  
         heatmap = sa.bucketAndCalcSignalReturns(signal_df_truncated, 'final_signal', maxperiod_fwdreturns=maxperiod_fwdreturns, signal_rounding=signal_rounding)
         # plot the heatmap 
