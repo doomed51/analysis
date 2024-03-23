@@ -97,30 +97,34 @@ class CrossoverStrategy(Strategy):
     """
     
 
-    # given a dataframe with columns (date    close symbol_underlying  index     open     high      low       volume interval symbol  pctChange  ...  fwdReturns30  fwdReturns31  fwdReturns32  fwdReturns33  fwdReturns34), plot a grid of the distribution of the first n fwdreturns 
     def plot_return_distribution_facetgrid(self, **kwargs):
-        
+        """
+        Plots the distribution of returns using a FacetGrid.
+
+        Parameters:
+        - max_return_period (int): The maximum return period to consider. Default is 15.
+        - return_type (str): The type of returns to plot. Default is 'fwdReturns'.
+
+        Returns:
+        - matplotlib.figure.Figure: The Figure object containing the plotted facetgrid.
+
+        """
         max_return_period = kwargs.get('max_return_period', 15)
         return_type = kwargs.get('return_type', 'fwdReturns')
         # select just the columns we need
         returns_columns = ['date'] + ['%s%s'%(return_type, i) for i in range(1, max_return_period+1)]
-        #returns_columns = [col for col in self.signal_df.columns if return_type in col]
-        
+
+        # melt columns 
         data_long = pd.melt(self.signal_df, id_vars=['date'], value_vars=returns_columns, 
                     var_name=return_type, value_name='Value')
-        # sort by fwdReturns column
-        data_long = data_long.sort_values(by=return_type)
-        print(data_long)
+        
         # Convert the 'fwdReturns' column to integer for sorting
         data_long[return_type] = data_long[return_type].str.replace('fwdReturns', '').astype(int)
         data_long = data_long.sort_values(by=return_type)
 
+        # plot the facetgrid 
         g = sns.FacetGrid(data_long, col=return_type, col_wrap=5, sharex=True, sharey=True, **kwargs)
         g.map(sns.histplot, 'Value', bins=100)
         g.map(lambda x, **kwargs: plt.grid(True), 'Value')  # Add gridlines to each subplot
 
-        ## add gridlines 
-
-
-        # add facetgrid to the figure
         return g.figure
