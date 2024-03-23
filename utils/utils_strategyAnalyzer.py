@@ -32,18 +32,14 @@ def bucketAndCalcSignalReturns(signaldf, signal_col, signal_rounding=2, maxperio
         if 'fwdReturns%s'%(i) in signaldf.columns: # skip if col exists
             continue
         signaldf['fwdReturns%s'%(i)] = signaldf['close'].pct_change(i).shift(-i)
-    # strip 'fwdReturns' from the column names
-    
+  
     # round signal column to n decimal places, or otherwise bucket it to calculate the mean fwd returns on
     signaldf['%s_normalized'%(signal_col)] = signaldf[signal_col].round(signal_rounding) 
-    
     # List of column names for fwdReturns
     fwd_returns_cols = ['fwdReturns{}'.format(i) for i in range(1, maxperiod_fwdreturns + 1)]
 
     # Perform the groupby and mean calculation in one step
     signal_meanReturns = signaldf.groupby('%s_normalized'%(signal_col))[fwd_returns_cols].mean()
     signal_meanReturns.sort_index(inplace=True, ascending=False) # transpose so that fwdReturns are columns
-
-
 
     return signal_meanReturns
