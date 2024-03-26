@@ -38,8 +38,6 @@ class CrossoverStrategy(Strategy):
     def _calculateSignal(self, signal_df):
         # calculated as target column - signal column
         signal_df['signal'] = self.target_df[self.target_column_name] - signal_df[self.signal_column_name]
-        # smooth signal column
-        #signal_df['signal'] = signal_df['signal'].rolling(20).mean()        
 
         return signal_df
 
@@ -95,8 +93,6 @@ class CrossoverStrategy(Strategy):
     """
         plot facet grid of the distribution of fwd returns after a signal crossover
     """
-    
-
     def plot_return_distribution_facetgrid(self, **kwargs):
         """
         Plots the distribution of returns using a FacetGrid.
@@ -114,8 +110,9 @@ class CrossoverStrategy(Strategy):
         # select just the columns we need
         returns_columns = ['date'] + ['%s%s'%(return_type, i) for i in range(1, max_return_period+1)]
 
+    
         # melt columns 
-        data_long = pd.melt(self.signal_df, id_vars=['date'], value_vars=returns_columns, 
+        data_long = pd.melt(self.signal_df[self.signal_df['final_signal'] > 0], id_vars=['date'], value_vars=returns_columns, 
                     var_name=return_type, value_name='Value')
         
         # Convert the 'fwdReturns' column to integer for sorting
@@ -124,7 +121,22 @@ class CrossoverStrategy(Strategy):
 
         # plot the facetgrid 
         g = sns.FacetGrid(data_long, col=return_type, col_wrap=5, sharex=True, sharey=True, **kwargs)
-        g.map(sns.histplot, 'Value', bins=100)
+        g.map(sns.histplot, 'Value', bins=50, kde=True)
         g.map(lambda x, **kwargs: plt.grid(True), 'Value')  # Add gridlines to each subplot
 
         return g.figure
+    
+    def plot_signal_and_levelcrossover(self):
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax1=ax
+        sns.lineplot(data=self.signal_df, x='date', y=self.signal_column_name, ax=ax1)
+        sns.lineplot(data=self.signal_df, x='date', y='final_signal', ax=ax1.twinx(), color='green', alpha=0.5, marker='o')
+        ax1.set_title('Signal and Final Signal')
+        ax1.set_ylabel('signal')
+        ax1.set_xlabel('date')
+        ax1.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
+        # axis line
+        ax1.axhline(0, color='grey', linestyle='-', alpha=0.5)
+
+        return fig 
