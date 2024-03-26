@@ -202,11 +202,12 @@ class Strategy:
         self.signal_df['final_signal'] = self.signal_df['interim_signal_a'].diff()
         self.signal_df['final_signal'] = self.signal_df['final_signal'].apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))
         
-        print(self.signal_df.head(20))
+        print(self.signal_df)
+
         # drop rows where final_signal = 0
         signal_df_truncated = self.signal_df[self.signal_df['final_signal'] != 0].reset_index(drop=True).copy()
 
-        print(signal_df_truncated.head(20))
+        print(signal_df_truncated)
 
         # where signal crosses 0,  
         heatmap = sa.bucketAndCalcSignalReturns(signal_df_truncated, 'final_signal', maxperiod_fwdreturns=maxperiod_fwdreturns, signal_rounding=signal_rounding)
@@ -219,3 +220,18 @@ class Strategy:
         ax.set_xlabel('fwd returns')
 
         return heatmap
+    
+    def plot_signal_and_levelcrossover(self):
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax1=ax
+        sns.lineplot(data=self.signal_df, x='date', y=self.signal_column_name, ax=ax1)
+        sns.lineplot(data=self.signal_df, x='date', y='final_signal', ax=ax1.twinx(), color='green', alpha=0.5, marker='o')
+        ax1.set_title('Signal and Final Signal')
+        ax1.set_ylabel('signal')
+        ax1.set_xlabel('date')
+        ax1.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
+        # axis line
+        ax1.axhline(0, color='grey', linestyle='-', alpha=0.5)
+
+        return fig 
