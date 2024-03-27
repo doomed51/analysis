@@ -103,11 +103,14 @@ def strategy_dayOfMonthSeasonality(symbol, startDay, endDay, direction=1):
     ## add date columns for easier selection 
     history['month'] = history['date'].dt.month
     history['day'] = history['date'].dt.day
+    # convert day to business day of month 
+    history['day'] = history.apply(lambda x: utils.calculate_business_day_of_month(x), axis=1)
     history['year'] = history['date'].dt.year
     
     # make a list dates to open and close trades 
     history_startDates = history.groupby(['year', 'month'], group_keys=False).apply(utils.closest_day, startDay).reset_index() # get start dates
     history_startDates.rename(columns={0: 'date'}, inplace=True)
+    
     history_endDates = history.groupby(['year', 'month'], group_keys=False).apply(utils.closest_day, endDay).reset_index() # get end dates
     history_endDates.rename(columns={0: 'date'}, inplace=True)
 
@@ -122,6 +125,7 @@ def strategy_dayOfMonthSeasonality(symbol, startDay, endDay, direction=1):
     history = utils.calcLogReturns(history, colName = 'close', direction=direction)
     # drop open 
     history.loc[::2, 'logReturn'] = 0
+
     # drop rows with logReturn = 0
     history = history[history['logReturn'] != 0]
     # add cumsum
