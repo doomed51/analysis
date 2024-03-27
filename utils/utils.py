@@ -169,9 +169,7 @@ def calculate_business_day_of_month(row, holidays=[]):
     For timeseries data with gaps (e.g., only has business days), this function returns the closest date in pxHistory to the targetDay 
 """
 def closest_day(pxHistory, targetDay):
-   #Calculate abs(targetDay - pxHistory dates)
    pxHistory['daydiff'] = abs(targetDay - pxHistory['day'])
-   # sort by the difference, and return the date in the first row
    pxHistory = pxHistory.sort_values(by='daydiff', ascending=True)
    closest_date = pxHistory.iloc[0]['date']
    return closest_date
@@ -218,3 +216,17 @@ def calcZScore(pxHistory, targetCol, numBuckets=10):
     else:
         pxHistory['zscore_%s_%s-ile'%(targetCol, numBuckets)] = pd.qcut(pxHistory['zscore_%s'%(targetCol)], numBuckets, labels=False)
    #return pxHistory
+
+"""
+====================== /////  TESTS ///// ======================
+"""
+
+def test_closest_day():
+    pxHistory = pd.DataFrame({'day': [1, 2, 3, 4, 5],
+                              'date': ['2022-01-01', '2022-01-02', '2022-01-03', '2022-01-04', '2022-01-05']})
+    targetDay = 3
+    closest_date = closest_day(pxHistory, targetDay)
+    assert closest_date == '2022-01-03'
+    
+
+test_closest_day()
