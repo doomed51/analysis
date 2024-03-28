@@ -74,22 +74,6 @@ class CrossoverStrategy(Strategy):
 
         return fig
 
-    def DEPRECATED_plotSignalReturnsHeatmap(self, signal_columnName, maxperiod_fwdreturns=100, signal_rounding=2):
-        fig, ax = plt.subplots()
-        fig.suptitle('Signal Returns Heatmap')
-        self.drawSignalReturnsHeatmap(ax, maxperiod_fwdreturns, signal_columnName, signal_rounding=signal_rounding)
-        return fig
-
-    def DEPRECATED_drawSignalReturnsHeatmap(self, ax, signal_columnName, maxperiod_fwdreturns, signal_rounding = 2):        
-        mean_fwdReturns = sa.bucketAndCalcSignalReturns(self.signal_df, signal_columnName, signal_rounding, maxperiod_fwdreturns)
-        sns.heatmap(mean_fwdReturns, annot=False, cmap='RdYlGn', ax=ax)
-
-        # plot formatting
-        ax.set_xticklabels([int(x.get_text().replace('fwdReturns', '')) for x in ax.get_xticklabels()])
-        ax.tick_params(axis='x', rotation=0)
-        ax.set_title('%s vs. Fwd. Returns'%(signal_columnName))
-        ax.set_ylabel(signal_columnName)
-
     """
         plot facet grid of the distribution of fwd returns after a signal crossover
     """
