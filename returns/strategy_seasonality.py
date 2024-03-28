@@ -164,8 +164,8 @@ def plotResults(returns = [], benchmark='SPY'):#, returns2=pd.DataFrame(), retur
         # add cumsum column
         history_underlying['cumsum'] = history_underlying['logReturn'].cumsum()
     
-    # lineplot of cumsum
     fig, ax = plt.subplots()
+    # enumerate through each strategy, calculating sharpe and plotting returns
     for i, strategyReturn in enumerate(returns):
 
         # check if strategyReturn had strategyName column
@@ -174,18 +174,14 @@ def plotResults(returns = [], benchmark='SPY'):#, returns2=pd.DataFrame(), retur
         else:
             strategyName = 'strat %s'%(i+1)
 
-        # seaborn lineplot of returns in red
-        sns.lineplot(x='date', y='cumsum', data=strategyReturn, ax=ax, label=strategyName)
-        if i == len(returns) - 1:
-            # calculate sharpe ratio
-            sharpe = calcReturns.calcSharpeRatio(strategyReturn, history_underlying)
-            sharpe_benchmark = calcReturns.calcSharpeRatio(strategyReturn, history)
-            # print sharpe on plot
-            ax.text(0.05, 0.05, 'Sharpe[[%s]]: %.2f'%(strategyName, sharpe), transform=ax.transAxes, fontsize=14, verticalalignment='bottom', bbox=dict(facecolor='white', alpha=0.95, edgecolor='black'))
-            # add another text box with a different sharpe 
-            ax.text(0.05, 0.01, 'Sharpe Vs. %s[[%s]]:%.2f'%(history['symbol'][0], strategyName, sharpe_benchmark), transform=ax.transAxes, fontsize=14, verticalalignment='bottom', bbox=dict(facecolor='white', alpha=0.95, edgecolor='black'))
-    
-    ## add history cumsum
+        # calculate sharpe ratio
+        sharpe = round(calcReturns.calcSharpeRatio(strategyReturn, history_underlying), 4)
+        sharpe_benchmark = round(calcReturns.calcSharpeRatio(strategyReturn, history), 4)
+        
+        # plot return lineplot
+        sns.lineplot(x='date', y='cumsum', data=strategyReturn, ax=ax, label='%s: Sharpe: %s, vs. %s: %s'%(strategyName, sharpe, benchmark, sharpe_benchmark))
+
+    ## add underlying historical cumsum
     sns.lineplot(x='date', y='cumsum', data=history, ax=ax, color='black', label=benchmark)
     if not history_underlying.empty:
         sns.lineplot(x='date', y='cumsum', data=history_underlying, ax=ax, color='grey', label=returns[0]['symbol'][0])
