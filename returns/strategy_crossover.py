@@ -74,6 +74,18 @@ class CrossoverStrategy(Strategy):
 
         return fig
 
+    def plot_signal_vs_underlying_zoomedView(self):
+        fig, ax = plt.subplots(2,1, sharex=True)
+        fig.suptitle('%s Signal vs. Underlying'%(self.target_df['symbol'][0]))
+
+        # 0,0
+        self.draw_signal_and_percentiles(ax[0])
+
+        # 0,1
+        self.draw_underlying_close(ax[1])
+
+        return fig
+
     """
         plot facet grid of the distribution of fwd returns after a signal crossover
     """
@@ -110,6 +122,9 @@ class CrossoverStrategy(Strategy):
 
         return g.figure
     
+    """
+        This is a data test function that confirms that a crossover signal is accurately calculated. It will plot a signal vs. the crossover yes/no signal.
+    """
     def plot_signal_and_levelcrossover(self):
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
