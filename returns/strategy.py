@@ -9,7 +9,7 @@
 import config
 import pandas as pd 
 import seaborn as sns
-import interface_localDB as db
+from interface import interface_localDB as db
 
 from utils import utils_strategyAnalyzer as sa
 
@@ -102,10 +102,16 @@ class Strategy:
     """
     def draw_signal_decile_vs_fwdReturn_heatmap(self, ax, maxperiod_fwdreturns=35, signal_rounding=4):
         
+        decile_num_rolling = 252
+
         signal_colname = '%s_decile'%(self.signal_column_name)
         # if the column '%s_decile'%(self.signal_column_name) doesn't exist, create it
-        if signal_colname not in self.signal_df.columns:
-            self.signal_df['%s_decile'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 10, labels=False)
+        #if signal_colname not in self.signal_df.columns:
+        #    self.signal_df['%s_decile'%(self.signal_column_name)] = pd.qcut(self.signal_df['%s_normalized'%(self.signal_column_name)], 10, labels=False)
+        
+        ## add column '%s_decile'%(self.signal_column_name) that is the rolling decile of the signal
+        self.signal_df['%s_decile'%(self.signal_column_name)] = self.signal_df[self.signal_column_name].rolling(decile_num_rolling).apply(lambda x: pd.qcut(x, 10, labels=False)[-1], raw=True)
+        
         # calculate the heatmap 
         heatmap = sa.bucketAndCalcSignalReturns(self.signal_df, signal_colname, maxperiod_fwdreturns=maxperiod_fwdreturns)
         # plot the heatmap 

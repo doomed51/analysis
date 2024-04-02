@@ -6,7 +6,7 @@ import sys
 
 # set root path
 sys.path.append('..')
-import interface_localDB as db
+from interface import interface_localDB as db
 
 """ 
     This function calculates the number of shares that can be bought

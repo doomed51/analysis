@@ -5,13 +5,13 @@ import config
 import sys
 
 from returns import calcReturns as calcReturns
-import interface_localDB as db
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
 sys.path.append('..')
 from utils import utils
+from interface import interface_localDB as db
 
 """
 

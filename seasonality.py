@@ -11,7 +11,7 @@ from utils import utils as ut
 import config
 
 import datetime as dt
-import interface_localDB as db
+from interface import interface_localDB as db
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import pandas as pd

@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import interface_localDB as db
+from interface import interface_localDB as db
 
 from utils import utils_strategyAnalyzer as sa
 
