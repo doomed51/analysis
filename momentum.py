@@ -2,7 +2,7 @@ import config
 import pandas as pd 
 import matplotlib.pyplot as plt
 import statsmodels.formula.api as smf
-import interface_analysisOptimizations as ao 
+from interface import interface_analysisOptimizations as ao 
 
 from ast import literal_eval
 from rich import print
