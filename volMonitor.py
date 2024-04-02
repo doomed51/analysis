@@ -19,7 +19,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 import config
-import seasonality
 from impl import momentum
 import math
 
