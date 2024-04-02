@@ -6,7 +6,7 @@ import sys
 sys.path.append('..')
 
 import config
-import momentum
+from impl import momentum
 
 import statsmodels.api as sm 
 import statsmodels.formula.api as smf
