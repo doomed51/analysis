@@ -2,7 +2,7 @@
 #sys.path.append('..')
 
 ## local libs
-import interface_localDB as db
+from interface import interface_localDB as db
 
 from returns import strategy_crossover as sc
 
@@ -20,7 +20,7 @@ import plotly.graph_objects as go
 
 import config
 import seasonality
-import momentum
+from impl import momentum
 import math
 
 ### CONFIGS ### 
@@ -684,8 +684,6 @@ def plot_contango_sma_crossover(termstructure, ax, cantango_column_name = '_1to2
         ax.legend(loc='upper left')   
         ax.set_title('Contango sma(%s,%s)'%(slow_sma, fast_sma))
         
-
-
 vixts = tsobj.TermStructure('VIX', '1day', 'uvxy') 
 ngts = tsobj.TermStructure('NG', '1day', 'BOIL')
 
@@ -693,11 +691,10 @@ ngts = tsobj.TermStructure('NG', '1day', 'BOIL')
 tpw = pltWindow.plotWindow()
 tpw.MainWindow.resize(2560, 1380)
 
-
-
 ########## Add analysis tabs   
 tpw.addPlot('VIX ts(1-2) monitor', plotTermStructureMonitor(vixts, '_1to2MoContango'))
-tpw.addPlot('VIX ts(4-7) monitor', plotTermStructureMonitor(vixts, '_4to7MoContango'))
+tpw.addPlot('VIX ts(4-8) monitor', plotTermStructureMonitor(vixts, '_4to8MoContango'))
+#tpw.addPlot('VIX ts(2-3) monitor', plotTermStructureMonitor(vixts, '_2to3MoContango'))
 tpw.addPlot('VIX ts overview', plotTermStructureOverview(vixts, '_1to2MoContango'))
 tpw.addPlot('NG ts overview', plotTermStructureOverview(ngts, '_3to4MoContango'))
 tpw.addPlot('NG ts monitor', plotTermStructureMonitor(ngts, '_3to4MoContango'))
