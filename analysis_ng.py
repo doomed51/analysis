@@ -98,9 +98,6 @@ def plotTermStructure(ts, numDays=5):
 """
 def plotTermStructureContango(ts, startMonth, endMonth):
     
-    # plot 'date' and 'close_202309' columns
-    #plt.plot(ts['date'], ts['close_202309'])
-
     # get %contango ts 
     ts_contango = ut_Futures.getContango(ts, startMonth, endMonth)
     
@@ -115,8 +112,7 @@ def plotTermStructureContango(ts, startMonth, endMonth):
     plt.tight_layout()
     print(ts_contango)
 
-with db.sqlite_connection(dbname_futures) as conn:
-    ts = ut_Futures.getRawTermstructure(conn, 'NG')
+
 
 """ 
     Test use case: create a grid of 2x2 plots 
@@ -141,6 +137,9 @@ def plotGrid_testCase():
     plotTermStructureContango(ts, 1, 11)    
 
     plt.tight_layout()
+
+with db.sqlite_connection(dbname_futures) as conn:
+    ts = ut_Futures.getRawTermstructure(conn, 'NG')
 
 #plotTermStructure(ts)
 #plotTermStructureContango(ts, 1, 9)
