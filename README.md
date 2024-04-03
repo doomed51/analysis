@@ -1,6 +1,6 @@
 # Overview
 
-Suite of scripts for quick and dirty analysis of securities  
+This system is intended to help retail traders better understand and quantify behavioural patterns in a universe of securities.
 
 ### How to run:
 
