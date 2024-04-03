@@ -4,7 +4,7 @@ sys.path.append('..')
 import argparse 
 import config
 
-import interface_localDB as db
+from interface import interface_localDB as db
 from utils import utils as ut
 
 import pandas as pd
