@@ -5,11 +5,14 @@ Suite of scripts for quick and dirty analysis of securities
 How to run:
 
 1. Install requirements.txt 
+3. Configure main.py to run the analyses you want, current supported analyses 
+   - seasonality 
+   - momentum / momentum crossover 
 2. Run with 
-- python main.py <symbol>"
-- python volMonitor.py 
+   - python main.py <symbol>
+   - python volMonitor.py 
 
-Note: Requires locally stored ohlc and term structure data. 
+Note: Requires locally stored ohlc and term structure data. To download and store data see ![Here](https://github.com/doomed51/saveHistoricalData) 
 
 
 ## Screenshots
