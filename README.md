@@ -24,8 +24,8 @@ Note: Requires locally stored ohlc and term structure data.
 
 Built loosely on component based architecture principles. Directory structure: 
 
-- core: core classes for implementing analysis, returns plots  
-- impl: analysis implementations utilizing core classes 
-- returns: plots simulated returns of a given strategy implementation 
-- interface: Handles interactions with local DBs and any external APIs   
-- utils: Helper functions to standardize calculations across the system   
+- **core**: core classes for implementing analysis, returns plots  
+- **impl**: analysis implementations utilizing core classes 
+- **returns**: plots simulated returns of a given strategy implementation 
+- **interface**: Handles interactions with local DBs and any external APIs   
+- **utils**: Helper functions to standardize calculations across the system   
