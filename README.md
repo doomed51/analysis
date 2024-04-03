@@ -1,21 +1,30 @@
-# analysis
+# Overview
 
-Suite of visualizations for analyzing seasonality and momentum patterns in securities 
-
-Requires locally stored ohlc and term structure data. 
+Suite of scripts for quick and dirty analysis of securities  
 
 How to run:
 
 1. Install requirements.txt 
-2. Run with "main.py <symbol>"
+2. Run with 
+- python main.py <symbol>"
+- python volMonitor.py 
+
+Note: Requires locally stored ohlc and term structure data. 
 
 
-### Tabbed window for multiple analyses
-![Overview](https://github.com/doomed51/analysis/blob/main/screenshots/tabbed_figures.JPG)
+### Screenshots
+![Seasonality Overview](https://github.com/doomed51/analysis/blob/main/screenshots/analysis_seasonal-overview.JPG)
 
-### Seasonality Monitor
-![Overview](https://github.com/doomed51/analysis/blob/main/screenshots/analysis_seasonal-overview.JPG)
-
-### Intraday Seasonality:
-![Intraday](https://github.com/doomed51/analysis/blob/main/screenshots/analysis_seasonal-intraday.JPG)
+![Momo Overview](https://github.com/doomed51/analysis/blob/main/screenshots/analysis_momoOverview.JPG)
   
+![Volatility Monitor](https://github.com/doomed51/analysis/blob/main/screenshots/analysis_termStructureMonitor.JPG)
+
+## Structure
+
+Built loosely on component based architecture principles. Directory structure: 
+
+- core: core classes for implementing analysis, returns plots  
+- impl: analysis implementations utilizing core classes 
+- returns: plots simulated returns of a given strategy implementation 
+- interface: Handles interactions with local DBs and any external APIs   
+- utils: Helper functions to standardize calculations across the system   
