@@ -13,11 +13,11 @@ Note: Requires locally stored ohlc and term structure data.
 
 
 ## Screenshots
-# Seasonality
+#### Seasonality
 ![Seasonality Overview](https://github.com/doomed51/analysis/blob/main/screenshots/analysis_seasonal-overview.JPG)
-# Momentum signal 
+#### Momentum signal 
 ![Momo Overview](https://github.com/doomed51/analysis/blob/main/screenshots/analysis_momoOverview.JPG)
-# Volatility Monitor
+#### Volatility Monitor
 ![Volatility Monitor](https://github.com/doomed51/analysis/blob/main/screenshots/analysis_termStructureMonitor.JPG)
 
 ## Structure
