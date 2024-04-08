@@ -4,20 +4,17 @@ plots various seasonal analyses for a given symbol
     - plotSeasonalReturns_intraday: 3x3 grid of barplots for analyzing intraday seasonal returns
     - plotSeasonalReturns_overview: 1x3 grid of barplots for a quick overview of seasonality in a symbol 
 """
-import sys
-sys.path.append('..')
-from utils import utils as ut
 
 import config
-
 import datetime as dt
-from interface import interface_localDB as db
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
+from interface import interface_localDB as db
 from matplotlib.dates import date2num
+from utils import utils as ut
 
 dbname_stock = config.dbname_stock
 
@@ -99,7 +96,6 @@ def plotSeasonalReturns_intraday(seasonalReturns, intervals, symbols, titles, ta
 
     # set margin of the figure
     plt.subplots_adjust(hspace=0.3, wspace=0.4, left=0.05, right=0.95, top=0.95, bottom=0.09)
-
 
 ## this function plots a 3 x 3 grid of plots of log returns seasonality for select timeframes  
 def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdlineplot=False):
@@ -274,7 +270,7 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdli
 """
 Returns seasonal aggregate of passed in pxhistory df
 """
-def getSeasonalAggregate(pxHistory, interval, symbol, numdays=0):
+def DEPRECATED_getSeasonalAggregate(pxHistory, interval, symbol, numdays=0):
     
     # if numdays >0, then only aggregate data for last numdays
     if numdays > 0:
