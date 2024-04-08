@@ -95,7 +95,6 @@ def plotMomoScatter(pxhistory, momPeriod1=10, momPeriod2=30, forwardReturnsPerio
     # create 2x4 figure with scatter of shortMomo vs fwdreturnsPeriods where hue = longMomoState
     sns.set_theme(style="darkgrid")
     fig, ax = plt.subplots(2,7, figsize=(20, 10), sharex=True, sharey=True)
-    sns.set()
 
     # plot scatter of shortMomo vs fwdReturnsPeriods where hue = longMomoState
     sns.scatterplot(ax=ax[0,0], data=pxhistory, x='shortMomo', y='fwdReturns1', hue='longMomoState')
