@@ -1,5 +1,5 @@
 """
-    Dashboard for lower timeframe analyses. 1min, 5min, 15min, 30min
+    Dashboard for lower timeframe analyses. 1min, 5min, 15min
 
 """
 from sys import argv
@@ -9,10 +9,10 @@ from utils import utils_strategyAnalyzer as sa
 from returns import strategy_crossover as sc
 
 import pandas as pd 
-import interface_localDB as db 
+from interface import interface_localDB as db 
 
 import config 
-import momentum 
+from impl import momentum 
 
 class ltfAnalysis:
     def __init__(self, symbol, interval):
