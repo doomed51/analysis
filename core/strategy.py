@@ -28,12 +28,6 @@ class Strategy:
         Behold, herein lie lambda functions generating the required calculated columns for the strategy  
     """
 
-    def _calc_signal(self):
-        """
-            Define the signal calculation in the strategy implementation class 
-        """
-        print('ERROR: _calc_signal not implemented')
-    
     def _calc_rolling_percentile_for_col(self, target_col_name = 'close', rollingWindow=252):
         self.pxhistory['%s_percentile'%(self.signal_name)] = self.pxhistory[target_col_name].rolling(rollingWindow).apply(lambda x: pd.qcut(x, 10, labels=False)[-1], raw=True) 
         self._calc_zscore('%s_percentile'%(self.signal_name))
@@ -41,6 +35,14 @@ class Strategy:
     def _calc_zscore(self, colname, rollingWindow=252):
         self.pxhistory['%s_zscore'%(colname)] = self.pxhistory[colname].rolling(rollingWindow).apply(lambda x: (x[-1] - x.mean()) / x.std(), raw=True)
 
+    def _calc_deciles(self, colname):
+        self.pxhistory['%s_decile'%(colname)] = pd.qcut(self.pxhistory[colname], 10, labels=False)
+    
+    def _calc_fwd_returns(self, maxperiod_fwdreturns=20, colname='close'):
+        for i in range (1, maxperiod_fwdreturns+1):
+            if '%s_fwdReturns%s'%(colname, i) in self.pxhistory.columns:
+                continue
+            self.pxhistory['%s_fwdReturns%s'%(colname, i)] = self.pxhistory[colname].pct_change(i).shift(-i)
     ######### SECTION END 
 
     # load underlying history from db 
@@ -114,3 +116,6 @@ class Strategy:
         ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
         ax.set_ylabel(y)
         ax.set_xlabel('date')
+
+    def draw_heatmap_fwdreturn(self, ax, colname_y='logReturn', maxperiod_fwdreturns=20):
+        pass
