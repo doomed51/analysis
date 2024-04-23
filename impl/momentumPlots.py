@@ -560,18 +560,24 @@ def plotMomoandpx(pxHistory, momoPeriod1, momoPeriod2, momoPercentile=0.1, perce
 
     return fig
 
-""" 
-    plots specified momoPeriods, fwdReturnPeriod scatter 
-    input: pxhistory
-            momoAndFwdreturnsPeriods [df] w/ columns: momoPeriod, fwdReturnPeriod
-"""
+
 def plotMomoAndFwdReturns(pxHistory, momoAndFwdReturnsPeriods):
+    """
+    Plots scatters of momentum (momo) vs. forward returns (fwdReturns) for different periods.
+
+    Args:
+        pxHistory (DataFrame): Historical price data.
+        momoAndFwdReturnsPeriods (DataFrame): DataFrame containing momo and fwdReturns periods.
+
+    Returns:
+        fig (Figure): The matplotlib Figure object containing the plotted charts.
+    """
 
     # create figure with 2 rows and 3 columns
     fig, ax = plt.subplots(2,5, figsize=(20, 10), sharex=True, sharey=True)
-    # set figure title
-    fig.suptitle('Momo vs Fwd Returns with Top r2')
-    # get momo for each unique momoperiod in momoAndFwdReturnsPeriods
+    fig.suptitle('Momo vs Fwd Returns of Top r2')
+
+    # get momo for each unique momoPeriod in momoAndFwdReturnsPeriods
     for period in momoAndFwdReturnsPeriods['momoPeriod'].unique():
         # skip if momo already in pxHistory
         if 'momo%s'%(period) not in pxHistory.columns:
@@ -605,12 +611,24 @@ def plotMomoAndFwdReturns(pxHistory, momoAndFwdReturnsPeriods):
     plots scatters filtered by percentilles 
 """
 def plotMomoandPx_filteredByPercentile(pxHistory, momoAndFwdReturnsPeriods, momoPercentileTop=0.99, momoPercentileBottom=0.01):
+    """
+    Plots scatters of momo vs. forward returns for each momoAndFwdReturnsPeriods, filtered by percentiles.
+
+    Args:
+        pxHistory (DataFrame): Historical price data.
+        momoAndFwdReturnsPeriods (DataFrame): DataFrame containing momo and forward returns periods.
+        momoPercentileTop (float, optional): Top percentile for momo filtering. Defaults to 0.99.
+        momoPercentileBottom (float, optional): Bottom percentile for momo filtering. Defaults to 0.01.
+
+    Returns:
+        matplotlib.figure.Figure: The generated figure object.
+    """
     # create figure with 2 rows and 3 columns
     sns.set_theme(style="darkgrid")
     fig, ax = plt.subplots(2,5, figsize=(20, 10), sharex=True, sharey=True)
     sns.set()
     # set figure title
-    fig.suptitle('Momo vs Fwd Returns with Top r2 filtered by momoPercentile')
+    fig.suptitle('Momo vs Fwd Returns of Top r2 filtered by momoPercentile(%s, %s)'%(momoPercentileTop, momoPercentileBottom))
     
     # get momo for each unique momoperiod in momoAndFwdReturnsPeriods
     for period in momoAndFwdReturnsPeriods['momoPeriod'].unique():
