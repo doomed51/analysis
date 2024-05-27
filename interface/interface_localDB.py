@@ -1,3 +1,6 @@
+## Imported from: https://github.com/doomed51/saveHistoricalData.git
+#  LAST UPDATE DATE: 2024-04-29
+
 """
 This module simplifies interacting with the local database of historical ohlc data. 
 
@@ -131,34 +134,40 @@ def _updateLookup_symbolRecords(conn, tablename, earliestTimestamp, numMissingDa
         cursor = conn.cursor()
         cursor.execute(sql_update)
 
+def __remove_timezone_from_datestring(datestring):
+    """
+        lambda function: Remove timezone info from datestring
+    """    
+    if len(datestring) > 19:
+        return datestring[:19]
+    else:
+        return datestring
+
 """ ensures proper format of px history tables retrieved from db """
 def _formatpxHistory(pxHistory):
-    pxHistory.reset_index(drop=True, inplace=True) # reset index
-
-    # if interval is 1day, make sure sure the date column only has 10chars 
-    if pxHistory['interval'][1] == '1day':
-        pxHistory['date'] = pxHistory['date'].str[:10]
     
-    ##### Remove any errant timezone info:
-    # get the rows that have timezone info in the date column
-    # remove the timezone info from the date column
-    # update pxhistory with the formatted date column
-    pxHistory_hasTimezone = pxHistory[pxHistory['date'].str.len() > 19].copy()
-    if not pxHistory_hasTimezone.empty:
-        # remove the timezone info from the date column, while not triggering a settingwithcopy warning
-        pxHistory_hasTimezone.loc[:, 'date'] = pxHistory_hasTimezone['date'].str[:19]
-
-        # update pxhistory with the formatted date column
-        pxHistory.update(pxHistory_hasTimezone)
-
-    # final formatting ... 
+    pxHistory.reset_index(drop=True, inplace=True)
+    
+    ## Remove unnecessary info in the date string
     if pxHistory['interval'][1] == '1day':
-        pxHistory['date'] = pd.to_datetime(pxHistory['date'], format='%Y-%m-%d')
+        pxHistory['date'] = pxHistory['date'].str[:10] # remove milliseconds
+    
+    else: 
+        pxHistory['formatted_date'] = pxHistory['date'].apply(__remove_timezone_from_datestring)
+        pxHistory.drop(columns=['date'], inplace=True)
+        pxHistory.rename(columns={'formatted_date':'date'}, inplace=True)
+
+    pxHistory = pxHistory[~pxHistory['date'].duplicated()]
+   
+    # format to datetime type 
+    if pxHistory['interval'][1] == '1day':
+        pxHistory.loc[:,'date'] = pd.to_datetime(pxHistory['date'], format='%Y-%m-%d')
     else:
-        pxHistory['date'] = pd.to_datetime(pxHistory['date'], format='%Y-%m-%d %H:%M:%S')
+        pxHistory.loc[:,'date'] = pd.to_datetime(pxHistory['date'], format='%Y-%m-%d %H:%M:%S')
     
-    pxHistory.sort_values(by='date', inplace=True) #sort by date
-    
+    # final formatting
+    pxHistory = pxHistory.sort_values(by='date')
+
     return pxHistory
 
 """
@@ -209,10 +218,12 @@ def getPriceHistory(conn, symbol, interval, withpctChange=True, lastTradeMonth='
     sqlStatement = 'SELECT * FROM '+tableName
     pxHistory = pd.read_sql(sqlStatement, conn)
     
+    # format the px history
+    pxHistory = _formatpxHistory(pxHistory)
+
+    # calc pct change if needed
     if withpctChange:
         pxHistory['pctChange'] = pxHistory['close'].pct_change()
-
-    pxHistory = _formatpxHistory(pxHistory)
 
     # caclulate log returns
     pxHistory = ut.calcLogReturns(pxHistory, 'close')
