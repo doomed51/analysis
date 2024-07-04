@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import statsmodels.formula.api as smf
 from interface import interface_analysisOptimizations as ao 
 
+from core import indicators
 from ast import literal_eval
 from rich import print
 from utils import utils
@@ -16,15 +17,16 @@ from utils import utils
         shift: (optional) number of periods to shift momo
 """
 def calcMomoFactor(universe, lag=1, shift=1, lagmomo=False):
-    returns = universe.groupby('symbol', group_keys=False).apply(lambda group: (
-    group.sort_values(by='date')
-         .assign(momo=lambda x: (x['close'] / x['close'].shift(lag)) - 1,
-                 lagmomo=lambda x: x['momo'].shift(shift))
-        )
-    ).reset_index(drop=True)
-    if lagmomo == False:
-        returns.drop(columns=['lagmomo'], inplace=True)
-    return returns
+    # returns = universe.groupby('symbol', group_keys=False).apply(lambda group: (
+    # group.sort_values(by='date')
+    #      .assign(momo=lambda x: (x['close'] / x['close'].shift(lag)) - 1,
+    #              lagmomo=lambda x: x['momo'].shift(shift))
+    #     )
+    # ).reset_index(drop=True)
+    # if lagmomo == False:
+    #     returns.drop(columns=['lagmomo'], inplace=True)
+
+    return indicators.momenturm_factor(universe, 'close', lag=lag, shift=shift, lag_momo=lagmomo)
 
 """
     Returns correlation between momoperiod and fwdreturnperiod 
