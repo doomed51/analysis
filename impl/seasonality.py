@@ -129,7 +129,7 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdli
     fig.suptitle('Log Return Seasonality for %s (%s years of data)'%(symbol.upper(), round(len(pxHistory_htf)/252, 1)))
 
     # Monthly seasonality
-    seasonalAggregate_yearByMonth_logReturns_1day = ut.aggregate_by_month(logReturn_htf, 'logReturn')
+    seasonalAggregate_yearByMonth_logReturns_1day = ut.aggregate_by_month(logReturn_htf, 'close_logReturn')
 
     # Plot yearly seasonality
     ax1 = axes[0,0]
@@ -137,17 +137,19 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdli
     sns.barplot(x=seasonalAggregate_yearByMonth_logReturns_1day.index, y='std', data=seasonalAggregate_yearByMonth_logReturns_1day, ax=ax1, color='grey', alpha=0.5)
     sns.barplot(x=seasonalAggregate_yearByMonth_logReturns_1day.index, y='mean', data=seasonalAggregate_yearByMonth_logReturns_1day, ax=ax2, color='red', alpha=0.75)
     axes[0,0].set_title('Yearly Seasonality')
-    axes[0,0].set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+    _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    axes[0,0].xaxis.set_ticks(range(len(_months)))
+    axes[0,0].set_xticklabels(_months)
 
     # Plot current year log returns if ytdlineplot is True
     if ytdlineplot == True:
         fig.suptitle('Return Seasonality for %s vs %s return (%s years of data)'%(symbol.upper(), logReturn_htf['date'].dt.year.max(), round(len(pxHistory_htf)/252, 1)))
         logReturn_1day_currentYear = logReturn_htf[logReturn_htf['date'].dt.year == logReturn_htf['date'].dt.year.max()].reset_index(drop=True)
-        seasonalAggregate_logReturnsForCurrentyear = ut.aggregate_by_month(logReturn_1day_currentYear, 'logReturn')
+        seasonalAggregate_logReturnsForCurrentyear = ut.aggregate_by_month(logReturn_1day_currentYear, 'close_logReturn')
         sns.lineplot(x=seasonalAggregate_logReturnsForCurrentyear.index, y='mean', data=seasonalAggregate_logReturnsForCurrentyear, ax=ax2, color='green', alpha=1)
 
     # Day of month seasonality
-    aggregate_day_of_month = ut.aggregate_by_dayOfMonth(logReturn_htf, 'logReturn')
+    aggregate_day_of_month = ut.aggregate_by_dayOfMonth(logReturn_htf, 'close_logReturn')
     ax3 = axes[0,1]
     ax4 = ax3.twinx()
     sns.barplot(x=aggregate_day_of_month.index, y='std', data=aggregate_day_of_month, ax=ax3, color='grey', alpha=0.5)
@@ -157,25 +159,26 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdli
     axes[0,1].set_xticks(axes[0,1].get_xticks()[::2])
 
     if ytdlineplot == True:
-        aggregate_day_of_month_currentYear = ut.aggregate_by_dayOfMonth(logReturn_1day_currentYear, 'logReturn')
+        aggregate_day_of_month_currentYear = ut.aggregate_by_dayOfMonth(logReturn_1day_currentYear, 'close_logReturn')
         sns.lineplot(x=aggregate_day_of_month_currentYear.index, y='mean', data=aggregate_day_of_month_currentYear, ax=ax4, color='green', alpha=1)
 
     # Day of week seasonality
-    aggregate_day_of_week = ut.aggregate_by_dayOfWeek(logReturn_htf, 'logReturn')
+    aggregate_day_of_week = ut.aggregate_by_dayOfWeek(logReturn_htf, 'close_logReturn')
     ax5 = axes[0,2]
     ax6 = ax5.twinx()
     sns.barplot(x=aggregate_day_of_week.index, y='std', data=aggregate_day_of_week, ax=ax5, color='grey', alpha=0.5)
     sns.barplot(x=aggregate_day_of_week.index, y='mean', data=aggregate_day_of_week, ax=ax6, color='red', alpha=1)
     axes[0,2].set_title('Day of Week Seasonality')
     axes[0,2].set_xlabel('Day of Week')
+    axes[0,2].xaxis.set_ticks(range(5))
     axes[0,2].set_xticklabels(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'])
 
     if ytdlineplot == True:
-        aggregate_day_of_week_currentYear = ut.aggregate_by_dayOfWeek(logReturn_1day_currentYear, 'logReturn')
+        aggregate_day_of_week_currentYear = ut.aggregate_by_dayOfWeek(logReturn_1day_currentYear, 'close_logReturn')
         sns.lineplot(x=aggregate_day_of_week_currentYear.index, y='mean', data=aggregate_day_of_week_currentYear, ax=ax6, color='green', alpha=1)
 
     # Intra-day seasonality
-    aggregate_timestamp_5mins = ut.aggregate_by_timestamp(logReturn_ltf, 'logReturn')
+    aggregate_timestamp_5mins = ut.aggregate_by_timestamp(logReturn_ltf, 'close_logReturn')
     aggregate_timestamp_5mins['cumsum'] = aggregate_timestamp_5mins['mean'].cumsum()
     print(logReturn_ltf)
     ax7 = axes[1,0]
@@ -184,16 +187,19 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdli
     sns.barplot(x=aggregate_timestamp_5mins.index, y='mean', data=aggregate_timestamp_5mins, ax=ax8, color='red', alpha=1)
     sns.lineplot(x=aggregate_timestamp_5mins.index, y='cumsum', data=aggregate_timestamp_5mins, ax=ax8, color='grey', alpha=0.5, linestyle='--')
     axes[1,0].set_title('Intra-Day Seasonality')
+    print(len(aggregate_timestamp_5mins))
     axes[1,0].set_xlabel('Time of Day')
-    axes[1,0].set_xticklabels(aggregate_timestamp_5mins['timestamp'], rotation=90, fontsize=8)
+    # axes[1,0].xaxis.set_ticks(range(0, len(aggregate_timestamp_5mins), 12))
+    # axes[1,0].xaxis.set_ticks(3)
+    axes[1,0].set_xticklabels(aggregate_timestamp_5mins['timestamp'].to_list(), rotation=90, fontsize=8)
 
     if ytdlineplot == True:
-        aggregate_timestamp_5mins_currentYear = ut.aggregate_by_timestamp(logReturn_ltf[logReturn_ltf['date'].dt.year == logReturn_ltf['date'].dt.year.max()], 'logReturn')
+        aggregate_timestamp_5mins_currentYear = ut.aggregate_by_timestamp(logReturn_ltf[logReturn_ltf['date'].dt.year == logReturn_ltf['date'].dt.year.max()], 'close_logReturn')
         sns.lineplot(x=aggregate_timestamp_5mins_currentYear.index, y='mean', data=aggregate_timestamp_5mins_currentYear, ax=ax8, color='green', alpha=1)
 
     # Intra-day seasonality restricted to trading hours
     logReturn_5mins_restricted = logReturn_ltf[(logReturn_ltf['date'].dt.time >= dt.time(9, 30)) & (logReturn_ltf['date'].dt.time <= dt.time(15, 55))]
-    aggregate_logReturn_5mins_restricted = ut.aggregate_by_timestamp(logReturn_5mins_restricted, 'logReturn')
+    aggregate_logReturn_5mins_restricted = ut.aggregate_by_timestamp(logReturn_5mins_restricted, 'close_logReturn')
     aggregate_logReturn_5mins_restricted['cumsum'] = aggregate_logReturn_5mins_restricted['mean'].cumsum()
     ax9 = axes[1,1]
     ax10 = ax9.twinx()
@@ -205,11 +211,11 @@ def logReturns_overview_of_seasonality(symbol, restrictTradingHours=False, ytdli
     axes[1,1].set_xticklabels(aggregate_logReturn_5mins_restricted['timestamp'], rotation=90, fontsize=8)
 
     if ytdlineplot == True:
-        aggregate_logReturn_5mins_restricted_currentYear = ut.aggregate_by_timestamp(logReturn_5mins_restricted[logReturn_5mins_restricted['date'].dt.year == logReturn_5mins_restricted['date'].dt.year.max()], 'logReturn')
+        aggregate_logReturn_5mins_restricted_currentYear = ut.aggregate_by_timestamp(logReturn_5mins_restricted[logReturn_5mins_restricted['date'].dt.year == logReturn_5mins_restricted['date'].dt.year.max()], 'close_logReturn')
         sns.lineplot(x=aggregate_logReturn_5mins_restricted_currentYear.index, y='mean', data=aggregate_logReturn_5mins_restricted_currentYear, ax=ax10, color='green', alpha=1)
 
     # Heatmap of intra-day log returns for last 30 days
-    pivot_logReturn_5mins_restricted = logReturn_5mins_restricted.pivot_table(index=logReturn_5mins_restricted['date'].dt.time, columns=logReturn_5mins_restricted['date'].dt.date, values='logReturn')
+    pivot_logReturn_5mins_restricted = logReturn_5mins_restricted.pivot_table(index=logReturn_5mins_restricted['date'].dt.time, columns=logReturn_5mins_restricted['date'].dt.date, values='close_logReturn')
     pivot_logReturn_5mins_restricted = pivot_logReturn_5mins_restricted[pivot_logReturn_5mins_restricted.columns[-30:]]
     sns.heatmap(pivot_logReturn_5mins_restricted, ax=axes[1,2], center=0, cmap='RdYlGn')
     axes[1,2].set_title('Intra-Day log returns for last 30 days')
