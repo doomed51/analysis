@@ -24,7 +24,7 @@ def intra_day_cumulative_signal(pxhistory, colname, lookback_periods=10, intrada
         # Drop the auxiliary column used for day identification
         pxhistory.drop(columns=['day'], inplace=True)
     else:
-        pxhistory[f'{colname}_cumsum_{lookback_period}'] = pxhistory[colname].rolling(window=lookback_period, min_periods=1).sum()
+        pxhistory[f'{colname}_cumsum_{lookback_periods}'] = pxhistory[colname].rolling(window=lookback_periods, min_periods=1).sum()
     return pxhistory
 
 def momenturm_factor(df, colname, lag=1, shift=1, lag_momo=False):
