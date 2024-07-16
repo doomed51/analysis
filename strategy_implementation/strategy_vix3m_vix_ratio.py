@@ -1,0 +1,308 @@
+from core import strategy as st
+from core import indicators
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+
+class StrategyVixAndVol(st.Strategy):
+    """
+    Analysis of a volatility forecast based on vix3m/vix ratio, and vvix percentiles.
+
+    Args:
+        interval (enum:interval): interval of price history data.
+        signal_name (str): signal column name in price history data.
+
+
+    Attributes:
+        pxHistory (dataframe): The price history of the asset(VIX) with all desired 
+        signals+ indicators.
+        [OPTIONAL]
+        ratio_moving_average_shortperiod (int): period of short moving average for vix3m/vix ratio.
+        ratio_moving_average_longperiod (int): period of long moving average for vix3m/vix ratio.
+        vvix_rvi_period_shortperiod (int): period of short RVI.
+        vvix_rvi_period_longperiod (int): period of long RVI.
+
+    """
+
+    def __init__(self, interval='1day', signal_name='close', **kwargs):
+        self.symbol = 'VIX'
+        self.interval = interval
+        self.pxhistory = self._load_pxhistory(symbol=self.symbol, interval=self.interval)
+        self.signal_name = signal_name
+        self.ratio_moving_average_shortperiod = kwargs.get('ma_period_short', 5)
+        self.ratio_moving_average_longperiod = kwargs.get('ma_period_long', 20)
+        self.vvix_rvi_period_shortperiod = kwargs.get('rvi_period_short', 5)
+        self.vvix_rvi_period_longperiod = kwargs.get('rvi_period_long', 20)
+
+        ## add VVIX & stats
+        self.vvix = st.Strategy(name='vvix', symbol='VVIX', signal_name='close', interval=self.interval)
+        self.vvix._calc_deciles(colname='close')
+        self._calc_vvix_percentile_forecast()
+        # Add RVI & delta
+        self.vvix.pxhistory = indicators.relative_volatility_index(self.vvix.pxhistory, 'close', 20).rename(columns={'close_rvi': 'close_rvi_%s'%(self.vvix_rvi_period_shortperiod)})
+        self.vvix.pxhistory = indicators.relative_volatility_index(self.vvix.pxhistory, 'close', 90).rename(columns={'close_rvi': 'close_rvi_%s'%(self.vvix_rvi_period_longperiod)}) 
+        self.vvix.pxhistory['close_rvi_delta'] = self.vvix.pxhistory['close_rvi_%s'%(self.vvix_rvi_period_shortperiod)] - self.vvix.pxhistory['close_rvi_%s'%(self.vvix_rvi_period_longperiod)]
+        # Calc deciles and percentiles 
+        self.vvix._calc_deciles(colname='close_rvi_delta')
+        self.vvix._calc_deciles(colname='close_zscore')
+        self.vvix._calc_deciles(colname='close_rvi_%s'%(self.vvix_rvi_period_longperiod))
+        self.vvix._calc_zscore(colname='close_rvi_%s'%(self.vvix_rvi_period_longperiod), rollingWindow=0)
+        
+        ## add vix3m/vix ratio and deciles
+        self.vix3m = st.Strategy(name='vix3m', symbol='VIX3M', signal_name='close', interval=self.interval)
+        self.pxhistory = pd.merge(self.pxhistory, self.vix3m.pxhistory[['date', 'close']], on='date', how='inner', suffixes=('', '_vix3m'))
+        self._calc_vix3m_vix_ratio()
+        self._calc_deciles(colname='vix3m_vix_ratio')
+        self._calc_percentiles(colname='vix3m_vix_ratio')
+        self._calc_zscore(colname='vix3m_vix_ratio')
+        self._calc_deciles(colname='vix3m_vix_ratio_zscore')
+
+        
+        ## Ratio WMA and crossover        
+        self.pxhistory = indicators.moving_average_weighted(self.pxhistory, 'vix3m_vix_ratio', self.ratio_moving_average_longperiod)
+        self.pxhistory = self.pxhistory.rename(columns={'vix3m_vix_ratio_wma': 'vix3m_vix_ratio_ma_long'})
+        self.pxhistory = indicators.moving_average_weighted(self.pxhistory, 'vix3m_vix_ratio', self.ratio_moving_average_shortperiod)
+        self.pxhistory = self.pxhistory.rename(columns={'vix3m_vix_ratio_wma': 'vix3m_vix_ratio_ma_short'})
+        self.pxhistory = indicators.moving_average_crossover(self.pxhistory, 'vix3m_vix_ratio_ma_long', 'vix3m_vix_ratio_ma_short')
+
+        colname_crossover = '%s_%s_crossover'%('vix3m_vix_ratio_ma_long', 'vix3m_vix_ratio_ma_short')
+        colname_wma_crossover = 'vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover'
+        
+        # WMA crossover stats 
+        self._calc_deciles(colname=colname_crossover)
+        self._calc_percentiles(colname=colname_crossover)
+        self._calc_zscore(colname=colname_crossover, rollingWindow=0)
+        
+        ## WMA crossover intra-day cumsum 
+        self.pxhistory = indicators.intra_day_cumulative_signal(self.pxhistory, colname_crossover, intraday_reset=True)
+        self._calc_zscore(colname='%s_cumsum'%(colname_crossover), rollingWindow=0)
+        self._calc_deciles(colname='%s_cumsum'%(colname_crossover))
+        self._calc_percentiles(colname='%s_cumsum'%(colname_crossover))
+
+        # add stats of difference between ratio and long ma
+        self.pxhistory['vix3m_vix_ratio_ma_long_diff'] = self.pxhistory['vix3m_vix_ratio'] - self.pxhistory['vix3m_vix_ratio_ma_long']
+        self._calc_deciles(colname='vix3m_vix_ratio_ma_long_diff')
+        self._calc_percentiles(colname='vix3m_vix_ratio_ma_long_diff')
+        self._calc_zscore(colname='vix3m_vix_ratio_ma_long_diff', rollingWindow=0)
+
+
+
+
+    
+    def _calc_vvix_percentile_forecast(self, col_name='close_percentile', rollingWindow=252):
+        """
+            Calculate the percentile forecast for the VIX
+        """
+        # calculate rolling percentile for vvix 
+        self.vvix._calc_rolling_percentile_for_col(target_col_name=self.signal_name, rollingWindow=rollingWindow)
+        self.vvix.pxhistory = self.vvix.pxhistory.rename(columns={'%s'%(col_name): '%s_vvix'%(col_name)})
+
+        # merge vvix with pxhistory discarding missing dates & generate the forecast 
+        self.pxhistory = pd.merge(self.pxhistory, self.vvix.pxhistory[['date', '%s_vvix'%(col_name)]], on='date', how='inner')
+        self.pxhistory['close_percentile_forecast_vvix'] = self.pxhistory['%s_vvix'%(col_name)].apply(lambda x: -20 if x >= 9 else 20 if x <= 1 else 0)
+    
+    ## Dashboards
+    ##   These represent the finalized method of viewing a particular symbol, or signal 
+    
+    def plot_overview_dashboard(self, signal_col_name='vix3m_vix_ratio', **kwargs):
+        print(self.pxhistory.columns)
+
+        fig, ax = plt.subplots(3, 5)
+        periods_to_plot = kwargs.get('periods_to_plot', 390)
+        maxperiod_fwdreturns = kwargs.get('maxperiod_fwdreturns', 20)
+        percentile_lookback_period = kwargs.get('percentile_lookback_period', 252)
+
+        fig.suptitle('Vix3m Ratio Dash')
+
+        #############
+        ## row 1: ratio 
+        #############
+        g, bin_edges = pd.qcut(self.pxhistory[signal_col_name], 10, labels=False, duplicates='drop', retbins=True)
+        self.pxhistory['%s_percentile_90'%(signal_col_name)] = self.pxhistory[signal_col_name].rolling(percentile_lookback_period).quantile(0.9)
+        self.pxhistory['%s_percentile_10'%(signal_col_name)] = self.pxhistory[signal_col_name].rolling(percentile_lookback_period).quantile(0.1)
+        
+        # self.draw_lineplot(ax[0,0], y=signal_col_name, y_alt='close', drawPercetiles=True, hlines_to_plot=[bin_edges[6]], n_periods_to_plot=periods_to_plot)
+        self.draw_lineplot(ax[0,0], y='%s_zscore'%(signal_col_name), y_alt='close', n_periods_to_plot=periods_to_plot)
+        ax[0,0].axhline(0, color='black', linestyle='-', alpha=0.5)
+        # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s_zscore'%(signal_col_name), ax=ax[0,0], color='black', alpha=0.5)
+        sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='vix3m_vix_ratio_ma_short', ax=ax[0,0], color='red', alpha=0.3)
+        sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='vix3m_vix_ratio_ma_long', ax=ax[0,0], color='red', alpha=0.5)  
+        # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s_percentile_90'%(signal_col_name), ax=ax[0,0])
+        # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s_percentile_10'%(signal_col_name), ax=ax[0,0])
+        # add text to the plot
+        # ax[0,0].text(self.pxhistory['date'].iloc[-1], round(self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1], 3), '%s'%(self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
+        # ax[0,0].text(self.pxhistory['date'].iloc[-1], round(self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1],3), '%s'%(self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
+
+        self.draw_heatmap_signal_returns(ax[0,1], y='%s_percentile'%(signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
+        self.draw_heatmap_signal_returns(ax[0,2], y='%s_decile'%(signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
+        # self.draw_heatmap_signal_returns(ax[0,3], y='%s_zscore'%(signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
+        self.draw_heatmap_signal_returns(ax[0,3], y='vix3m_vix_ratio_zscore', maxperiod_fwdreturns=maxperiod_fwdreturns)
+        self.draw_autocorrelation(ax[0,4], y=signal_col_name, max_lag=50)
+        # self.draw_distribution(ax[0,3], y=signal_col_name, drawPercetiles=True, percentiles_to_plot=bin_edges)
+
+        #############
+        ## row 2: ratio ma-long diff 
+        #############
+        row2_signal_col_name = '%s_%s_crossover'%('vix3m_vix_ratio_ma_long', 'vix3m_vix_ratio_ma_short')
+        g, bin_edges = pd.qcut(self.pxhistory[row2_signal_col_name], 10, labels=False, duplicates='drop', retbins=True)
+        self.pxhistory['%s_percentile_90'%(row2_signal_col_name)] = self.pxhistory[row2_signal_col_name].rolling(percentile_lookback_period).quantile(0.9)
+        self.pxhistory['%s_percentile_10'%(row2_signal_col_name)] = self.pxhistory[row2_signal_col_name].rolling(percentile_lookback_period).quantile(0.1)
+        # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s_percentile_90'%(signal_col_name), ax=ax[1,0])
+        # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s_percentile_10'%(signal_col_name), ax=ax[1,0])
+        # ax[1,0].text(self.pxhistory['date'].iloc[-1], self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1], '%s'%(self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
+        # ax[1,0].text(self.pxhistory['date'].iloc[-1], self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1], '%s'%(self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
+        # self.draw_lineplot(ax[1,0], y=signal_col_name, y_alt='close', hlines_to_plot=[bin_edges[4], bin_edges[9]], n_periods_to_plot=periods_to_plot)
+        ##
+        ######## 1,0 - 1,4
+        sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y=row2_signal_col_name, ax=ax[1,0])
+        sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s_zscore'%(row2_signal_col_name), ax=ax[1,0].twinx(), color='red', alpha=0.5)
+        ax[1,0].axhline(0, color='black', linestyle='-', alpha=0.5)
+        self.draw_heatmap_signal_returns(ax[1,1], y='%s_percentile'%(row2_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
+        self.draw_heatmap_signal_returns(ax[1,2], y='%s_decile'%(row2_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
+        self.draw_heatmap_signal_returns(ax[1,3], y='%s_zscore'%(row2_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
+        self.draw_autocorrelation(ax[1,4], y=row2_signal_col_name, max_lag=50)
+        # self.draw_distribution(ax[1,3], y=signal_col_name, drawPercetiles=True, percentiles_to_plot=bin_edges)
+
+        #############
+        ## row 3
+        #############
+        g, bin_edges = pd.qcut(self.vvix.pxhistory['close'], 10, labels=False, duplicates='drop', retbins=True)
+        hlines_to_plot = ([
+            # self.vvix.pxhistory['close'].quantile(0.1), 
+            # self.vvix.pxhistory['close'].quantile(0.9), 
+            # bin_edges[4],
+            # bin_edges[9]
+        ])
+        self.vvix.pxhistory['close_percentile_90'] = self.vvix.pxhistory['close'].rolling(252).quantile(0.9)
+        self.vvix.pxhistory['close_percentile_1'] = self.vvix.pxhistory['close'].rolling(252).quantile(0.1)
+        self.vvix.pxhistory['close_zscore_percentile_90'] = self.vvix.pxhistory['close_zscore'].rolling(252).quantile(0.9)
+        self.vvix.pxhistory['close_zscore_percentile_10'] = self.vvix.pxhistory['close_zscore'].rolling(252).quantile(0.1)
+
+        ############ 2,0
+        # row_3_signal_col_name = 'wma_crossover_cumsum'
+        row_3_signal_col_name = 'vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover_cumsum'
+        # self.pxhistory.rename(columns={'vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover_cumsum': row_3_signal_col_name}, inplace=True)
+
+        sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y=row_3_signal_col_name, ax=ax[2,0])
+        ax[2,0].axhline(0, color='black', linestyle='-', alpha=0.5)
+        self.draw_heatmap_signal_returns(ax[2,1], y='%s_zscore'%(row_3_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
+        self.draw_heatmap_signal_returns(ax[2,2], y='%s_decile'%(row_3_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
+        self.draw_heatmap_signal_returns(ax[2,3], y='%s_percentile'%(row_3_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
+        self.draw_autocorrelation(ax[2,4], y=row_3_signal_col_name, max_lag=50)
+
+        """" 
+            VVIX ROW 
+        """
+        # self.vvix.draw_lineplot(ax[2,0], y='close_zscore', hlines_to_plot=hlines_to_plot, n_periods_to_plot=periods_to_plot)
+        # sns.lineplot(data=self.vvix.pxhistory.tail(periods_to_plot), x='date', y='close_zscore_percentile_90', ax=ax[2,0])
+        # sns.lineplot(data=self.vvix.pxhistory.tail(periods_to_plot), x='date', y='close_zscore_percentile_10', ax=ax[2,0])
+        # ax[2,0].text(self.vvix.pxhistory['date'].iloc[-1], self.vvix.pxhistory['close_percentile_90'].iloc[-1], '%s'%(self.vvix.pxhistory['close_percentile_90'].iloc[-1]), fontsize=9, color='black')
+        # ax[2,0].text(self.vvix.pxhistory['date'].iloc[-1], self.vvix.pxhistory['close_percentile_1'].iloc[-1], '%s'%(self.vvix.pxhistory['close_percentile_1'].iloc[-1]), fontsize=9, color='black')
+        
+        # ############  2,1 - 2,3
+        # self.vvix.draw_heatmap_signal_returns(ax[2,1], y='close_zscore', maxperiod_fwdreturns=maxperiod_fwdreturns)
+        # self.vvix.draw_heatmap_signal_returns(ax[2,2], y='close_rvi_%s_zscore'%(self.vvix_rvi_period_longperiod), maxperiod_fwdreturns=maxperiod_fwdreturns)
+        # # self.vvix.draw_heatmap_signal_returns(ax[2,3], y='close_rvi_delta_decile', maxperiod_fwdreturns=maxperiod_fwdreturns)
+        # self.vvix.draw_autocorrelation(ax[2,3], y='close_rvi_delta', max_lag=50)
+        """ VVIX ROW END """
+
+
+
+        # share x-axis between 0,0; 1,0; 2,0
+        # for i in range(5):
+        #     ax[0,i].get_shared_x_axes().join(ax[0,i], ax[1,i], ax[2,i])
+        ax[0,0].get_shared_x_axes().join(ax[0,0],ax[1,0], ax[2,0])
+
+
+        fig.autofmt_xdate()
+        return fig
+
+    def plot_vvix_dashboard(self, signal_col_name='close', **kwargs):   
+        # draw lineplot 
+        fig, ax = plt.subplots(1, 1)
+        n_periods_to_plot = kwargs.get('n_periods_to_plot', 390)
+        
+        self.vvix.draw_lineplot(ax, y=signal_col_name, y_alt='close', n_periods_to_plot=n_periods_to_plot)
+
+        fig.autofmt_xdate()
+        return fig 
+
+    def plot_intraday_dashboard(self, signal_col_name='vix3m_vix_ratio'): 
+        """
+            Plots a dashboard that can be used to monitor intra-day changes in the signal
+        """
+        fig, ax = plt.subplots(2, 2)
+        
+        ## row 1 with intra-day plots to provide a way to monitor intra-day changes in the signal
+        self.draw_lineplot(ax[0,0], y=signal_col_name, y_alt='close', drawPercetiles=True, n_periods_to_plot=200)
+
+        # ax[1,0] vvix aurto correlation
+        self.vvix.draw_autocorrelation(ax=ax[1,1], max_lag=50)
+
+        #_draw_realtime_lineplot_of_signal(ax[0,1], signal_col_name)
+
+        #_draw_realtime_distribution(ax[0,2], signal_col_name)
+
+        ## row 2 with 30m plots to provide a medium term overview of the signal 
+        #_draw_lineplot(col=ratio, interval=30 min, lookback=40 days )
+
+        #_draw_heatmap(col=ratio, interval=30min, maxperiod_fwdreturns=20)
+
+        #_draw_histogram(col=ratio, interval=30min, lookback=40 days)
+
+        ## row 3 with 1 day, longer term plots that provide a overview of the signal over its entire available lifetime 
+        #_draw_lineplot(col=ratio, interval=1 day)
+
+        #_draw_heatmap(col=ratio, interval=1 day, maxperiod_fwdreturns=20)
+
+        #_draw_histogram(col=ratio, interval=1 day)
+        fig.autofmt_xdate()
+        return fig
+    
+    ## Analysis
+    ##   These are working grounds of understanding and deriving meaning from 
+    ##   different ways of viewing symbols, and signals
+
+    def plot_ratio_ma_diff_heatmap_grid(self, lookback_periods=[]): 
+        if lookback_periods == []:
+            print('plot_ratio_ma_diff_heatmap_grid: No lookback periods provided')
+            exit()
+        
+        signal_col_name = 'vix3m_vix_ratio_ma'
+        for lp in lookback_periods:
+            if not '%s_%s'%(signal_col_name, lp) in self.pxhistory.columns:
+                self.pxhistory['%s_%s'%(signal_col_name, lp)] = self.pxhistory['vix3m_vix_ratio'].rolling(window=lp).mean()
+                self.pxhistory['%s_diff_%s'%(signal_col_name, lp)] = self.pxhistory['vix3m_vix_ratio'] - self.pxhistory['%s_%s'%(signal_col_name, lp)]
+                self._calc_deciles(colname='%s_diff_%s'%(signal_col_name, lp))
+                self._calc_percentiles(colname='%s_diff_%s'%(signal_col_name, lp))
+    
+    def _calc_vix3m_vix_ratio(self, _pxhistory=None):
+        """
+            Calculate the ratio of VIX3M to VIX
+        """
+        if _pxhistory: 
+            _pxhistory['vix3m_vix_ratio'] = _pxhistory['close_vix3m'] / _pxhistory['close']
+        else:
+            self.pxhistory['vix3m_vix_ratio'] = self.pxhistory['close_vix3m'] / self.pxhistory['close']
+
+    def plot_ratio_diff_lineplot(self, signal_col_name='vix3m_vix_ratio_ma_long_diff', percentile_lookback_period=98280):
+        percentile_lookback_period = 252 #98280
+        fig, ax = plt.subplots(1, 1)
+        n_periods_to_plot = 1000
+
+        self.draw_lineplot(ax, y=signal_col_name, n_periods_to_plot=n_periods_to_plot)
+        # add 90 and 10 rolling percentile columns 
+        self.pxhistory['%s_percentile_90'%(signal_col_name)] = self.pxhistory[signal_col_name].rolling(percentile_lookback_period).quantile(0.9)
+        self.pxhistory['%s_percentile_10'%(signal_col_name)] = self.pxhistory[signal_col_name].rolling(percentile_lookback_period).quantile(0.1)
+        sns.lineplot(data=self.pxhistory.tail(n_periods_to_plot), x='date', y='%s_percentile_90'%(signal_col_name), ax=ax)
+        sns.lineplot(data=self.pxhistory.tail(n_periods_to_plot), x='date', y='%s_percentile_10'%(signal_col_name), ax=ax)
+
+        # add text to the plot
+        ax.text(self.pxhistory['date'].iloc[-1], self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1], '%s'%(self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
+        ax.text(self.pxhistory['date'].iloc[-1], self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1], '%s'%(self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
+
+        fig.autofmt_xdate()
+        return fig
+
+   
