@@ -49,13 +49,13 @@ class Strategy:
         self._calc_zscore('%s_percentile'%(target_col_name))
 
     def _calc_zscore(self, colname, rollingWindow=252, _pxHistory = None): 
-    """
-        Calculate the z-score of a column.
-        Params: 
-            colname: str column name to calculate z-score on
-            rollingWindow: int rolling window to calculate z-score on. Settingto 0 uses entire population 
-            _pxHistory: pd.DataFrame to calculate z-score on. Default is None, which uses the objects default pxhistory
-    """
+        """
+            Calculate the z-score of a column.
+            Params: 
+                colname: str column name to calculate z-score on
+                rollingWindow: int rolling window to calculate z-score on. Settingto 0 uses entire population 
+                _pxHistory: pd.DataFrame to calculate z-score on. Default is None, which uses the objects default pxhistory
+        """
         if _pxHistory is None:
             if rollingWindow == 0:
                 self.pxhistory['%s_zscore'%(colname)] = self.pxhistory[colname] - self.pxhistory[colname].mean() / self.pxhistory[colname].std()
