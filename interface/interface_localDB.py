@@ -14,10 +14,11 @@ This module simplifies interacting with the local database of historical ohlc da
 import sqlite3
 import sys
 import config
-
 import pandas as pd
 sys.path.append('..')
 from utils import utils as ut
+
+pd.options.mode.chained_assignment = None  # default='warn'
 
 """ Global vars """
 dbname_index = config.dbname_stock
@@ -165,6 +166,10 @@ def _formatpxHistory(pxHistory):
     else:
         pxHistory.loc[:,'date'] = pd.to_datetime(pxHistory['date'], format='%Y-%m-%d %H:%M:%S')
     
+    # make sure date is datetime type
+    # pxHistory.loc[:,'date'] = pd.to_datetime(pxHistory.loc[:,'date'])
+    pxHistory['date'] = pd.to_datetime(pxHistory['date'])
+
     # final formatting
     pxHistory = pxHistory.sort_values(by='date')
 
