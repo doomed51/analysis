@@ -49,17 +49,19 @@ class Strategy:
         self._calc_zscore('%s_percentile'%(target_col_name))
 
     def _calc_zscore(self, colname, rollingWindow=252, _pxHistory = None): 
-        # self.pxhistory['%s_zscore'%(colname)] = self.pxhistory[colname].rolling(rollingWindow).apply(lambda x: (x[-1] - x.mean()) / x.std(), raw=True)
-
+    """
+        Calculate the z-score of a column.
+        Params: 
+            colname: str column name to calculate z-score on
+            rollingWindow: int rolling window to calculate z-score on. Settingto 0 uses entire population 
+            _pxHistory: pd.DataFrame to calculate z-score on. Default is None, which uses the objects default pxhistory
+    """
         if _pxHistory is None:
             if rollingWindow == 0:
-                # self.pxhistory['%s_zscore'%(colname)] = self.pxhistory[colname].apply(lambda x: (x[-1] - x.mean()) / x.std())
                 self.pxhistory['%s_zscore'%(colname)] = self.pxhistory[colname] - self.pxhistory[colname].mean() / self.pxhistory[colname].std()
             else: 
-                # self.pxhistory['%s_zscore'%(colname)] = self.pxhistory[colname].rolling(rollingWindow).apply(lambda x: (x[-1] - x.mean()) / x.std())
                 self.pxhistory['%s_zscore'%(colname)] = self.pxhistory[colname].rolling(rollingWindow).apply(lambda x: (x[-1] - x.mean()) / x.std(), raw=True)
         else:
-            # _pxHistory['%s_zscore'%(colname)] = _pxHistory[colname].rolling(rollingWindow).apply(lambda x: (x[-1] - x.mean()) / x.std(), raw=True)
             _pxHistory['%s_zscore'%(colname)] = _pxHistory[colname] - _pxHistory[colname].mean() / _pxHistory[colname].std()
     
     def _calc_ntile(self, numBuckets, colname, _pxHistory = None):
