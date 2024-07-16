@@ -5,6 +5,28 @@
 import pandas as pd
 import numpy as np
 
+def intra_day_cumulative_signal(pxhistory, colname, lookback_periods=10, intraday_reset=False):
+    """
+    Adds column colname_CUMSUM_lookback_periodsP to the dataframe.
+    inputs:
+        df: dataframe with price history
+        colname: column name to calculate the signal on
+        lookback_periods: list of lookback periods to calculate the signal over
+    """
+    cumsum_col = '%s_cumsum'%(colname)
+    if intraday_reset == True:
+        # Add a column to identify the day
+        pxhistory['day'] = pxhistory['date'].dt.date
+
+        # Calculate cumulative sum within each group (each day)
+        pxhistory[f'{colname}_cumsum'] = pxhistory.groupby('day')[colname].cumsum()
+        
+        # Drop the auxiliary column used for day identification
+        pxhistory.drop(columns=['day'], inplace=True)
+    else:
+        pxhistory[f'{colname}_cumsum_{lookback_period}'] = pxhistory[colname].rolling(window=lookback_period, min_periods=1).sum()
+    return pxhistory
+
 def momenturm_factor(df, colname, lag=1, shift=1, lag_momo=False):
     """
     Calculates momentum factor for a given pxhistory, lag, and shift 
@@ -25,7 +47,7 @@ def momenturm_factor(df, colname, lag=1, shift=1, lag_momo=False):
 
 def moving_average_crossover(df, colname_long, colname_short):
     """
-    Calculates the moving average crossover for a given dataframe and column names. 
+    Adds column colname_long_colname_short_CROSSOVER 
     inputs:
         df: dataframe with price history
         colname_long: column name for the long moving average
@@ -34,6 +56,18 @@ def moving_average_crossover(df, colname_long, colname_short):
      
     df['%s_%s_crossover'%(colname_long, colname_short)] = df[colname_short] - df[colname_long]
     # np.where(df[colname_short] > df[colname_long], 1, 0)
+    return df
+
+def moving_average_weighted(df, colname, length):
+    """
+    Calculates the weighted moving average of a series. 
+    inputs:
+        df: dataframe with price history
+        colname: column name to calculate WMA on
+        length: lookback period
+    """
+    weights = np.arange(1, length + 1)
+    df['%s_wma'%(colname)] = df[colname].rolling(window=length).apply(lambda x: np.dot(x, weights) / weights.sum(), raw=True)
     return df
 
 def relative_volatility_index(df, colname, length):
@@ -71,3 +105,13 @@ def relative_volatility_index(df, colname, length):
     df['%s_rvi'%(colname)] = 100 * avg_std_up / (avg_std_up + avg_std_down)
 
     return df 
+
+def weighted_moving_average_returnsSeries(px_series, length):
+    """
+    Calculates the weighted moving average of a series. 
+    inputs:
+        px_series: series of prices
+        length: lookback period
+    """
+    weights = np.arange(1, length + 1)
+    return pd.Series(px_series).rolling(window=length).apply(lambda x: np.dot(x, weights) / weights.sum(), raw=True)
