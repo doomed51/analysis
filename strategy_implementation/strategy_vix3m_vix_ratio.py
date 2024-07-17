@@ -26,81 +26,59 @@ class StrategyVixAndVol(st.Strategy):
     """
 
     def __init__(self, interval='1day', signal_name='close', **kwargs):
-        self.symbol = 'VIX'
-        self.interval = interval
-        self.pxhistory = self._load_pxhistory(symbol=self.symbol, interval=self.interval)
-        self.signal_name = signal_name
         self.ratio_moving_average_shortperiod = kwargs.get('ma_period_short', 5)
         self.ratio_moving_average_longperiod = kwargs.get('ma_period_long', 20)
         self.vvix_rvi_period_shortperiod = kwargs.get('rvi_period_short', 5)
         self.vvix_rvi_period_longperiod = kwargs.get('rvi_period_long', 20)
-
-        ## add VVIX & stats
-        self.vvix = st.Strategy(name='vvix', symbol='VVIX', signal_name='close', interval=self.interval)
-        self.vvix._calc_deciles(colname='close')
-        self._calc_vvix_percentile_forecast()
-        # Add RVI & delta
-        self.vvix.pxhistory = indicators.relative_volatility_index(self.vvix.pxhistory, 'close', 20).rename(columns={'close_rvi': 'close_rvi_%s'%(self.vvix_rvi_period_shortperiod)})
-        self.vvix.pxhistory = indicators.relative_volatility_index(self.vvix.pxhistory, 'close', 90).rename(columns={'close_rvi': 'close_rvi_%s'%(self.vvix_rvi_period_longperiod)}) 
-        self.vvix.pxhistory['close_rvi_delta'] = self.vvix.pxhistory['close_rvi_%s'%(self.vvix_rvi_period_shortperiod)] - self.vvix.pxhistory['close_rvi_%s'%(self.vvix_rvi_period_longperiod)]
-        # Calc deciles and percentiles 
-        self.vvix._calc_deciles(colname='close_rvi_delta')
-        self.vvix._calc_deciles(colname='close_zscore')
-        self.vvix._calc_deciles(colname='close_rvi_%s'%(self.vvix_rvi_period_longperiod))
-        self.vvix._calc_zscore(colname='close_rvi_%s'%(self.vvix_rvi_period_longperiod), rollingWindow=0)
         
-        ## add vix3m/vix ratio and deciles
+        self.symbol = 'VIX'
+        self.interval = interval
+        self.pxhistory = self._load_pxhistory(symbol=self.symbol, interval=self.interval)
+        self.signal_name = signal_name
+
+        ## Nested strategies
+        self.vvix = st.Strategy(name='vvix', symbol='VVIX', signal_name='close', interval=self.interval)
         self.vix3m = st.Strategy(name='vix3m', symbol='VIX3M', signal_name='close', interval=self.interval)
         self.pxhistory = pd.merge(self.pxhistory, self.vix3m.pxhistory[['date', 'close']], on='date', how='inner', suffixes=('', '_vix3m'))
+        
+        ## vix3m/vix ratio and associated calcs
         self._calc_vix3m_vix_ratio()
         self._calc_deciles(colname='vix3m_vix_ratio')
         self._calc_percentiles(colname='vix3m_vix_ratio')
         self._calc_zscore(colname='vix3m_vix_ratio')
+        # 2nd degree calcs 
         self._calc_deciles(colname='vix3m_vix_ratio_zscore')
 
-        
-        ## Ratio WMA and crossover        
+        ## Ratio Indicators and associated calcs 
         self.pxhistory = indicators.moving_average_weighted(self.pxhistory, 'vix3m_vix_ratio', self.ratio_moving_average_longperiod)
         self.pxhistory = self.pxhistory.rename(columns={'vix3m_vix_ratio_wma': 'vix3m_vix_ratio_ma_long'})
         self.pxhistory = indicators.moving_average_weighted(self.pxhistory, 'vix3m_vix_ratio', self.ratio_moving_average_shortperiod)
         self.pxhistory = self.pxhistory.rename(columns={'vix3m_vix_ratio_wma': 'vix3m_vix_ratio_ma_short'})
         self.pxhistory = indicators.moving_average_crossover(self.pxhistory, 'vix3m_vix_ratio_ma_long', 'vix3m_vix_ratio_ma_short')
-
         colname_crossover = '%s_%s_crossover'%('vix3m_vix_ratio_ma_long', 'vix3m_vix_ratio_ma_short')
-        colname_wma_crossover = 'vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover'
+        self.pxhistory = indicators.intra_day_cumulative_signal(self.pxhistory, colname_crossover, intraday_reset=False, lookback_periods=20)
         
-        # WMA crossover stats 
+        # MA crossover calcs 
         self._calc_deciles(colname=colname_crossover)
         self._calc_percentiles(colname=colname_crossover)
         self._calc_zscore(colname=colname_crossover, rollingWindow=0)
         
         ## WMA crossover intra-day cumsum 
-        self.pxhistory = indicators.intra_day_cumulative_signal(self.pxhistory, colname_crossover, intraday_reset=True)
         self._calc_zscore(colname='%s_cumsum'%(colname_crossover), rollingWindow=0)
         self._calc_deciles(colname='%s_cumsum'%(colname_crossover))
         self._calc_percentiles(colname='%s_cumsum'%(colname_crossover))
 
-        # add stats of difference between ratio and long ma
-        self.pxhistory['vix3m_vix_ratio_ma_long_diff'] = self.pxhistory['vix3m_vix_ratio'] - self.pxhistory['vix3m_vix_ratio_ma_long']
-        self._calc_deciles(colname='vix3m_vix_ratio_ma_long_diff')
-        self._calc_percentiles(colname='vix3m_vix_ratio_ma_long_diff')
-        self._calc_zscore(colname='vix3m_vix_ratio_ma_long_diff', rollingWindow=0)
-
-
-
-
-    
-    def _calc_vvix_percentile_forecast(self, col_name='close_percentile', rollingWindow=252):
-        """
-            Calculate the percentile forecast for the VIX
-        """
-        # calculate rolling percentile for vvix 
-        self.vvix._calc_rolling_percentile_for_col(target_col_name=self.signal_name, rollingWindow=rollingWindow)
-        self.vvix.pxhistory = self.vvix.pxhistory.rename(columns={'%s'%(col_name): '%s_vvix'%(col_name)})
-
-        # merge vvix with pxhistory discarding missing dates & generate the forecast 
-        self.pxhistory = pd.merge(self.pxhistory, self.vvix.pxhistory[['date', '%s_vvix'%(col_name)]], on='date', how='inner')
-        self.pxhistory['close_percentile_forecast_vvix'] = self.pxhistory['%s_vvix'%(col_name)].apply(lambda x: -20 if x >= 9 else 20 if x <= 1 else 0)
+        ## Nested VVIX strategy
+        self.vvix._calc_deciles(colname='close')
+        # Close indicators
+        self.vvix.pxhistory = indicators.relative_volatility_index(self.vvix.pxhistory, 'close', 20).rename(columns={'close_rvi': 'close_rvi_%s'%(self.vvix_rvi_period_shortperiod)})
+        self.vvix.pxhistory = indicators.relative_volatility_index(self.vvix.pxhistory, 'close', 90).rename(columns={'close_rvi': 'close_rvi_%s'%(self.vvix_rvi_period_longperiod)}) 
+        self.vvix.pxhistory['close_rvi_crossover'] = self.vvix.pxhistory['close_rvi_%s'%(self.vvix_rvi_period_shortperiod)] - self.vvix.pxhistory['close_rvi_%s'%(self.vvix_rvi_period_longperiod)]
+        # RVI calcs
+        self.vvix._calc_deciles(colname='close_rvi_crossover')
+        self.vvix._calc_deciles(colname='close_zscore')
+        self.vvix._calc_deciles(colname='close_rvi_%s'%(self.vvix_rvi_period_longperiod))
+        self.vvix._calc_zscore(colname='close_rvi_%s'%(self.vvix_rvi_period_longperiod), rollingWindow=0)
     
     ## Dashboards
     ##   These represent the finalized method of viewing a particular symbol, or signal 
@@ -286,23 +264,5 @@ class StrategyVixAndVol(st.Strategy):
         else:
             self.pxhistory['vix3m_vix_ratio'] = self.pxhistory['close_vix3m'] / self.pxhistory['close']
 
-    def plot_ratio_diff_lineplot(self, signal_col_name='vix3m_vix_ratio_ma_long_diff', percentile_lookback_period=98280):
-        percentile_lookback_period = 252 #98280
-        fig, ax = plt.subplots(1, 1)
-        n_periods_to_plot = 1000
-
-        self.draw_lineplot(ax, y=signal_col_name, n_periods_to_plot=n_periods_to_plot)
-        # add 90 and 10 rolling percentile columns 
-        self.pxhistory['%s_percentile_90'%(signal_col_name)] = self.pxhistory[signal_col_name].rolling(percentile_lookback_period).quantile(0.9)
-        self.pxhistory['%s_percentile_10'%(signal_col_name)] = self.pxhistory[signal_col_name].rolling(percentile_lookback_period).quantile(0.1)
-        sns.lineplot(data=self.pxhistory.tail(n_periods_to_plot), x='date', y='%s_percentile_90'%(signal_col_name), ax=ax)
-        sns.lineplot(data=self.pxhistory.tail(n_periods_to_plot), x='date', y='%s_percentile_10'%(signal_col_name), ax=ax)
-
-        # add text to the plot
-        ax.text(self.pxhistory['date'].iloc[-1], self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1], '%s'%(self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
-        ax.text(self.pxhistory['date'].iloc[-1], self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1], '%s'%(self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
-
-        fig.autofmt_xdate()
-        return fig
 
    
