@@ -13,7 +13,7 @@ class TermStructure:
 
         # load data from db 
         self.ts_raw = self.get_raw_term_structure()
-        self.ts_pctContango = self.get_term_structure_pct_contango(_1to2=True, _1to3=True, _1to5=True, _2to3=True, _3to4=True, _3to6=True, _4to7=True, _1to8=True, averageContango=True).sort_index(axis=1)
+        self.ts_pctContango = self.get_term_structure_pct_contango(_1to2=True, _1to3=True, _1to5=True, _2to3=True, _3to4=True, _3to6=True, _4to6=True, _4to7=True, _4to8=True, _1to8=True, averageContango=True).sort_index(axis=1)
         self.underlying_pxhistory = self.get_underlying_pxhistory()
 
     def get_raw_term_structure(self):
