@@ -32,8 +32,6 @@ class Strategy:
         self.pxhistory = self._load_pxhistory(symbol=self.symbol, interval=self.interval)
         self._calc_zscore('close')
 
-        sns.set_style('darkgrid')
-
     # load underlying history from db 
     def _load_pxhistory(self, symbol, interval):
         with db.sqlite_connection(config.dbname_stock) as conn:
@@ -159,6 +157,7 @@ class Strategy:
         Returns:
         None
         """
+        
         hlines_to_plot = kwargs.get('hlines_to_plot', [])
         n_periods_to_plot = kwargs.get('n_periods_to_plot', 0)
 
