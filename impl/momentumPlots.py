@@ -176,7 +176,7 @@ def plotMomoScatter(pxhistory, momPeriod1=10, momPeriod2=30, forwardReturnsPerio
     plots quintiles of momo vs fwd returns 
 """
 def plotMomoQuintiles(pxHistory, momoPeriods=[], fwdReturnPeriods=[], **kwargs):
-    numQuintileBins = kwargs.get('numQuintileBins', 15) # number of quintile bins to use
+    num_bins = kwargs.get('num_bins', 15) # number of bins to use
     # get momo for each ? in momoPeriods
     for period in momoPeriods:
         # skip if momo already in pxHistory
@@ -193,7 +193,7 @@ def plotMomoQuintiles(pxHistory, momoPeriods=[], fwdReturnPeriods=[], **kwargs):
         TODO: move this to previous for loop
     """
     for period in momoPeriods:
-        pxHistory['momo%sQuintile'%(period)] = pd.qcut(pxHistory['momo%s'%(period)], numQuintileBins, labels=False)
+        pxHistory['momo%sQuintile'%(period)] = pd.qcut(pxHistory['momo%s'%(period)], num_bins, labels=False)
     
     # set numColumns to the length of fwdreturnperiods
     numColumns = max(1, len(fwdReturnPeriods))
@@ -205,7 +205,7 @@ def plotMomoQuintiles(pxHistory, momoPeriods=[], fwdReturnPeriods=[], **kwargs):
     sns.set_palette("dark")
     
     # plot barchart of momoquintiles vs fwdreturns
-    sns.set()
+    #sns.set()
     for row in range(numRows):
         for column in range(numColumns):
             # select subset of pxhistory 
@@ -213,7 +213,7 @@ def plotMomoQuintiles(pxHistory, momoPeriods=[], fwdReturnPeriods=[], **kwargs):
             # group by quantile calculating mean of fwdreturns
             pxHistory_ = pxHistory_.groupby('momo%sQuintile'%(momoPeriods[row])).mean().reset_index()
             # barplot of quintile vs mean of fwdreturns for that quintile
-            sns.barplot(ax=ax[row, column], data=pxHistory_, x='momo%sQuintile'%(momoPeriods[row]), y='fwdReturns%s'%(fwdReturnPeriods[column]), palette="Blues_d")
+            sns.barplot(ax=ax[row, column], data=pxHistory_, x='momo%sQuintile'%(momoPeriods[row]), y='fwdReturns%s'%(fwdReturnPeriods[column]))
             ax[row, column].set_xlabel('momo%sQuintile'%(momoPeriods[row]))
             ax[row, column].set_ylabel('fwdReturns%s'%(fwdReturnPeriods[column]))
 
