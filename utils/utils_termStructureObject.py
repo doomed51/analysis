@@ -76,7 +76,6 @@ class TermStructure:
         ax.set_title(f'{symbol} Term Structure for last {numDays} days')
         # set gridstyle
         ax.grid(True, which='both', axis='both', linestyle='--')
-        sns.set_style('darkgrid')
 
     def plot_historical_termstructure(self, ax, contangoColName='_4to7MoContango', **kwargs):
         smaPeriod_contango = kwargs.get('smaPeriod_contango', 20)

@@ -96,7 +96,6 @@ def plotTermStructure(ts, symbol_underlying, symbol_secondary, ax, numDays=5):
     ax.set_title(f'{symbol_underlying} Term Structure for last {numDays} days')
     # set gridstyle
     ax.grid(True, which='both', axis='both', linestyle='--')
-    sns.set_style('darkgrid')
     
 """
     Returns a plot of historical term structure contango for the last n periods
