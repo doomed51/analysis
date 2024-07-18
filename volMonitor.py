@@ -94,7 +94,6 @@ view for day to day monitoring of VIX term structure changes. The following are 
     - VIX close pct change vs. vvix percentile rank scatter
 """
 def plotVixTermStructureMonitor(vix_ts_pctContango, vix, vvix, contangoColName = 'fourToSevenMoContango'):
-    sns.set_style('darkgrid')
     # using seaborn, create figure with 2 subplots
     fig, ax = plt.subplots(2, 2, figsize=(15, 10))
     # set title
