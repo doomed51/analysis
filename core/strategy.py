@@ -7,6 +7,7 @@
     - a target dataframe : pd.DataFrame containing the col. being targeted by the signal 
 """
 import config
+import ffn 
 import matplotlib.pyplot as plt
 import pandas as pd 
 import seaborn as sns
@@ -46,7 +47,7 @@ class Strategy:
         self.pxhistory['%s_percentile'%(target_col_name)] = self.pxhistory[target_col_name].rolling(rollingWindow).apply(lambda x: pd.qcut(x, 10, labels=False, duplicates='drop')[-1], raw=True)
         self._calc_zscore('%s_percentile'%(target_col_name))
 
-    def _calc_zscore(self, colname, rollingWindow=252, _pxHistory = None): 
+    def _calc_zscore(self, colname, rollingWindow=252, _pxHistory = None, rescale = False): 
         """
             Calculate the z-score of a column.
             Params: 
@@ -61,6 +62,10 @@ class Strategy:
                 self.pxhistory['%s_zscore'%(colname)] = self.pxhistory[colname].rolling(rollingWindow).apply(lambda x: (x[-1] - x.mean()) / x.std(), raw=True)
         else:
             _pxHistory['%s_zscore'%(colname)] = _pxHistory[colname] - _pxHistory[colname].mean() / _pxHistory[colname].std()
+        
+        if rescale:
+            self.pxhistory['%s_zscore'%(colname)] = ffn.rescale(self.pxhistory['%s_zscore'%(colname)])
+
     
     def _calc_ntile(self, numBuckets, colname, _pxHistory = None):
         if _pxHistory is None:
@@ -89,6 +94,15 @@ class Strategy:
             if '%s_fwdReturns%s'%(colname, i) in self.pxhistory.columns:
                 continue
             self.pxhistory['%s_fwdReturns%s'%(colname, i)] = self.pxhistory[colname].pct_change(i).shift(-i)
+
+    def _apply_default_plot_formatting(self, ax, title, xlabel, ylabel):
+        ax.set_title(title)
+        ax.set_ylabel(ylabel)
+        ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
+        ax.xaxis.set_major_locator(plt.MaxNLocator(5))
+        ax.tick_params(axis='x', rotation=7)
+
+        ax.legend()
 
     ######### PLOTTING FUNCTIONS 
     ##########
@@ -166,6 +180,10 @@ class Strategy:
             _pxhistory = self.pxhistory.tail(n_periods_to_plot)
         else:
             _pxhistory = self.pxhistory
+
+        # if intraday, convert date to string 
+        # if _pxhistory['interval'].iloc[0] in ['1min', '5min', '15min', '30min']:
+        #     _pxhistory['date'] = _pxhistory['date'].dt.strftime('%Y-%m-%d %H:%M:%S')
         # draw the lineplot 
         sns.lineplot(x=_pxhistory['date'], y=_pxhistory[y], ax=ax, color='blue', alpha=0.7, label=y)
         
@@ -181,11 +199,12 @@ class Strategy:
                 ax.text(ax.get_xlim()[1], p, '%.5f'%(p), fontsize=9, horizontalalignment='left', color='blue', alpha=0.7)
 
         # format plot  
-        ax.set_title('%s'%(y), fontsize=14, fontweight='bold')
-        ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
-        ax.set_ylabel(y)
-        ax.set_xlabel('date')
-        ax.legend()
+        self._apply_default_plot_formatting(ax, '%s'%(y), 'date', y)
+        # ax.set_title('%s'%(y), fontsize=14, fontweight='bold')
+        # ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
+        # ax.set_ylabel(y)
+        # ax.set_xlabel('date')
+        # ax.legend()
 
     def draw_autocorrelation(self, ax, y='close', max_lag=100):
         """
