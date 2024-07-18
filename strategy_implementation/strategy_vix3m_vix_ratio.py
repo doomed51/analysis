@@ -61,7 +61,7 @@ class StrategyVixAndVol(st.Strategy):
         # MA crossover calcs 
         self._calc_deciles(colname=colname_crossover)
         self._calc_percentiles(colname=colname_crossover)
-        self._calc_zscore(colname=colname_crossover, rollingWindow=0)
+        self._calc_zscore(colname=colname_crossover, rollingWindow=0, rescale=True)
         
         ## WMA crossover intra-day cumsum 
         self._calc_zscore(colname='%s_cumsum'%(colname_crossover), rollingWindow=0)
@@ -80,17 +80,18 @@ class StrategyVixAndVol(st.Strategy):
         self.vvix._calc_deciles(colname='close_rvi_%s'%(self.vvix_rvi_period_longperiod))
         self.vvix._calc_zscore(colname='close_rvi_%s'%(self.vvix_rvi_period_longperiod), rollingWindow=0)
     
-    ## Dashboards
-    ##   These represent the finalized method of viewing a particular symbol, or signal 
-    
     def plot_overview_dashboard(self, signal_col_name='vix3m_vix_ratio', **kwargs):
         print(self.pxhistory.columns)
+        if self.pxhistory['interval'].iloc[0] in ['1min', '5mins', '15mins', '30mins']:
+            self.pxhistory['date'] = self.pxhistory['date'].dt.strftime('%Y-%m-%d %H:%M:%S')
 
         fig, ax = plt.subplots(3, 5)
+        plt.subplots(layout="constrained")
+        plt.rcParams['figure.constrained_layout.use'] = True
+
         periods_to_plot = kwargs.get('periods_to_plot', 390)
         maxperiod_fwdreturns = kwargs.get('maxperiod_fwdreturns', 20)
         percentile_lookback_period = kwargs.get('percentile_lookback_period', 252)
-
         fig.suptitle('Vix3m Ratio Dash')
 
         #############
@@ -104,23 +105,23 @@ class StrategyVixAndVol(st.Strategy):
         self.draw_lineplot(ax[0,0], y='%s_zscore'%(signal_col_name), y_alt='close', n_periods_to_plot=periods_to_plot)
         ax[0,0].axhline(0, color='black', linestyle='-', alpha=0.5)
         # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s_zscore'%(signal_col_name), ax=ax[0,0], color='black', alpha=0.5)
-        sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='vix3m_vix_ratio_ma_short', ax=ax[0,0], color='red', alpha=0.3)
-        sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='vix3m_vix_ratio_ma_long', ax=ax[0,0], color='red', alpha=0.5)  
+        # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='vix3m_vix_ratio_ma_short', ax=ax[0,0], color='red', alpha=0.3)
+        # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='vix3m_vix_ratio_ma_long', ax=ax[0,0], color='red', alpha=0.5)  
         # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s_percentile_90'%(signal_col_name), ax=ax[0,0])
         # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s_percentile_10'%(signal_col_name), ax=ax[0,0])
         # add text to the plot
         # ax[0,0].text(self.pxhistory['date'].iloc[-1], round(self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1], 3), '%s'%(self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
         # ax[0,0].text(self.pxhistory['date'].iloc[-1], round(self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1],3), '%s'%(self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
 
-        self.draw_heatmap_signal_returns(ax[0,1], y='%s_percentile'%(signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
-        self.draw_heatmap_signal_returns(ax[0,2], y='%s_decile'%(signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
+        self.draw_heatmap_signal_returns(ax[0,1], y='%s_percentile'%(signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns, title = '%s Percentile'%(str.split(signal_col_name, '_')[-2:][1]))
+        self.draw_heatmap_signal_returns(ax[0,2], y='%s_decile'%(signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns, title = '%s Decile'%(str.split(signal_col_name, '_')[-2:][1]))
         # self.draw_heatmap_signal_returns(ax[0,3], y='%s_zscore'%(signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
-        self.draw_heatmap_signal_returns(ax[0,3], y='vix3m_vix_ratio_zscore', maxperiod_fwdreturns=maxperiod_fwdreturns)
+        self.draw_heatmap_signal_returns(ax[0,3], y='vix3m_vix_ratio_zscore', maxperiod_fwdreturns=maxperiod_fwdreturns, title = '%s Z-score'%(str.split(signal_col_name, '_')[-2:][1]))
         self.draw_autocorrelation(ax[0,4], y=signal_col_name, max_lag=50)
         # self.draw_distribution(ax[0,3], y=signal_col_name, drawPercetiles=True, percentiles_to_plot=bin_edges)
 
         #############
-        ## row 2: ratio ma-long diff 
+        ## row 2: Ratio - MA Crossover 
         #############
         row2_signal_col_name = '%s_%s_crossover'%('vix3m_vix_ratio_ma_long', 'vix3m_vix_ratio_ma_short')
         g, bin_edges = pd.qcut(self.pxhistory[row2_signal_col_name], 10, labels=False, duplicates='drop', retbins=True)
@@ -131,14 +132,14 @@ class StrategyVixAndVol(st.Strategy):
         # ax[1,0].text(self.pxhistory['date'].iloc[-1], self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1], '%s'%(self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
         # ax[1,0].text(self.pxhistory['date'].iloc[-1], self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1], '%s'%(self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
         # self.draw_lineplot(ax[1,0], y=signal_col_name, y_alt='close', hlines_to_plot=[bin_edges[4], bin_edges[9]], n_periods_to_plot=periods_to_plot)
-        ##
-        ######## 1,0 - 1,4
-        sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y=row2_signal_col_name, ax=ax[1,0])
-        sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s_zscore'%(row2_signal_col_name), ax=ax[1,0].twinx(), color='red', alpha=0.5)
+        sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s'%(row2_signal_col_name), ax=ax[1,0], color='blue', label='%s_zscore'%(row2_signal_col_name))
+        # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y=row2_signal_col_name, ax=ax[1,0].twinx(), alpha=0.1)
         ax[1,0].axhline(0, color='black', linestyle='-', alpha=0.5)
-        self.draw_heatmap_signal_returns(ax[1,1], y='%s_percentile'%(row2_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
-        self.draw_heatmap_signal_returns(ax[1,2], y='%s_decile'%(row2_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
-        self.draw_heatmap_signal_returns(ax[1,3], y='%s_zscore'%(row2_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
+        # set title to last two words of colname (seperated by _)
+        self.apply_default_lineplot_formatting(ax=ax[1,0], title='Ratio MA %s'%(str.split(row2_signal_col_name, '_')[-2:][1]), xlabel='', ylabel='vix3m/vix ratio ma-long zscore')
+        self.draw_heatmap_signal_returns(ax[1,1], y='%s_percentile'%(row2_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns, title = '%s Percentile'%(str.split(row2_signal_col_name, '_')[-2:][1]))
+        self.draw_heatmap_signal_returns(ax[1,2], y='%s_decile'%(row2_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns, title = '%s Decile'%(str.split(row2_signal_col_name, '_')[-2:][1]))
+        self.draw_heatmap_signal_returns(ax[1,3], y='%s_zscore'%(row2_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns, title = '%s Z-score'%(str.split(row2_signal_col_name, '_')[-2:][1]))
         self.draw_autocorrelation(ax[1,4], y=row2_signal_col_name, max_lag=50)
         # self.draw_distribution(ax[1,3], y=signal_col_name, drawPercetiles=True, percentiles_to_plot=bin_edges)
 
@@ -157,16 +158,13 @@ class StrategyVixAndVol(st.Strategy):
         self.vvix.pxhistory['close_zscore_percentile_90'] = self.vvix.pxhistory['close_zscore'].rolling(252).quantile(0.9)
         self.vvix.pxhistory['close_zscore_percentile_10'] = self.vvix.pxhistory['close_zscore'].rolling(252).quantile(0.1)
 
-        ############ 2,0
-        # row_3_signal_col_name = 'wma_crossover_cumsum'
         row_3_signal_col_name = 'vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover_cumsum'
-        # self.pxhistory.rename(columns={'vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover_cumsum': row_3_signal_col_name}, inplace=True)
-
-        sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y=row_3_signal_col_name, ax=ax[2,0])
+        sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y=row_3_signal_col_name, ax=ax[2,0], label='Ratio - MA Crossover Cumsum', color='blue')
+        self.apply_default_lineplot_formatting(ax=ax[2,0], title='Crossover Cumsum', xlabel='', ylabel='ma crossover cumsum')
         ax[2,0].axhline(0, color='black', linestyle='-', alpha=0.5)
-        self.draw_heatmap_signal_returns(ax[2,1], y='%s_zscore'%(row_3_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
-        self.draw_heatmap_signal_returns(ax[2,2], y='%s_decile'%(row_3_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
-        self.draw_heatmap_signal_returns(ax[2,3], y='%s_percentile'%(row_3_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns)
+        self.draw_heatmap_signal_returns(ax[2,1], y='%s_zscore'%(row_3_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns, title = '%s Z-score'%(str.split(row_3_signal_col_name, '_')[-2:][1]))
+        self.draw_heatmap_signal_returns(ax[2,2], y='%s_decile'%(row_3_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns, title = '%s Decile'%(str.split(row_3_signal_col_name, '_')[-2:][1]))
+        self.draw_heatmap_signal_returns(ax[2,3], y='%s_percentile'%(row_3_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns, title = '%s Percentile'%(str.split(row_3_signal_col_name, '_')[-2:][1]))
         self.draw_autocorrelation(ax[2,4], y=row_3_signal_col_name, max_lag=50)
 
         """" 
@@ -185,15 +183,9 @@ class StrategyVixAndVol(st.Strategy):
         # self.vvix.draw_autocorrelation(ax[2,3], y='close_rvi_delta', max_lag=50)
         """ VVIX ROW END """
 
-
-
-        # share x-axis between 0,0; 1,0; 2,0
-        # for i in range(5):
-        #     ax[0,i].get_shared_x_axes().join(ax[0,i], ax[1,i], ax[2,i])
+        # share x-axis
         ax[0,0].get_shared_x_axes().join(ax[0,0],ax[1,0], ax[2,0])
 
-
-        fig.autofmt_xdate()
         return fig
 
     def plot_vvix_dashboard(self, signal_col_name='close', **kwargs):   
@@ -211,12 +203,23 @@ class StrategyVixAndVol(st.Strategy):
             Plots a dashboard that can be used to monitor intra-day changes in the signal
         """
         fig, ax = plt.subplots(2, 2)
-        
-        ## row 1 with intra-day plots to provide a way to monitor intra-day changes in the signal
-        self.draw_lineplot(ax[0,0], y=signal_col_name, y_alt='close', drawPercetiles=True, n_periods_to_plot=200)
 
+        ## row 1 with intra-day plots to provide a way to monitor intra-day changes in the signal
+        # self.draw_lineplot(ax[0,0], y=signal_col_name)
+
+        self.draw_lineplot(ax[0,0], y='%s_ma_long_%s_ma_short_crossover_zscore'%(signal_col_name, signal_col_name))
+
+        import ffn 
+        rescaled = ffn.rescale(self.pxhistory['%s_ma_long_%s_ma_short_crossover_zscore'%(signal_col_name, signal_col_name)], -1, 1)
+        rescaled.plot(ax=ax[0,1])
+
+        sns.histplot(self.pxhistory['%s_ma_long_%s_ma_short_crossover_zscore'%(signal_col_name, signal_col_name)], ax=ax[1,0], bins=100, kde=True)
+        sns.histplot(rescaled, ax=ax[1,1], bins=100, kde=True)
+        ax = ax[0,1]
+        ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
+        ax.set_xlabel('date')
         # ax[1,0] vvix aurto correlation
-        self.vvix.draw_autocorrelation(ax=ax[1,1], max_lag=50)
+        # self.vvix.draw_autocorrelation(ax=ax[1,1], max_lag=50)
 
         #_draw_realtime_lineplot_of_signal(ax[0,1], signal_col_name)
 
@@ -235,13 +238,8 @@ class StrategyVixAndVol(st.Strategy):
         #_draw_heatmap(col=ratio, interval=1 day, maxperiod_fwdreturns=20)
 
         #_draw_histogram(col=ratio, interval=1 day)
-        fig.autofmt_xdate()
         return fig
     
-    ## Analysis
-    ##   These are working grounds of understanding and deriving meaning from 
-    ##   different ways of viewing symbols, and signals
-
     def plot_ratio_ma_diff_heatmap_grid(self, lookback_periods=[]): 
         if lookback_periods == []:
             print('plot_ratio_ma_diff_heatmap_grid: No lookback periods provided')

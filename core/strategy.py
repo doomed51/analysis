@@ -96,13 +96,20 @@ class Strategy:
             self.pxhistory['%s_fwdReturns%s'%(colname, i)] = self.pxhistory[colname].pct_change(i).shift(-i)
 
     def _apply_default_plot_formatting(self, ax, title, xlabel, ylabel):
-        ax.set_title(title)
+        ax.set_title(title, fontsize=12, fontweight='bold')
+        ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
+
+    def apply_default_lineplot_formatting(self, ax, title, xlabel, ylabel):
+        # ax.set_title(title)
+        # ax.set_xlabel(xlabel)
+        # ax.set_ylabel(ylabel)
+        # ax.legend()
+        self._apply_default_plot_formatting(ax, title, xlabel, ylabel)
         ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
         ax.xaxis.set_major_locator(plt.MaxNLocator(5))
         ax.tick_params(axis='x', rotation=7)
-
-        ax.legend()
+        # ax.legend()
 
     ######### PLOTTING FUNCTIONS 
     ##########
@@ -139,7 +146,7 @@ class Strategy:
             ax.set_xlabel(y)
             ax.legend()
 
-    def draw_heatmap_signal_returns(self, ax, y='logReturn_decile', maxperiod_fwdreturns=20):
+    def draw_heatmap_signal_returns(self, ax, y='logReturn_decile', maxperiod_fwdreturns=20, title=''):
         # calculate the heatmap 
         heatmap = sa.bucketAndCalcSignalReturns(self.pxhistory, y, signal_rounding=1, maxperiod_fwdreturns=maxperiod_fwdreturns)
 
@@ -150,7 +157,12 @@ class Strategy:
         sns.heatmap(heatmap, ax=ax, cmap='RdYlGn', center=0, annot=False, fmt='.2f')
 
         # plot formatting
-        ax.set_title('%s vs. Forward Returns'%(y), fontsize=14, fontweight='bold')
+        if title=='':
+            # ax.set_title('%s vs. Forward Returns'%(y), fontsize=14, fontweight='bold')
+            self._apply_default_plot_formatting(ax, title='%s vs. Forward Returns'%(y), xlabel='', ylabel='')
+        else:
+            # ax.set_title(title, fontsize=14, fontweight='bold')
+            self._apply_default_plot_formatting(ax, title=title, xlabel='', ylabel='')
         ax.set_ylabel(y)
 
     def draw_lineplot(self, ax, y='close', y_alt=None, **kwargs):
@@ -181,16 +193,13 @@ class Strategy:
         else:
             _pxhistory = self.pxhistory
 
-        # if intraday, convert date to string 
-        # if _pxhistory['interval'].iloc[0] in ['1min', '5min', '15min', '30min']:
-        #     _pxhistory['date'] = _pxhistory['date'].dt.strftime('%Y-%m-%d %H:%M:%S')
         # draw the lineplot 
         sns.lineplot(x=_pxhistory['date'], y=_pxhistory[y], ax=ax, color='blue', alpha=0.7, label=y)
         
         # (optional) draw alternate lineplot 
         if y_alt:
             ax2 = ax.twinx()
-            sns.lineplot(x=_pxhistory['date'], y=_pxhistory[y_alt], ax=ax2, color='black', alpha=0.3)
+            sns.lineplot(x=_pxhistory['date'], y=_pxhistory[y_alt], ax=ax2, color='black', alpha=0.3, label=y_alt)
         
         # (optional) draw percentiles 
         if hlines_to_plot:
@@ -198,13 +207,18 @@ class Strategy:
                 ax.axhline(p, color='blue', linestyle='--', alpha=0.3)
                 ax.text(ax.get_xlim()[1], p, '%.5f'%(p), fontsize=9, horizontalalignment='left', color='blue', alpha=0.7)
 
-        # format plot  
-        self._apply_default_plot_formatting(ax, '%s'%(y), 'date', y)
-        # ax.set_title('%s'%(y), fontsize=14, fontweight='bold')
-        # ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
-        # ax.set_ylabel(y)
-        # ax.set_xlabel('date')
-        # ax.legend()
+
+        # handle legends
+        lines_1, labels_1 = ax.get_legend_handles_labels()
+        if y_alt:
+            lines_2, labels_2 = ax2.get_legend_handles_labels()
+            ax.legend( lines_1+lines_2,  labels_1+labels_2)
+            ax2.get_legend().remove()   
+        else:
+            ax.legend(lines_1, labels_1)
+            pass
+
+        self.apply_default_lineplot_formatting(ax=ax, title='%s'%(y), xlabel='', ylabel=y)
 
     def draw_autocorrelation(self, ax, y='close', max_lag=100):
         """
@@ -220,10 +234,15 @@ class Strategy:
         """
         autocorrelations = sa.calculateAutocorrelations(self.pxhistory, y, max_lag)
         ax.stem(autocorrelations, linefmt='--')
+        # if y has more than 1 term 
+        if len(y.split('_')) > 1:
+            
+            # ax.set_title('%s Autocorrelation'%(str.split(y, '_')[-2:][1]), fontsize=14, fontweight='bold')
+            self._apply_default_plot_formatting(ax, title='%s Autocorrelation'%(str.split(y, '_')[-2:][1]), xlabel='lag', ylabel='autocorrelation')
+        else:
+            # ax.set_title('Autocorrelation (%s-%s)'%(self.symbol, y), fontsize=14, fontweight='bold')
+            self._apply_default_plot_formatting(ax, title='Autocorrelation (%s-%s)'%(self.symbol, y), xlabel='lag', ylabel='autocorrelation')
         
-        ax.set_title('Autocorrelation (%s-%s)'%(self.symbol, y), fontsize=14, fontweight='bold')
-        ax.set_ylabel('autocorrelation')
-        ax.set_xlabel('lag')
 
     def draw_barplot(self, ax, y, x, **kwargs):
         """
