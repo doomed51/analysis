@@ -1,6 +1,6 @@
 # Overview
 
-This system is intended to help retail traders better understand and quantify behavioural patterns in a universe of securities.
+A system to develop and test hypotheses relating to systematic or semi-systematic trading of volatility, and seasonality. 
 
 ### How to run:
 
