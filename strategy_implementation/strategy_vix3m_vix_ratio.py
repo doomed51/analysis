@@ -61,10 +61,10 @@ class StrategyVixAndVol(st.Strategy):
         # MA crossover calcs 
         self._calc_deciles(colname=colname_crossover)
         self._calc_percentiles(colname=colname_crossover)
-        self._calc_zscore(colname=colname_crossover, rollingWindow=0, rescale=True)
+        self._calc_zscore(colname=colname_crossover, rescale=True)
         
         ## WMA crossover intra-day cumsum 
-        self._calc_zscore(colname='%s_cumsum'%(colname_crossover), rollingWindow=0)
+        self._calc_zscore(colname='%s_cumsum'%(colname_crossover))
         self._calc_deciles(colname='%s_cumsum'%(colname_crossover))
         self._calc_percentiles(colname='%s_cumsum'%(colname_crossover))
 
@@ -78,7 +78,7 @@ class StrategyVixAndVol(st.Strategy):
         self.vvix._calc_deciles(colname='close_rvi_crossover')
         self.vvix._calc_deciles(colname='close_zscore')
         self.vvix._calc_deciles(colname='close_rvi_%s'%(self.vvix_rvi_period_longperiod))
-        self.vvix._calc_zscore(colname='close_rvi_%s'%(self.vvix_rvi_period_longperiod), rollingWindow=0)
+        self.vvix._calc_zscore(colname='close_rvi_%s'%(self.vvix_rvi_period_longperiod))
     
     def plot_overview_dashboard(self, signal_col_name='vix3m_vix_ratio', **kwargs):
         print(self.pxhistory.columns)
@@ -97,7 +97,7 @@ class StrategyVixAndVol(st.Strategy):
         #############
         ## row 1: ratio 
         #############
-        g, bin_edges = pd.qcut(self.pxhistory[signal_col_name], 10, labels=False, duplicates='drop', retbins=True)
+        # g, bin_edges = pd.qcut(self.pxhistory[signal_col_name], 10, labels=False, duplicates='drop', retbins=True)
         self.pxhistory['%s_percentile_90'%(signal_col_name)] = self.pxhistory[signal_col_name].rolling(percentile_lookback_period).quantile(0.9)
         self.pxhistory['%s_percentile_10'%(signal_col_name)] = self.pxhistory[signal_col_name].rolling(percentile_lookback_period).quantile(0.1)
         
@@ -124,7 +124,7 @@ class StrategyVixAndVol(st.Strategy):
         ## row 2: Ratio - MA Crossover 
         #############
         row2_signal_col_name = '%s_%s_crossover'%('vix3m_vix_ratio_ma_long', 'vix3m_vix_ratio_ma_short')
-        g, bin_edges = pd.qcut(self.pxhistory[row2_signal_col_name], 10, labels=False, duplicates='drop', retbins=True)
+        # g, bin_edges = pd.qcut(self.pxhistory[row2_signal_col_name], 10, labels=False, duplicates='drop', retbins=True)
         self.pxhistory['%s_percentile_90'%(row2_signal_col_name)] = self.pxhistory[row2_signal_col_name].rolling(percentile_lookback_period).quantile(0.9)
         self.pxhistory['%s_percentile_10'%(row2_signal_col_name)] = self.pxhistory[row2_signal_col_name].rolling(percentile_lookback_period).quantile(0.1)
         # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s_percentile_90'%(signal_col_name), ax=ax[1,0])
@@ -146,7 +146,7 @@ class StrategyVixAndVol(st.Strategy):
         #############
         ## row 3
         #############
-        g, bin_edges = pd.qcut(self.vvix.pxhistory['close'], 10, labels=False, duplicates='drop', retbins=True)
+        # g, bin_edges = pd.qcut(self.vvix.pxhistory['close'], 10, labels=False, duplicates='drop', retbins=True)
         hlines_to_plot = ([
             # self.vvix.pxhistory['close'].quantile(0.1), 
             # self.vvix.pxhistory['close'].quantile(0.9), 
