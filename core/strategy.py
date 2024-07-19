@@ -65,16 +65,20 @@ class Strategy:
         
         if rescale:
             self.pxhistory['%s_zscore'%(colname)] = ffn.rescale(self.pxhistory['%s_zscore'%(colname)])
-
-    
-    def _calc_ntile(self, numBuckets, colname, _pxHistory = None):
+   
+    def _calc_ntile(self, numBuckets, colname, _pxHistory = None, rollingWindow=252):
         if _pxHistory is None:
-            self.pxhistory['%s_ntile'%(colname)] = pd.qcut(self.pxhistory[colname], numBuckets, labels=False, duplicates='drop')
+            data = self.pxhistory
         else:
-            _pxHistory['%s_ntile'%(colname)] = pd.qcut(_pxHistory[colname], numBuckets, labels=False, duplicates='drop')
+            data = _pxHistory
+
+        if rollingWindow > 0:
+            data['%s_ntile' % colname] = data[colname].rolling(rollingWindow).apply(lambda x: pd.qcut(x, numBuckets, labels=False, duplicates='drop').iloc[-1], raw=False)
+        else:
+            data['%s_ntile' % colname] = pd.qcut(data[colname], numBuckets, labels=False, duplicates='drop')
     
-    def _calc_deciles(self, colname, _pxHistory = None):
-        self._calc_ntile(10, colname, _pxHistory)
+    def _calc_deciles(self, colname, _pxHistory = None, rollingWindow=252):
+        self._calc_ntile(10, colname, _pxHistory, rollingWindow)
         self.pxhistory.rename(columns={'%s_ntile'%(colname): '%s_decile'%(colname)}, inplace=True)
     
     def _calc_percentiles(self, colname, _pxHistory = None, lookback=252):
@@ -111,10 +115,7 @@ class Strategy:
         ax.tick_params(axis='x', rotation=7)
         # ax.legend()
 
-    ######### PLOTTING FUNCTIONS 
-    ##########
-    ## Behold, herein lie generic plotting functions. 
-    ## They draw plots on the provided axis.  
+    ######### These function return a plot object  #########
     
     def draw_distribution(self, ax, y='close', drawPercetiles=True, **kwargs):
             bins = kwargs.get('bins', 50)
@@ -243,7 +244,6 @@ class Strategy:
             # ax.set_title('Autocorrelation (%s-%s)'%(self.symbol, y), fontsize=14, fontweight='bold')
             self._apply_default_plot_formatting(ax, title='Autocorrelation (%s-%s)'%(self.symbol, y), xlabel='lag', ylabel='autocorrelation')
         
-
     def draw_barplot(self, ax, y, x, **kwargs):
         """
         Draw a bar plot on the given axes.
@@ -270,9 +270,7 @@ class Strategy:
         ax.set_ylabel(y)
         ax.set_xlabel(x)
 
-    ##########
-    ## BEHOLD, herein lie generic dashboard plotting functions. 
-    ## They draw a combination of plots and return a figure. 
+    ########## These function return a figure object ##########
 
     def plot_grid_signal_decile_returns(self, colname_y='logReturn_decile', maxperiod_fwdreturns=20):
         """
