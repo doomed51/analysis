@@ -27,7 +27,7 @@ def intra_day_cumulative_signal(pxhistory, colname, lookback_periods=10, intrada
         pxhistory[f'{colname}_cumsum'] = pxhistory[colname].rolling(window=lookback_periods, min_periods=1).sum()
     return pxhistory
 
-def momenturm_factor(df, colname, lag=1, shift=1, lag_momo=False):
+def momentum_factor(df, colname, lag=1, shift=1, lag_momo=False, use_absolute_values=False):
     """
     Calculates momentum factor for a given pxhistory, lag, and shift 
     inputs:
@@ -35,15 +35,32 @@ def momenturm_factor(df, colname, lag=1, shift=1, lag_momo=False):
         lag: lookback period 
         shift: (optional) number of periods to shift momo
     """
+    
+    if use_absolute_values: 
+        df['%s_abs'%(colname)] = df[colname].abs
+        colname = '%s_abs'%(colname)
+
     returns = df.groupby('symbol', group_keys=False).apply(lambda group: (
     group.sort_values(by='date')
          .assign(momo=lambda x: (x[colname] / x[colname].shift(lag)) - 1,
                  lagmomo=lambda x: x['momo'].shift(shift))
         )
     ).reset_index(drop=True)
+
     if lag_momo == False:
         returns.drop(columns=['lagmomo'], inplace=True)
     return returns
+
+def slope(df, colname, lookback_periods=10):
+    """
+    Calculates the slope of a given column over a lookback period. 
+    inputs:
+        df: dataframe with price history
+        colname: column name to calculate the slope on
+        lookback_periods: lookback period
+    """
+    df['%s_slope'%(colname)] = df[colname].rolling(window=lookback_periods).apply(lambda x: np.polyfit(np.arange(len(x)), x, 1)[0], raw=True)
+    return df
 
 def moving_average_crossover(df, colname_long, colname_short):
     """
