@@ -30,6 +30,7 @@ class StrategyVixAndVol(st.Strategy):
         self.ratio_moving_average_longperiod = kwargs.get('ma_period_long', 20)
         self.vvix_rvi_period_shortperiod = kwargs.get('rvi_period_short', 5)
         self.vvix_rvi_period_longperiod = kwargs.get('rvi_period_long', 20)
+        self.compensate_for_lookahead_bias = kwargs.get('compensate_for_lookahead_bias', False)
         
         self.symbol = 'VIX'
         self.interval = interval
@@ -43,6 +44,8 @@ class StrategyVixAndVol(st.Strategy):
         
         ## vix3m/vix ratio and associated calcs
         self._calc_vix3m_vix_ratio()
+        if self.compensate_for_lookahead_bias:
+            self.pxhistory['vix3m_vix_ratio'] = self.pxhistory['vix3m_vix_ratio'].shift(1)
         self._calc_deciles(colname='vix3m_vix_ratio')
         self._calc_percentiles(colname='vix3m_vix_ratio')
         self._calc_zscore(colname='vix3m_vix_ratio')
@@ -57,13 +60,16 @@ class StrategyVixAndVol(st.Strategy):
         self.pxhistory = indicators.moving_average_crossover(self.pxhistory, 'vix3m_vix_ratio_ma_long', 'vix3m_vix_ratio_ma_short')
         colname_crossover = '%s_%s_crossover'%('vix3m_vix_ratio_ma_long', 'vix3m_vix_ratio_ma_short')
         self.pxhistory = indicators.intra_day_cumulative_signal(self.pxhistory, colname_crossover, intraday_reset=False, lookback_periods=20)
+        #crossover momentum 
+        self.pxhistory = indicators.slope(self.pxhistory, colname=colname_crossover, lookback_periods=5)
+        self.pxhistory = indicators.slope(self.pxhistory, colname='%s_cumsum'%(colname_crossover), lookback_periods=5)
         
         # MA crossover calcs 
         self._calc_deciles(colname=colname_crossover)
         self._calc_percentiles(colname=colname_crossover)
         self._calc_zscore(colname=colname_crossover, rescale=True)
         
-        ## WMA crossover intra-day cumsum 
+        ## MA crossover intra-day cumsum 
         self._calc_zscore(colname='%s_cumsum'%(colname_crossover))
         self._calc_deciles(colname='%s_cumsum'%(colname_crossover))
         self._calc_percentiles(colname='%s_cumsum'%(colname_crossover))
