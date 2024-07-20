@@ -193,7 +193,6 @@ class Strategy:
             _pxhistory = self.pxhistory.tail(n_periods_to_plot)
         else:
             _pxhistory = self.pxhistory
-
         # draw the lineplot 
         sns.lineplot(x=_pxhistory['date'], y=_pxhistory[y], ax=ax, color='blue', alpha=0.7, label=y)
         
