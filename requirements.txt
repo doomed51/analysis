@@ -1,5 +1,7 @@
+bt
+ffn
 matplotlib
 pandas
-seaborn
 PyQt5
 rich
+seaborn
