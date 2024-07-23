@@ -30,9 +30,13 @@ def plot_realtime_monitor_vix3m_vix_ratio():
     symbol = 'VIX3M'
     symbol2 = 'VIX'
     vix3m_vix_ratio_object = vv.StrategyVixAndVol(interval='1day', ma_period_short=15, ma_period_long=60)    
-    
+
     fig, ax = plt.subplots(2, 2, figsize=(15, 7))
     ax1_twin = ax[0,1].twinx()
+
+    vix3m_vix_ratio_object.draw_lineplot(ax[1,0], y='vix3m_vix_ratio', y_alt ='vix3m_vix_ratio_decile', n_periods_to_plot=60, plot_title='VIX3M/VIX Ratio')
+    vix3m_vix_ratio_object.draw_lineplot(ax[1,1], y='vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover', y_alt ='vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover_decile' , n_periods_to_plot=60, plot_title='VIX3M/VIX Ratio Crossover')
+
 
     def animate(i):
         # for a in ax:
