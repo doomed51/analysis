@@ -148,7 +148,13 @@ class Strategy:
             ax.legend()
 
     def draw_heatmap_signal_returns(self, ax, y='logReturn_decile', maxperiod_fwdreturns=20, title=''):
-        # calculate the heatmap 
+        """
+            Draws a heatmap of a signal vs. forward returns.
+            Parameters:
+            - ax: axes object to draw the heatmap on.
+            - y: Column name to use as y-axis data.
+            - maxperiod_fwdreturns: Maximum number of periods to calculate forward returns for. Default is 20.
+        """
         heatmap = sa.bucketAndCalcSignalReturns(self.pxhistory, y, signal_rounding=1, maxperiod_fwdreturns=maxperiod_fwdreturns)
 
         # for the columns with 'fwdReturns' in the name, remove it 
@@ -159,10 +165,8 @@ class Strategy:
 
         # plot formatting
         if title=='':
-            # ax.set_title('%s vs. Forward Returns'%(y), fontsize=14, fontweight='bold')
             self._apply_default_plot_formatting(ax, title='%s vs. Forward Returns'%(y), xlabel='', ylabel='')
         else:
-            # ax.set_title(title, fontsize=14, fontweight='bold')
             self._apply_default_plot_formatting(ax, title=title, xlabel='', ylabel='')
         ax.set_ylabel(y)
 
@@ -194,12 +198,12 @@ class Strategy:
         else:
             _pxhistory = self.pxhistory
         # draw the lineplot 
-        sns.lineplot(x=_pxhistory['date'], y=_pxhistory[y], ax=ax, color='blue', alpha=0.7, label=y)
+        sns.lineplot(x=_pxhistory['date'], y=_pxhistory[y], ax=ax, color='blue', alpha=0.7, label=y, rasterized=True)
         
         # (optional) draw alternate lineplot 
         if y_alt:
             ax2 = ax.twinx()
-            sns.lineplot(x=_pxhistory['date'], y=_pxhistory[y_alt], ax=ax2, color='black', alpha=0.3, label=y_alt)
+            sns.lineplot(x=_pxhistory['date'], y=_pxhistory[y_alt], ax=ax2, color='black', alpha=0.3, label=y_alt, rasterized=True)
         
         # (optional) draw percentiles 
         if hlines_to_plot:
@@ -270,6 +274,22 @@ class Strategy:
         ax.set_xlabel(x)
 
     ########## These function return a figure object ##########
+
+    def plot_signal_overview(self, colname_signal, max_period_forward_returns=20):
+        """
+            Meant to provide an overview of the characteristics of a calculated signal.  
+            2x2 grid with: 
+                lineplot: signal and close
+                distribution: signal
+                autocorrelation: signal
+                heatmap: signal vs forward returns
+        """
+        fig, ax = plt.subplots(2, 2, figsize=(20, 10))
+        self.draw_lineplot(ax[0, 0], y=colname_signal, y_alt='close')
+        self.draw_distribution(ax[0, 1], y=colname_signal)
+        self.draw_autocorrelation(ax[1, 0], y=colname_signal)
+        self.draw_heatmap_signal_returns(ax[1, 1], y=colname_signal, maxperiod_fwdreturns=max_period_forward_returns)
+        return fig
 
     def plot_grid_signal_decile_returns(self, colname_y='logReturn_decile', maxperiod_fwdreturns=20):
         """
