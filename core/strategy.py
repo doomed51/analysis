@@ -191,6 +191,7 @@ class Strategy:
         
         hlines_to_plot = kwargs.get('hlines_to_plot', [])
         n_periods_to_plot = kwargs.get('n_periods_to_plot', 0)
+        plot_title = kwargs.get('plot_title', '%s'%(y))
 
         # (optional) slice the pxhistory to only plot the last n periods
         if n_periods_to_plot>0:
@@ -222,7 +223,7 @@ class Strategy:
             ax.legend(lines_1, labels_1)
             pass
 
-        self.apply_default_lineplot_formatting(ax=ax, title='%s'%(y), xlabel='', ylabel=y)
+        self.apply_default_lineplot_formatting(ax=ax, title=plot_title, xlabel='', ylabel=y)
 
     def draw_autocorrelation(self, ax, y='close', max_lag=100):
         """
