@@ -8,7 +8,8 @@ dbname_analysisOptimizations = 'analysisOptimizations.db'
 ############### Reference Lists
 
 _indexList = ['VIX', 'VIX3M', 'VVIX', 'SPX', 'VIX1D', 'TSX']
-
+intervals = ['1 min', '5 mins', '30 mins', '1 day']
+_index = ['VIX', 'VIX3M', 'VVIX', 'SPX', 'VIX1D', 'TSX']
 
 currency_mapping = {
     'CL': 'USD',
