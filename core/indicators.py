@@ -5,7 +5,7 @@
 import pandas as pd
 import numpy as np
 
-def intra_day_cumulative_signal(pxhistory, colname, lookback_periods=10, intraday_reset=False):
+def intra_day_cumulative_signal(pxhistory, colname, lookback_period=10, intraday_reset=False):
     """
     Adds column colname_CUMSUM_lookback_periodsP to the dataframe.
     inputs:
@@ -13,18 +13,18 @@ def intra_day_cumulative_signal(pxhistory, colname, lookback_periods=10, intrada
         colname: column name to calculate the signal on
         lookback_periods: list of lookback periods to calculate the signal over
     """
-    cumsum_col = '%s_cumsum'%(colname)
+    cumsum_col_name = '%s_cumsum'%(colname)
     if intraday_reset == True:
         # Add a column to identify the day
         pxhistory['day'] = pxhistory['date'].dt.date
 
         # Calculate cumulative sum within each group (each day)
-        pxhistory[f'{colname}_cumsum'] = pxhistory.groupby('day')[colname].cumsum()
+        pxhistory[cumsum_col_name] = pxhistory.groupby('day')[colname].cumsum()
         
         # Drop the auxiliary column used for day identification
         pxhistory.drop(columns=['day'], inplace=True)
     else:
-        pxhistory[f'{colname}_cumsum'] = pxhistory[colname].rolling(window=lookback_periods, min_periods=1).sum()
+        pxhistory[cumsum_col_name] = pxhistory[colname].rolling(window=lookback_period, min_periods=1).sum()
     return pxhistory
 
 def momentum_factor(df, colname, lag=1, shift=1, lag_momo=False, use_absolute_values=False):
