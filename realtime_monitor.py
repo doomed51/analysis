@@ -87,7 +87,7 @@ def plot_realtime_monitor_vix3m_vix_ratio():
 
         ax[0,1].clear()
         ax1_twin.clear()
-        sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover'], x=merged['date'], ax=ax1_twin, color='grey', label='crossover')
+        sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover'], x=merged['date'], ax=ax1_twin, color='grey', label='crossover', alpha=0.5)
         # ax1_twin.clear()
         sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover_cumsum'], x=merged['date'], ax=ax[0,1], color='green', label='crossover cumsum')
         ax[0,1].axhline(y=0, color='green', linestyle='-', alpha=0.5)
