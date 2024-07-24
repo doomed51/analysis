@@ -1,6 +1,8 @@
 from core import strategy as st
 from core import indicators
+from backtests import bt_vix3m_vix_ratio as btsts 
 
+import ffn 
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -28,6 +30,7 @@ class StrategyVixAndVol(st.Strategy):
     def __init__(self, interval='1day', signal_name='close', **kwargs):
         self.ratio_moving_average_shortperiod = kwargs.get('ma_period_short', 5)
         self.ratio_moving_average_longperiod = kwargs.get('ma_period_long', 20)
+        self.lookback_period_crossover_cumsum = kwargs.get('lookback_period_crossover_cumsum', 5)
         self.vvix_rvi_period_shortperiod = kwargs.get('rvi_period_short', 5)
         self.vvix_rvi_period_longperiod = kwargs.get('rvi_period_long', 20)
         self.compensate_for_lookahead_bias = kwargs.get('compensate_for_lookahead_bias', False)
@@ -59,7 +62,7 @@ class StrategyVixAndVol(st.Strategy):
         self.pxhistory = self.pxhistory.rename(columns={'vix3m_vix_ratio_wma': 'vix3m_vix_ratio_ma_short'})
         self.pxhistory = indicators.moving_average_crossover(self.pxhistory, 'vix3m_vix_ratio_ma_long', 'vix3m_vix_ratio_ma_short')
         colname_crossover = '%s_%s_crossover'%('vix3m_vix_ratio_ma_long', 'vix3m_vix_ratio_ma_short')
-        self.pxhistory = indicators.intra_day_cumulative_signal(self.pxhistory, colname_crossover, intraday_reset=False, lookback_periods=20)
+        self.pxhistory = indicators.intra_day_cumulative_signal(self.pxhistory, colname_crossover, intraday_reset=False, lookback_period=self.lookback_period_crossover_cumsum)
         #crossover momentum 
         self.pxhistory = indicators.slope(self.pxhistory, colname=colname_crossover, lookback_periods=5)
         self.pxhistory = indicators.slope(self.pxhistory, colname='%s_cumsum'%(colname_crossover), lookback_periods=5)
@@ -73,6 +76,13 @@ class StrategyVixAndVol(st.Strategy):
         self._calc_zscore(colname='%s_cumsum'%(colname_crossover))
         self._calc_deciles(colname='%s_cumsum'%(colname_crossover))
         self._calc_percentiles(colname='%s_cumsum'%(colname_crossover))
+
+        ## backtest signals 
+        self.pxhistory['strat_ratio_decile_and_crossover_slope'] = self.pxhistory.apply(lambda row: self.__ratio_decile_and_crossover_slope(row=row, decile_short=5, decile_long=8), axis=1)
+        self.calc_trigger_points('strat_ratio_decile_and_crossover_slope')
+        # print(self.pxhistory[['date', 'strat_ratio_decile_and_crossover_slope', 'strat_ratio_decile_and_crossover_slope_trigger']])
+        # print(self.pxhistory.columns)
+        # exit()
 
         ## Nested VVIX strategy
         self.vvix._calc_deciles(colname='close')
@@ -92,17 +102,16 @@ class StrategyVixAndVol(st.Strategy):
             self.pxhistory['date'] = self.pxhistory['date'].dt.strftime('%Y-%m-%d %H:%M:%S')
 
         fig, ax = plt.subplots(3, 5)
-        plt.subplots(layout="constrained")
-        plt.rcParams['figure.constrained_layout.use'] = True
+        
 
         periods_to_plot = kwargs.get('periods_to_plot', 390)
         maxperiod_fwdreturns = kwargs.get('maxperiod_fwdreturns', 20)
         percentile_lookback_period = kwargs.get('percentile_lookback_period', 252)
         fig.suptitle('Vix3m Ratio Dash')
 
-        #############
-        ## row 1: ratio 
-        #############
+        ###################################################################################################
+        ################################### ROW 1: ratio  #################################################
+
         # g, bin_edges = pd.qcut(self.pxhistory[signal_col_name], 10, labels=False, duplicates='drop', retbins=True)
         self.pxhistory['%s_percentile_90'%(signal_col_name)] = self.pxhistory[signal_col_name].rolling(percentile_lookback_period).quantile(0.9)
         self.pxhistory['%s_percentile_10'%(signal_col_name)] = self.pxhistory[signal_col_name].rolling(percentile_lookback_period).quantile(0.1)
@@ -125,10 +134,10 @@ class StrategyVixAndVol(st.Strategy):
         self.draw_heatmap_signal_returns(ax[0,3], y='vix3m_vix_ratio_zscore', maxperiod_fwdreturns=maxperiod_fwdreturns, title = '%s Z-score'%(str.split(signal_col_name, '_')[-2:][1]))
         self.draw_autocorrelation(ax[0,4], y=signal_col_name, max_lag=50)
         # self.draw_distribution(ax[0,3], y=signal_col_name, drawPercetiles=True, percentiles_to_plot=bin_edges)
+        
+        ###################################################################################################
+        ################################### ROW 2: Ratio - MA Crossover ###################################
 
-        #############
-        ## row 2: Ratio - MA Crossover 
-        #############
         row2_signal_col_name = '%s_%s_crossover'%('vix3m_vix_ratio_ma_long', 'vix3m_vix_ratio_ma_short')
         # g, bin_edges = pd.qcut(self.pxhistory[row2_signal_col_name], 10, labels=False, duplicates='drop', retbins=True)
         self.pxhistory['%s_percentile_90'%(row2_signal_col_name)] = self.pxhistory[row2_signal_col_name].rolling(percentile_lookback_period).quantile(0.9)
@@ -138,11 +147,12 @@ class StrategyVixAndVol(st.Strategy):
         # ax[1,0].text(self.pxhistory['date'].iloc[-1], self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1], '%s'%(self.pxhistory['%s_percentile_90'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
         # ax[1,0].text(self.pxhistory['date'].iloc[-1], self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1], '%s'%(self.pxhistory['%s_percentile_10'%(signal_col_name)].iloc[-1]), fontsize=9, color='black')
         # self.draw_lineplot(ax[1,0], y=signal_col_name, y_alt='close', hlines_to_plot=[bin_edges[4], bin_edges[9]], n_periods_to_plot=periods_to_plot)
-        sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s'%(row2_signal_col_name), ax=ax[1,0], color='blue', label='%s_zscore'%(row2_signal_col_name))
+        # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y='%s'%(row2_signal_col_name), ax=ax[1,0], color='blue', label='%s_zscore'%(row2_signal_col_name))
+        self.draw_lineplot(ax[1,0], y='%s_zscore'%(row2_signal_col_name), y_alt='close', n_periods_to_plot=periods_to_plot, plot_title='Ratio MA %s'%(str.split(row2_signal_col_name, '_')[-2:][1]))
         # sns.lineplot(data=self.pxhistory.tail(periods_to_plot), x='date', y=row2_signal_col_name, ax=ax[1,0].twinx(), alpha=0.1)
-        ax[1,0].axhline(0, color='black', linestyle='-', alpha=0.5)
+        # ax[1,0].axhline(0, color='black', linestyle='-', alpha=0.5)
         # set title to last two words of colname (seperated by _)
-        self.apply_default_lineplot_formatting(ax=ax[1,0], title='Ratio MA %s'%(str.split(row2_signal_col_name, '_')[-2:][1]), xlabel='', ylabel='vix3m/vix ratio ma-long zscore')
+        # self.apply_default_lineplot_formatting(ax=ax[1,0], title='Ratio MA %s'%(str.split(row2_signal_col_name, '_')[-2:][1]), xlabel='', ylabel='zscore')
         self.draw_heatmap_signal_returns(ax[1,1], y='%s_percentile'%(row2_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns, title = '%s Percentile'%(str.split(row2_signal_col_name, '_')[-2:][1]))
         self.draw_heatmap_signal_returns(ax[1,2], y='%s_decile'%(row2_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns, title = '%s Decile'%(str.split(row2_signal_col_name, '_')[-2:][1]))
         self.draw_heatmap_signal_returns(ax[1,3], y='%s_zscore'%(row2_signal_col_name), maxperiod_fwdreturns=maxperiod_fwdreturns, title = '%s Z-score'%(str.split(row2_signal_col_name, '_')[-2:][1]))
@@ -192,6 +202,9 @@ class StrategyVixAndVol(st.Strategy):
         # share x-axis
         ax[0,0].get_shared_x_axes().join(ax[0,0],ax[1,0], ax[2,0])
 
+        plt.subplots(layout="constrained")
+        plt.rcParams['figure.constrained_layout.use'] = True
+
         return fig
 
     def plot_vvix_dashboard(self, signal_col_name='close', **kwargs):   
@@ -215,7 +228,6 @@ class StrategyVixAndVol(st.Strategy):
 
         self.draw_lineplot(ax[0,0], y='%s_ma_long_%s_ma_short_crossover_zscore'%(signal_col_name, signal_col_name))
 
-        import ffn 
         rescaled = ffn.rescale(self.pxhistory['%s_ma_long_%s_ma_short_crossover_zscore'%(signal_col_name, signal_col_name)], -1, 1)
         rescaled.plot(ax=ax[0,1])
 
@@ -268,5 +280,112 @@ class StrategyVixAndVol(st.Strategy):
         else:
             self.pxhistory['vix3m_vix_ratio'] = self.pxhistory['close_vix3m'] / self.pxhistory['close']
 
+    ###### Signal generation functions
 
-   
+    def run_strategy_backtests(self, **kwargs):
+        if self.pxhistory['interval'].iloc[0] in ['1min', '5mins', '15mins', '30mins']:
+            print('no intraday strategies yet')
+            return None
+
+        ## Strategy 1: Ratio decile and crossover slope
+        ratio_decile_short = kwargs.get('ratio_decile_short', 1)
+        ratio_decile_long = kwargs.get('ratio_decile_long', 7)
+        ratio_decile_flat = kwargs.get('ratio_decile_flat', [])
+        close_symbol = 'vix' # symbol that returns are calculated on 
+        target_close = self.pxhistory[['date', 'close']]
+        target_close.set_index('date', inplace=True)
+        target_close.columns = [close_symbol] 
+
+
+        # Ratio decile and crossover cumsum slope 
+        self.pxhistory['ratio_decile_and_crossover_cumsum_slope'] = self.pxhistory.apply(lambda x: btsts.ratio_decile_and_crossover_cumsum_slope(x, ratio_decile_short, ratio_decile_long), axis=1)
+        SIGNAL_ratio_decile_and_crossover_slope = self.pxhistory[['date', 'ratio_decile_and_crossover_cumsum_slope']]
+        SIGNAL_ratio_decile_and_crossover_slope.set_index('date', inplace=True)
+        SIGNAL_ratio_decile_and_crossover_slope.columns = [close_symbol]
+        backtest_ratio_decile_and_crossover_slope = btsts.construct_backtest(SIGNAL_ratio_decile_and_crossover_slope, 'vix', target_close, 'ratio decile(1,7) and crossover cumsum slope')
+
+        # Ratio decile 
+        self.pxhistory['SIGNAL_ratio_decile_only'] = self.pxhistory.apply(lambda x: btsts.ratio_decile_only(x, ratio_decile_short, ratio_decile_long, ratio_decile_flat), axis=1)
+        SIGNAL_ratio_decile_only = self.pxhistory[['date', 'SIGNAL_ratio_decile_only']]
+        SIGNAL_ratio_decile_only.set_index('date', inplace=True)
+        SIGNAL_ratio_decile_only.columns = [close_symbol]
+        backtest_ratio_decile_only = btsts.construct_backtest(SIGNAL_ratio_decile_only, 'vix', target_close, 'ratio decile(1,7) only')
+
+        self.pxhistory['SIGNAL_ratio_decile_short_only']  = self.pxhistory.apply(lambda x: btsts.ratio_decile_short_only(x, ratio_decile_short), axis=1)
+        SIGNAL_ratio_decile_short_only = self.pxhistory[['date', 'SIGNAL_ratio_decile_short_only']]
+        SIGNAL_ratio_decile_short_only.set_index('date', inplace=True)
+        SIGNAL_ratio_decile_short_only.columns = [close_symbol]
+        backtest_ratio_decile_short_only = btsts.construct_backtest(SIGNAL_ratio_decile_short_only, 'vix', target_close, 'ratio decile(1) short only')
+        
+        self.pxhistory['SIGNAL_ratio_decile_5_short_only']  = self.pxhistory.apply(lambda x: btsts.ratio_decile_short_only(x, 5), axis=1)
+        SIGNAL_ratio_decile_5_short_only = self.pxhistory[['date', 'SIGNAL_ratio_decile_5_short_only']]
+        SIGNAL_ratio_decile_5_short_only.set_index('date', inplace=True)
+        SIGNAL_ratio_decile_5_short_only.columns = [close_symbol]
+        SIGNAL_ratio_decile_5_short_only = btsts.construct_backtest(SIGNAL_ratio_decile_5_short_only, 'vix', target_close, 'ratio decile(5) short only')
+
+
+
+        ## Run the strategies 
+        results = btsts.run(backtest_ratio_decile_short_only, SIGNAL_ratio_decile_5_short_only, backtest_ratio_decile_only)
+        # 3x5 grid 
+        # fig, ax = plt.subplots(2, 2)
+        # plt.subplots(layout="constrained")
+        # plt.rcParams['figure.constrained_layout.use'] = True
+        # fig.suptitle('Select Backtests using Vix3m/Vix Ratio')
+
+        # ## Plot the backtests
+        # # btsts.plot_backtests(results, ax[0,0])
+        # results.plot(ax=ax[0,0])
+
+        # return fig
+        return results
+
+    def plot_strategy_backtests(self, strategy_objects, **kwargs):
+        fig, ax = plt.subplots(2, 2, sharex=True, sharey=True)
+        # plt.subplots(layout="constrained")
+        # plt.rcParams['figure.constrained_layout.use'] = True
+        fig.suptitle('Select Backtests using Vix3m/Vix Ratio')
+        row_num = 0  
+        col_num = 0
+        for i, strat in enumerate(strategy_objects):
+            print(row_num, col_num)
+            results = strat.run_strategy_backtests()
+            try: 
+                results.plot(ax=ax[row_num,col_num])
+            except:
+                print('could not plot')
+                print(row_num, col_num)
+            col_num += 1
+            if col_num % 2 == 0:
+                row_num += 1
+                col_num=0
+        return fig
+
+
+    def calc_trigger_points(self, colname):
+        """
+            Calculate the trigger ratio and crossover slope
+        """
+        # add column that is 1 when the colname is -ve in the previous row and 0 or +ve now, AND -1 when the previous row is +ve and the current row is to 0 or -ve
+        col = self.pxhistory[colname]
+        
+        # Initialize the trigger points column
+        self.pxhistory['%s_trigger'%(colname)] = 0
+        
+        # Set the trigger points based on direction change
+        self.pxhistory.loc[(col.shift(1) <= 0) & (col > 0), '%s_trigger'%(colname)] = 1
+        self.pxhistory.loc[(col.shift(1) >= 0) & (col < 0), '%s_trigger'%(colname)] = -1
+
+    def __ratio_decile_and_crossover_slope(self, row, decile_short, decile_long):
+        if row['interval'] in ['5mins', '30mins']:
+            if row['date'].time() >= (pd.to_datetime('15:00:00').time()):
+                return 0.0
+        
+        if row['vix3m_vix_ratio_decile'] <= decile_short: 
+            if row['vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover_cumsum_slope'] > 0:
+                return -0.2
+        
+        elif row['vix3m_vix_ratio_decile'] >= decile_long:
+            if row['vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover_cumsum_slope'] < 0:
+                return 0.2
+        else: return 0.0
