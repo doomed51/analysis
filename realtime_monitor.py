@@ -29,7 +29,7 @@ ibkrThrottleTime = 10 # minimum seconds to wait between api requests to ibkr
 def plot_realtime_monitor_vix3m_vix_ratio():
     symbol = 'VIX3M'
     symbol2 = 'VIX'
-    vix3m_vix_ratio_object = vv.StrategyVixAndVol(interval='1day', ma_period_short=15, ma_period_long=60)    
+    vix3m_vix_ratio_object = vv.StrategyVixAndVol(interval='1day', ma_period_short=15, ma_period_long=60, strategy_name='realtime_monitor')    
 
     fig, ax = plt.subplots(2, 2, figsize=(15, 7))
     ax1_twin = ax[0,1].twinx()
@@ -94,7 +94,7 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         ax1_twin.axhline(y=0, color='grey', linestyle='--', alpha=0.3)
         # show legend 
         ax[0,1].legend(loc='upper left')
-        ax1_twin.legend(loc='upper right')
+        ax1_twin.legend(loc='lower left')
 
 
         print('%s: VIX3M: %.4f'%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), merged['close_vix3m'].iloc[-1]))
