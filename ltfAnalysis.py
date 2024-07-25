@@ -1,18 +1,22 @@
 """
-    Dashboard for lower timeframe analyses. 1min, 5min, 15min
+    Script to manage analyses of lower timeframe vix3m / vix ratio 
 
 """
-from sys import argv
+import config
 
-from utils import utils_tabbedPlotsWindow as pltWindow
-from utils import utils_strategyAnalyzer as sa
-from returns import strategy_crossover as sc
-
+import matplotlib.pyplot as plt
+import seaborn as sns 
 import pandas as pd 
-from interface import interface_localDB as db 
+import bt 
 
-import config 
-from impl import momentum 
+from interface import interface_localDB as db
+
+from utils import utils as ut
+from utils import utils_tabbedPlotsWindow as tpw
+
+# import strategies
+from strategy_implementation import strategy_vix3m_vix_ratio as vv
+from strategy_implementation import strategy_vix3m_intraday as vix3m 
 
 class ltfAnalysis:
     def __init__(self, symbol, interval):
@@ -68,14 +72,22 @@ if __name__ == '__main__':
         symbol = argv[1].upper()
         interval = argv[2].lower()
         ltf = ltfAnalysis(symbol, interval)
+        
         ltf.addMomo(lookback=20)
         ltf.addMomo(lookback=40)
-        print(ltf.df_momo.tail())
+        momoCrossover = sc.CrossoverStrategy(symbol, ltf.df_momo, ltf.df_momo, 'momo40', 'momo20')
+        momoCrossover._calculateSignal()
+        
+        # add fwdReturn5 to signal_df
+        momoCrossover.signal_df['fwdReturn15'] = ltf.df_pxHistory['close'].pct_change(15).shift(-15)
+        # add crossover -ve or +ve column crossover_toggle
+        momoCrossover.signal_df['crossover_toggle'] = momoCrossover.signal_df['crossover'].apply(lambda x: 1 if x > 0 else -1)
 
-        momoCrossover = sc.CrossoverStrategy(ltf.df_momo, ltf.df_momo, 'momo40', 'momo20')
-
-        print(momoCrossover.signal_df.tail())
-        tpw = pltWindow.plotWindow()
-        tpw.MainWindow.resize(2560, 1380)       
-        tpw.addPlot('MOMO crossover', momoCrossover.plotSignalOverview())
-        tpw.show()
+        print('Loading plot testing window...')
+        testplot.plotly_implementation_subplots(momoCrossover.signal_df)
+        
+        ## Window with tabbed plots implementation 
+        #tpw = pltWindow.plotWindow()
+        #tpw.MainWindow.resize(2560, 1380)       
+        #tpw.addPlot('MOMO crossover', momoCrossover.plotSignalOverview())
+        #tpw.show()
