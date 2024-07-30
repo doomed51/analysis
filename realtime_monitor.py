@@ -11,6 +11,7 @@ from interface import interface_ibkr as ib
 from interface import interface_localDB as db
 from strategy_implementation import strategy_vix3m_vix_ratio as vv
 
+import ffn
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -34,7 +35,25 @@ def _calc_ntile(pxhistory, numBuckets, colname, rollingWindow=252):
         pxhistory['%s_ntile' % colname] = pd.qcut(pxhistory[colname], numBuckets, labels=False, duplicates='drop')
     
     return pxhistory
+
+def _calc_zscore(pxhistory, colname, rollingWindow=252, rescale = False): 
+    """
+        Calculate the z-score of a column.
+        Params: 
+            colname: str column name to calculate z-score on
+            rollingWindow: int rolling window to calculate z-score on. Settingto 0 uses entire population 
+            _pxHistory: pd.DataFrame to calculate z-score on. Default is None, which uses the objects default pxhistory
+    """
+    if rollingWindow == 0:
+        pxhistory['%s_zscore'%(colname)] = pxhistory[colname] - pxhistory[colname].mean() / pxhistory[colname].std()
+    else: 
+        pxhistory['%s_zscore'%(colname)] = pxhistory[colname].rolling(rollingWindow).apply(lambda x: (x[-1] - x.mean()) / x.std(), raw=True)
     
+    if rescale:
+        pxhistory['%s_zscore'%(colname)] = ffn.rescale(pxhistory['%s_zscore'%(colname)])
+    
+    return pxhistory
+
 def plot_realtime_monitor_vix3m_vix_ratio():
     symbol = 'VIX3M'
     symbol2 = 'VIX'
@@ -94,14 +113,20 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         
         merged = indicators.intra_day_cumulative_signal(merged, 'ratio_wma_long_ratio_wma_short_crossover', intraday_reset=True)
         
+        merged['symbol'] = 'VIX3M/VIX' 
         merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio')
         merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio_wma_long_ratio_wma_short_crossover')
         merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio_wma_long_ratio_wma_short_crossover_cumsum')
-
+        merged = _calc_zscore(pxhistory=merged, colname='ratio_wma_long_ratio_wma_short_crossover', rescale=True)
+        merged = indicators.momentum_factor(merged, colname='ratio', lag=30)
+        # rolling 5-period avg of momo
+        merged['momo'] = merged['momo'].rolling(window=5).mean()
         merged['date'] = merged['date'].dt.strftime('%Y-%m-%d %H:%M:%S')
         # merged['date'] = merged['date'].str[-8:] # only keep h m s 
 
-        print(merged.columns)
+
+        # only plot the last 7 * 60 minutes
+        merged = merged.iloc[-7*60:]
 
         ax[0,0].clear()
         ax0_twin.clear()
@@ -111,18 +136,20 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         sns.lineplot(y=merged['ratio_wma_long'], x=merged['date'], ax=ax[0,0], color='red', alpha=0.7)
         sns.lineplot(y=merged['ratio_wma_short'], x=merged['date'], ax=ax[0,0], color='red', alpha=0.2)
         vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax[0,0], title='VIX3M/VIX Ratio')
+        ax0_twin.axhline(y=0, color='grey', linestyle='--', alpha=0.3)
 
         # plot ratio decile 
-        sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover_ntile'], x=merged['date'], ax=ax0_twin, color='grey', alpha=0.3, label='crossover decile')
-        vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax0_twin)
+        sns.lineplot(y=merged['momo'], x=merged['date'], ax=ax0_twin, color='grey', label='momo', alpha=0.3)
+        vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax1_twin)
 
         ax[0,0].legend(loc='upper left')   
         ax0_twin.legend(loc='lower left')
 
         ax[0,1].clear()
         ax1_twin.clear()
-        sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover'], x=merged['date'], ax=ax1_twin, color='grey', label='crossover', alpha=0.3)
+        # sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover'], x=merged['date'], ax=ax1_twin, color='grey', label='crossover', alpha=0.3)
         
+        sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover_zscore'], x=merged['date'], ax=ax1_twin, color='grey', alpha=0.3, label='crossover zscore')
         sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover_cumsum'], x=merged['date'], ax=ax[0,1], color='green', label='crossover cumsum')
         vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax[0,1], title='Crossover Cumsum')
         vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax1_twin, title='')
