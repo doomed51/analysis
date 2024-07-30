@@ -42,6 +42,33 @@ class Strategy:
     """"
         Behold, herein lie lambda functions generating the required calculated columns for the strategy  
     """
+    def _apply_default_plot_formatting(self, ax, title='', xlabel='', ylabel=''):
+        ax.set_title(title, fontsize=12, fontweight='bold')
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+    def apply_default_lineplot_formatting(self, ax, title='', xlabel='', ylabel=''):
+        self._apply_default_plot_formatting(ax, title, xlabel, ylabel)
+        ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
+        ax.xaxis.set_major_locator(plt.MaxNLocator(5))
+        ax.tick_params(axis='x', rotation=7)
+
+    def _calc_trigger_points(self, colname):
+        """
+            Calculate a 'trigger' column that is 1 when the colname is -ve in the previous row and 0 or +ve now, AND -1 when the previous row is +ve and the current row is to 0 or -ve
+        """
+        col = self.pxhistory[colname]
+        
+        # Initialize the trigger points column
+        self.pxhistory['%s_trigger'%(colname)] = 0
+        
+        # Set the trigger points based on direction change
+        self.pxhistory.loc[(col.shift(1) <= 0) & (col > 0), '%s_trigger'%(colname)] = 1
+        self.pxhistory.loc[(col.shift(1) >= 0) & (col < 0), '%s_trigger'%(colname)] = -1
+
+    def _calc_deciles(self, colname, _pxHistory = None, rollingWindow=252):
+        self._calc_ntile(10, colname, _pxHistory, rollingWindow)
+        self.pxhistory.rename(columns={'%s_ntile'%(colname): '%s_decile'%(colname)}, inplace=True)
 
     def _calc_rolling_percentile_for_col(self, target_col_name = 'close', rollingWindow=252):
         self.pxhistory['%s_percentile'%(target_col_name)] = self.pxhistory[target_col_name].rolling(rollingWindow).apply(lambda x: pd.qcut(x, 10, labels=False, duplicates='drop')[-1], raw=True)
@@ -77,10 +104,6 @@ class Strategy:
         else:
             data['%s_ntile' % colname] = pd.qcut(data[colname], numBuckets, labels=False, duplicates='drop')
     
-    def _calc_deciles(self, colname, _pxHistory = None, rollingWindow=252):
-        self._calc_ntile(10, colname, _pxHistory, rollingWindow)
-        self.pxhistory.rename(columns={'%s_ntile'%(colname): '%s_decile'%(colname)}, inplace=True)
-    
     def _calc_percentiles(self, colname, _pxHistory = None, lookback=252):
         if _pxHistory is None:
             self.pxhistory['%s_percentile'%(colname)] = self.pxhistory[colname].rolling(lookback).apply(lambda x: pd.qcut(x, 100, labels=False, duplicates='drop')[-1], raw=True)
@@ -98,22 +121,6 @@ class Strategy:
             if '%s_fwdReturns%s'%(colname, i) in self.pxhistory.columns:
                 continue
             self.pxhistory['%s_fwdReturns%s'%(colname, i)] = self.pxhistory[colname].pct_change(i).shift(-i)
-
-    def _apply_default_plot_formatting(self, ax, title, xlabel, ylabel):
-        ax.set_title(title, fontsize=12, fontweight='bold')
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-
-    def apply_default_lineplot_formatting(self, ax, title, xlabel, ylabel):
-        # ax.set_title(title)
-        # ax.set_xlabel(xlabel)
-        # ax.set_ylabel(ylabel)
-        # ax.legend()
-        self._apply_default_plot_formatting(ax, title, xlabel, ylabel)
-        ax.grid(True, which='both', axis='both', linestyle='-', alpha=0.2)
-        ax.xaxis.set_major_locator(plt.MaxNLocator(5))
-        ax.tick_params(axis='x', rotation=7)
-        # ax.legend()
 
     ######### These function return a plot object  #########
     
@@ -159,6 +166,10 @@ class Strategy:
 
         # for the columns with 'fwdReturns' in the name, remove it 
         heatmap.columns = [col.replace('fwdReturns', '') for col in heatmap.columns]
+        # make sure we only have maxperiod_fwdreturns columns
+        heatmap = heatmap.iloc[:, :maxperiod_fwdreturns]
+        # print(heatmap)
+        # exit()
 
         # plot the heatmap
         sns.heatmap(heatmap, ax=ax, cmap='RdYlGn', center=0, annot=False, fmt='.2f')
@@ -221,9 +232,9 @@ class Strategy:
             ax2.get_legend().remove()   
         else:
             ax.legend(lines_1, labels_1)
-            pass
 
-        self.apply_default_lineplot_formatting(ax=ax, title=plot_title, xlabel='', ylabel=y)
+        self.apply_default_lineplot_formatting(ax=ax, title=plot_title)
+        if y_alt: self.apply_default_lineplot_formatting(ax=ax2)
 
     def draw_autocorrelation(self, ax, y='close', max_lag=100):
         """
@@ -276,7 +287,7 @@ class Strategy:
 
     ########## These function return a figure object ##########
 
-    def plot_signal_overview(self, colname_signal, max_period_forward_returns=20):
+    def plot_signal_overview(self, colname_signal, max_period_forward_returns=20, **kwargs):
         """
             Meant to provide an overview of the characteristics of a calculated signal.  
             2x2 grid with: 
@@ -285,8 +296,9 @@ class Strategy:
                 autocorrelation: signal
                 heatmap: signal vs forward returns
         """
+        lineplot_n_periods_to_plot = kwargs.get('lineplot_n_periods_to_plot', 200)
         fig, ax = plt.subplots(2, 2, figsize=(20, 10))
-        self.draw_lineplot(ax[0, 0], y=colname_signal, y_alt='close')
+        self.draw_lineplot(ax[0, 0], y=colname_signal, y_alt='close', n_periods_to_plot=lineplot_n_periods_to_plot)
         self.draw_distribution(ax[0, 1], y=colname_signal)
         self.draw_autocorrelation(ax[1, 0], y=colname_signal)
         self.draw_heatmap_signal_returns(ax[1, 1], y=colname_signal, maxperiod_fwdreturns=max_period_forward_returns)
@@ -345,9 +357,9 @@ class Strategy:
         if num_rows == 0: num_rows = 1
         
         # if lookback_perdiod-signal_col_name does not exist already, create it 
-        for lp in lookback_periods:
-            if not '%s_%s'%(signal_col_name, lp) in self.pxhistory.columns:
-                self.pxhistory['%s_%s'%(signal_col_name, lp)] = self.pxhistory[signal_col_name].rolling(lp).mean()
+        for lookback in lookback_periods:
+            if not '%s_%s'%(signal_col_name, lookback) in self.pxhistory.columns:
+                self.pxhistory['%s_%s'%(signal_col_name, lookback)] = self.pxhistory[signal_col_name].rolling(lookback).mean()
         
         # create the figure and axes
         fig, ax = plt.subplots(nrows=num_rows, ncols=num_columns, figsize=(10, 5))
@@ -359,12 +371,12 @@ class Strategy:
             ax = ax[:, None]
 
         # iterate through the lookback periods and plot the heatmaps
-        for i, lp in enumerate(lookback_periods):
+        for i, lookback in enumerate(lookback_periods):
             row = i // num_columns
             col = i % num_columns
             # _ax = ax[row, col]
             # sns.heatmap(self.pxhistory[['%s_%s'%(signal_col_name, lp)]], ax=ax[row, col], cmap='RdYlGn', center=0, annot=False, fmt='.2f')
-            self.draw_heatmap_signal_returns(ax[row, col], y='%s_%s'%(signal_col_name, lp))
+            self.draw_heatmap_signal_returns(ax[row, col], y='%s_%s'%(signal_col_name, lookback))
             # ax[row, col].set_title('%s_%s'%(signal_col_name, lp))
 
         return fig
