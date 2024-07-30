@@ -26,6 +26,15 @@ from core import indicators
 _dbName_stock = config.dbname_stock ## Default DB names
 ibkrThrottleTime = 10 # minimum seconds to wait between api requests to ibkr
 
+def _calc_ntile(pxhistory, numBuckets, colname, rollingWindow=252):
+
+    if rollingWindow > 0:
+        pxhistory['%s_ntile' % colname] = pxhistory[colname].rolling(rollingWindow).apply(lambda x: pd.qcut(x, numBuckets, labels=False, duplicates='drop').iloc[-1], raw=False)
+    else:
+        pxhistory['%s_ntile' % colname] = pd.qcut(pxhistory[colname], numBuckets, labels=False, duplicates='drop')
+    
+    return pxhistory
+    
 def plot_realtime_monitor_vix3m_vix_ratio():
     symbol = 'VIX3M'
     symbol2 = 'VIX'
@@ -33,6 +42,7 @@ def plot_realtime_monitor_vix3m_vix_ratio():
 
     fig, ax = plt.subplots(2, 2, figsize=(15, 7))
     ax1_twin = ax[0,1].twinx()
+    ax0_twin = ax[0,0].twinx()
 
     vix3m_vix_ratio_object.draw_lineplot(ax[1,0], y='vix3m_vix_ratio', y_alt ='vix3m_vix_ratio_decile', n_periods_to_plot=60, plot_title='VIX3M/VIX Ratio')
     vix3m_vix_ratio_object.draw_lineplot(ax[1,1], y='vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover', y_alt ='vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover_decile' , n_periods_to_plot=60, plot_title='VIX3M/VIX Ratio Crossover')
@@ -43,8 +53,8 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         #     a.clear()
         # plt.clf()
         # fig.clear()
-        wma_period_long = 60
-        wma_period_short = 15
+        wma_period_long = 90
+        wma_period_short = 30
 
         # timestamp.append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
@@ -56,54 +66,89 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         # p2 = Ticker(con2)
         # p2.last = np.random.randint(12, 15)
 
+        ## get data from ib 
         ibkr = ib.setupConnection() 
-        symbol_bars = ib.getBars(ibkr, symbol = symbol, interval = '1 min', lookback = '45000 S')
-        symbol2_bars = ib.getBars(ibkr, symbol = symbol2, interval = '1 min', lookback = '45000 S')
+        symbol_bars = ib.getBars(ibkr, symbol = symbol, interval = '1 min', lookback = '2 D')
+        symbol2_bars = ib.getBars(ibkr, symbol = symbol2, interval = '1 min', lookback = '2 D')
         ibkr.sleep(1)
         ibkr.disconnect()
+
+        ## format the returned data 
         symbol_bars.set_index('date', inplace=True)
         symbol2_bars.set_index('date', inplace=True)
+
+        ## merge vix3m and vix dataframes
         merged = symbol_bars.merge(symbol2_bars, on='date', suffixes=('_vix3m', '_vix'))
         merged.reset_index(inplace=True)
         merged['date'] = pd.to_datetime(merged['date'])
         
         merged['ratio'] = merged['close_vix3m']/merged['close_vix']
+        
         merged = indicators.moving_average_weighted(merged, 'ratio', wma_period_long)
         merged.rename(columns={'ratio_wma': 'ratio_wma_long'}, inplace=True)
+        
         merged = indicators.moving_average_weighted(merged, 'ratio', wma_period_short)
         merged.rename(columns={'ratio_wma': 'ratio_wma_short'}, inplace=True)
+        
         merged = indicators.moving_average_crossover(merged, colname_long = 'ratio_wma_long', colname_short = 'ratio_wma_short')
+        
         merged = indicators.intra_day_cumulative_signal(merged, 'ratio_wma_long_ratio_wma_short_crossover', intraday_reset=True)
-        # convert date to string 
-        merged['date'] = merged['date'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        # only keep h m s 
-        merged['date'] = merged['date'].str[-8:]
+        
+        merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio')
+        merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio_wma_long_ratio_wma_short_crossover')
+        merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio_wma_long_ratio_wma_short_crossover_cumsum')
 
-        # convert date to datetime 
+        merged['date'] = merged['date'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        # merged['date'] = merged['date'].str[-8:] # only keep h m s 
+
+        print(merged.columns)
+
         ax[0,0].clear()
-        sns.lineplot(y=merged['ratio'], x=merged['date'], ax=ax[0,0], color='blue')
+        ax0_twin.clear()
+        
+        # plot ratio and WMA's 
+        sns.lineplot(y=merged['ratio'], x=merged['date'], ax=ax[0,0], color='blue', label='ratio')
         sns.lineplot(y=merged['ratio_wma_long'], x=merged['date'], ax=ax[0,0], color='red', alpha=0.7)
         sns.lineplot(y=merged['ratio_wma_short'], x=merged['date'], ax=ax[0,0], color='red', alpha=0.2)
-        vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax[0,0], title='VIX3M/VIX Ratio', ylabel='Ratio', xlabel='')
+        vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax[0,0], title='VIX3M/VIX Ratio')
+
+        # plot ratio decile 
+        sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover_ntile'], x=merged['date'], ax=ax0_twin, color='grey', alpha=0.3, label='crossover decile')
+        vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax0_twin)
+
+        ax[0,0].legend(loc='upper left')   
+        ax0_twin.legend(loc='lower left')
 
         ax[0,1].clear()
         ax1_twin.clear()
         sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover'], x=merged['date'], ax=ax1_twin, color='grey', label='crossover', alpha=0.3)
-        # ax1_twin.clear()
+        
         sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover_cumsum'], x=merged['date'], ax=ax[0,1], color='green', label='crossover cumsum')
-        vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax[0,1], title='Crossover Cumsum', ylabel='Crossover Cumsum', xlabel='')
+        vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax[0,1], title='Crossover Cumsum')
+        vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax1_twin, title='')
         ax[0,1].axhline(y=0, color='green', linestyle='-', alpha=0.5)
         ax1_twin.axhline(y=0, color='grey', linestyle='--', alpha=0.3)
         # show legend 
         ax[0,1].legend(loc='upper left')
         ax1_twin.legend(loc='lower left')
 
+        # set the plot window title to timestamsp
+        fig.suptitle(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), fontsize=7)
 
         print('%s: VIX3M: %.4f'%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), merged['close_vix3m'].iloc[-1]))
         print('%s: VIX:   %.4f'%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), merged['close_vix'].iloc[-1]))
         print('%s: Ratio: %.5f, %speriod avg: %.5f, Crossover: %.5f'%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), merged['close_vix3m'].iloc[-1]/merged['close_vix'].iloc[-1], wma_period_long, merged['ratio_wma_long'].iloc[-1], merged['ratio_wma_long_ratio_wma_short_crossover'].iloc[-1] ))
         print('%s: Cumulative Crossover: %.5f \n'%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), merged['ratio_wma_long_ratio_wma_short_crossover_cumsum'].iloc[-1] ))
     
+    def interval_length():
+        # get in seconds between now and the next minute
+        now = datetime.now()
+        # next_minute = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
+        # seconds_to_next_minute = (next_minute - now).seconds
+        # difference between 60 and current second 
+        seconds_to_next_minute = 60 - now.second
+        print('Seconds to next minute: %s'%(seconds_to_next_minute))
+        return seconds_to_next_minute * 1000
     # animate the plot 
     animate(1)
     ani = FuncAnimation(fig, animate, interval=60000)
