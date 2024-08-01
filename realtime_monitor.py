@@ -117,10 +117,11 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio')
         merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio_wma_long_ratio_wma_short_crossover')
         merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio_wma_long_ratio_wma_short_crossover_cumsum')
+        
         merged = _calc_zscore(pxhistory=merged, colname='ratio_wma_long_ratio_wma_short_crossover', rescale=True)
         merged = indicators.momentum_factor(merged, colname='ratio', lag=30)
         # rolling 5-period avg of momo
-        merged['momo'] = merged['momo'].rolling(window=5).mean()
+        merged['momo'] = merged['momo'].rolling(window=15).mean()
         merged['date'] = merged['date'].dt.strftime('%Y-%m-%d %H:%M:%S')
         # merged['date'] = merged['date'].str[-8:] # only keep h m s 
 
@@ -149,8 +150,8 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         ax1_twin.clear()
         # sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover'], x=merged['date'], ax=ax1_twin, color='grey', label='crossover', alpha=0.3)
         
-        sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover_zscore'], x=merged['date'], ax=ax1_twin, color='grey', alpha=0.3, label='crossover zscore')
-        sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover_cumsum'], x=merged['date'], ax=ax[0,1], color='green', label='crossover cumsum')
+        sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover_ntile'], x=merged['date'], ax=ax1_twin, color='grey', alpha=0.3, label='crossover decile')
+        sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover_zscore'], x=merged['date'], ax=ax[0,1], color='green', label='crossover zscore')
         vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax[0,1], title='Crossover Cumsum')
         vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax1_twin, title='')
         ax[0,1].axhline(y=0, color='green', linestyle='-', alpha=0.5)
