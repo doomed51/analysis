@@ -12,6 +12,7 @@ from interface import interface_localDB as db
 from strategy_implementation import strategy_vix3m_vix_ratio as vv
 
 import ffn
+import time
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -59,23 +60,22 @@ def plot_realtime_monitor_vix3m_vix_ratio():
     symbol2 = 'VIX'
     vix3m_vix_ratio_object = vv.StrategyVixAndVol(interval='1day', ma_period_short=15, ma_period_long=60, strategy_name='realtime_monitor')    
 
+    plt.ion()
     fig, ax = plt.subplots(2, 2, figsize=(15, 7))
     ax1_twin = ax[0,1].twinx()
     ax0_twin = ax[0,0].twinx()
+    ax3_twin = ax[1,1].twinx()
 
     vix3m_vix_ratio_object.draw_lineplot(ax[1,0], y='vix3m_vix_ratio', y_alt ='vix3m_vix_ratio_decile', n_periods_to_plot=60, plot_title='VIX3M/VIX Ratio')
-    vix3m_vix_ratio_object.draw_lineplot(ax[1,1], y='vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover', y_alt ='vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover_decile' , n_periods_to_plot=60, plot_title='VIX3M/VIX Ratio Crossover')
+    # vix3m_vix_ratio_object.draw_lineplot(ax[1,1], y='vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover', y_alt ='vix3m_vix_ratio_ma_long_vix3m_vix_ratio_ma_short_crossover_decile' , n_periods_to_plot=60, plot_title='VIX3M/VIX Ratio Crossover')
 
 
     def animate(i):
-        # for a in ax:
-        #     a.clear()
-        # plt.clf()
-        # fig.clear()
-        wma_period_long = 90
-        wma_period_short = 30
-
-        # timestamp.append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        wma_period_long = 60
+        wma_period_short = 20
+        momo_period = 20
+        momo_smoothing = 10
+        periods_to_display = 4*60
 
         ## *** TESTING CODE **** 
         ## manually set p and p2 for testing 
@@ -119,15 +119,15 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio_wma_long_ratio_wma_short_crossover_cumsum')
         
         merged = _calc_zscore(pxhistory=merged, colname='ratio_wma_long_ratio_wma_short_crossover', rescale=True)
-        merged = indicators.momentum_factor(merged, colname='ratio', lag=30)
+        merged = indicators.momentum_factor(merged, colname='ratio', lag=momo_period)
         # rolling 5-period avg of momo
-        merged['momo'] = merged['momo'].rolling(window=15).mean()
+        merged['momo'] = merged['momo'].rolling(window=momo_smoothing).mean()
         merged['date'] = merged['date'].dt.strftime('%Y-%m-%d %H:%M:%S')
         # merged['date'] = merged['date'].str[-8:] # only keep h m s 
 
 
         # only plot the last 7 * 60 minutes
-        merged = merged.iloc[-7*60:]
+        merged = merged.iloc[-periods_to_display:]
 
         ax[0,0].clear()
         ax0_twin.clear()
@@ -152,7 +152,7 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         
         sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover_ntile'], x=merged['date'], ax=ax1_twin, color='grey', alpha=0.3, label='crossover decile')
         sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover_zscore'], x=merged['date'], ax=ax[0,1], color='green', label='crossover zscore')
-        vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax[0,1], title='Crossover Cumsum')
+        vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax[0,1], title='Ratio WMA (%s, %s) Crossover'%(wma_period_long, wma_period_short))
         vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax1_twin, title='')
         ax[0,1].axhline(y=0, color='green', linestyle='-', alpha=0.5)
         ax1_twin.axhline(y=0, color='grey', linestyle='--', alpha=0.3)
@@ -160,6 +160,17 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         ax[0,1].legend(loc='upper left')
         ax1_twin.legend(loc='lower left')
 
+        ax[1,1].clear()
+        ax3_twin.clear()
+        sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover_cumsum'], x=merged['date'], ax=ax[1,1], color='green', label='crossover cumsum')
+        sns.lineplot(y=merged['ratio_wma_long_ratio_wma_short_crossover'], x=merged['date'], ax=ax3_twin, color='grey', label='crossover', alpha=0.3)
+        vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax[1,1], title='Crossover Cumsum')
+        vix3m_vix_ratio_object.apply_default_lineplot_formatting(ax3_twin)
+        ax[1,1].axhline(y=0, color='green', linestyle='-', alpha=0.5)
+        ax3_twin.axhline(y=0, color='grey', linestyle='--', alpha=0.3)
+        # show legend
+        ax[1,1].legend(loc='upper left')
+        ax3_twin.legend(loc='lower left')
         # set the plot window title to timestamsp
         fig.suptitle(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), fontsize=7)
 
@@ -167,21 +178,22 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         print('%s: VIX:   %.4f'%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), merged['close_vix'].iloc[-1]))
         print('%s: Ratio: %.5f, %speriod avg: %.5f, Crossover: %.5f'%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), merged['close_vix3m'].iloc[-1]/merged['close_vix'].iloc[-1], wma_period_long, merged['ratio_wma_long'].iloc[-1], merged['ratio_wma_long_ratio_wma_short_crossover'].iloc[-1] ))
         print('%s: Cumulative Crossover: %.5f \n'%(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), merged['ratio_wma_long_ratio_wma_short_crossover_cumsum'].iloc[-1] ))
+
+        plt.draw() 
+        plt.pause(0.1)
     
-    def interval_length():
-        # get in seconds between now and the next minute
-        now = datetime.now()
-        # next_minute = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
-        # seconds_to_next_minute = (next_minute - now).seconds
-        # difference between 60 and current second 
-        seconds_to_next_minute = 60 - now.second
-        print('Seconds to next minute: %s'%(seconds_to_next_minute))
-        return seconds_to_next_minute * 1000
+    def animate_every_minute(): 
+        while True: 
+            now = datetime.now() 
+            seconds_to_next_minute = 60 - now.second
+            time.sleep(seconds_to_next_minute)
+            animate(1) 
+
     # animate the plot 
     animate(1)
-    ani = FuncAnimation(fig, animate, interval=60000)
     plt.tight_layout()
     plt.show()
+    animate_every_minute() 
 
 if __name__ == '__main__':
     plot_realtime_monitor_vix3m_vix_ratio()
