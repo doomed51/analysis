@@ -76,6 +76,8 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         momo_period = 20
         momo_smoothing = 10
         periods_to_display = 4*60
+        lookback_window_ntile = 1215
+        lookback_window_zscore = 1215  
 
         ## *** TESTING CODE **** 
         ## manually set p and p2 for testing 
@@ -87,10 +89,11 @@ def plot_realtime_monitor_vix3m_vix_ratio():
 
         ## get data from ib 
         ibkr = ib.setupConnection() 
-        symbol_bars = ib.getBars(ibkr, symbol = symbol, interval = '1 min', lookback = '2 D')
-        symbol2_bars = ib.getBars(ibkr, symbol = symbol2, interval = '1 min', lookback = '2 D')
+        symbol_bars = ib.getBars(ibkr, symbol = symbol, interval = '1 min', lookback = '7 D')
+        symbol2_bars = ib.getBars(ibkr, symbol = symbol2, interval = '1 min', lookback = '7 D')
         ibkr.sleep(1)
         ibkr.disconnect()
+        # print length of bars 
 
         ## format the returned data 
         symbol_bars.set_index('date', inplace=True)
@@ -99,6 +102,7 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         ## merge vix3m and vix dataframes
         merged = symbol_bars.merge(symbol2_bars, on='date', suffixes=('_vix3m', '_vix'))
         merged.reset_index(inplace=True)
+        
         merged['date'] = pd.to_datetime(merged['date'])
         
         merged['ratio'] = merged['close_vix3m']/merged['close_vix']
@@ -114,11 +118,11 @@ def plot_realtime_monitor_vix3m_vix_ratio():
         merged = indicators.intra_day_cumulative_signal(merged, 'ratio_wma_long_ratio_wma_short_crossover', intraday_reset=True)
         
         merged['symbol'] = 'VIX3M/VIX' 
-        merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio')
-        merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio_wma_long_ratio_wma_short_crossover')
-        merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio_wma_long_ratio_wma_short_crossover_cumsum')
+        merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio', rollingWindow=lookback_window_ntile)
+        merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio_wma_long_ratio_wma_short_crossover', rollingWindow=lookback_window_ntile)
+        merged = _calc_ntile(pxhistory=merged, numBuckets=10, colname='ratio_wma_long_ratio_wma_short_crossover_cumsum', rollingWindow=lookback_window_ntile)
         
-        merged = _calc_zscore(pxhistory=merged, colname='ratio_wma_long_ratio_wma_short_crossover', rescale=True)
+        merged = _calc_zscore(pxhistory=merged, colname='ratio_wma_long_ratio_wma_short_crossover', rescale=True, rollingWindow=lookback_window_zscore)
         merged = indicators.momentum_factor(merged, colname='ratio', lag=momo_period)
         # rolling 5-period avg of momo
         merged['momo'] = merged['momo'].rolling(window=momo_smoothing).mean()
