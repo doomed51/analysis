@@ -1,7 +1,8 @@
-############# DB Paths
+############# Data Paths
 
 dbname_stock = '/workbench/historicalData/venv/saveHistoricalData/data/historicalData_index.db'
 dbname_termstructure = '/workbench/historicalData/venv/saveHistoricalData/data/termstructure.db'
+release_dates_pce = '/workbench/historicalData/venv/saveHistoricalData/data/release_dates_PCE.xls'
 #dbname_analysisOptimizations = '/workbench/historicalData/venv/analysisOptimizations.db'
 dbname_analysisOptimizations = 'analysisOptimizations.db'
 
