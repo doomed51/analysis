@@ -142,3 +142,6 @@ access_token.yml
 
 # ignore scrap files 
 scrap*.py
+
+#ignore perf profiles 
+*.prof
