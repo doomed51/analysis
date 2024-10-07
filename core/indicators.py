@@ -134,6 +134,20 @@ def zscore(values, rollingWindow=252, rescale=False):
 
     return zscores
 
+@njit
+def rolling_std(arr, window):
+    """
+    Calculate the rolling standard deviation of a column.
+    Params: 
+        arr: np.array column to calculate rolling std on
+        window: int rolling window 
+    """
+    result = np.empty(len(arr))
+    result[:] = np.nan  # Initialize with NaNs
+    for i in range(window - 1, len(arr)):
+        result[i] = np.std(arr[i - window + 1:i])
+    return result
+
 def slope(df, colname, lookback_periods=10):
     """
     Calculates the slope of a given column over a lookback period. 
