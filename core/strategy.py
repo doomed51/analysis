@@ -14,6 +14,11 @@ import seaborn as sns
 from interface import interface_localDB as db
 from utils import utils_strategyAnalyzer as sa
 from utils import utils as ut
+from core import indicators 
+
+from numba import jit, njit
+import numpy as np 
+from numpy.lib.stride_tricks import sliding_window_view
 
 class Strategy:
     """
@@ -91,9 +96,77 @@ class Strategy:
             _pxHistory['%s_zscore'%(colname)] = _pxHistory[colname] - _pxHistory[colname].mean() / _pxHistory[colname].std()
         
         if rescale:
-            self.pxhistory['%s_zscore'%(colname)] = ffn.rescale(self.pxhistory['%s_zscore'%(colname)])
-   
-    def _calc_ntile(self, numBuckets, colname, _pxHistory = None, rollingWindow=252):
+            self.pxhistory['%s_zscore'%(colname)] = ffn.rescale(self.pxhistory['%s_zscore'%(colname)],-1,1)
+    
+    # @njit
+    # def calculate_percentiles(data, numBuckets):
+    #     percentiles = np.percentile(data, np.linspace(0, 100, numBuckets + 1))
+    #     return percentiles
+
+    # @njit
+    # def calc_ntile_series(series, percentiles):
+    #     return np.digitize(series, percentiles[1:-1], right=True)
+
+    # @njit
+    # def apply_ntile(self, window):
+    #     percentiles = self.calculate_percentiles(window, numBuckets)
+    #     return self.calc_ntile_series(window, percentiles)[-1]
+    
+    # @jit
+    # def calc_ntile_series(series, numBuckets):
+    #         percentiles = np.percentile(series.dropna(), np.linspace(0, 100, numBuckets + 1))
+    #         return np.digitize(series, percentiles[1:-1], right=True)
+    
+    # # @jit
+    # def _calc_ntile(self, numBuckets, colname, _pxHistory = None, rollingWindow=252):
+    #     if _pxHistory is None:
+    #         data = self.pxhistory
+    #     else:
+    #         data = _pxHistory
+
+    #     # if rollingWindow > 0:
+    #     #     data['%s_ntile' % colname] = data[colname].rolling(rollingWindow).apply(lambda x: pd.qcut(x, numBuckets, labels=False, duplicates='drop').iloc[-1], raw=False)
+    #     # else:
+    #     #     data['%s_ntile' % colname] = pd.qcut(data[colname], numBuckets, labels=False, duplicates='drop')
+    #     # data[colname].rolling(rollingWindow).apply(lambda x: print(x), raw=False)
+    #     if rollingWindow > 0:
+    #         data['%s_ntile' % colname] = data[colname].rolling(rollingWindow).apply(lambda x: self.calc_ntile_series(x, numBuckets)[-1], raw=True)
+    #     else:
+    #         data['%s_ntile' % colname] = self.calc_ntile_series(data[colname], numBuckets)
+
+    ########### august 1 impl
+
+    def rolling_deciles(self, pxhistory, colname, rollingWindow):
+        
+        @jit 
+        def compute_deciles(window):   
+            return np.percentile(window, np.arange(10, 100, 10))
+        
+        values = pxhistory[colname].values
+        windows = sliding_window_view(values, rollingWindow)
+
+        deciles = np.empty((windows.shape[0], 9))
+        for i in range(windows.shape[0]):
+            deciles[i, :] = compute_deciles(windows[i])
+        
+        # since there is a rolling window, append NaNs to the beginning of the deciles array
+        deciles = np.concatenate((np.full((rollingWindow-1, 9), np.nan), deciles), axis=0)
+
+        return deciles 
+
+    @jit
+    def _calc_ntile_optimized(self, numBuckets, colname, _pxHistory=None, rollingWindow=252):
+        if _pxHistory is None:
+            data = self.pxhistory
+        else:
+            data = _pxHistory
+
+        if rollingWindow > 0:
+            data['%s_ntile' % colname] = data[colname].rolling(rollingWindow).apply(lambda x: pd.qcut(x, numBuckets, labels=False, duplicates='drop').iloc[-1], raw=False)
+        else:
+            data['%s_ntile' % colname] = pd.qcut(data[colname], numBuckets, labels=False, duplicates='drop')
+
+    def _calc_ntile(self, numBuckets, colname, _pxHistory=None, rollingWindow=252):
         if _pxHistory is None:
             data = self.pxhistory
         else:
@@ -154,7 +227,7 @@ class Strategy:
             ax.set_xlabel(y)
             ax.legend()
 
-    def draw_heatmap_signal_returns(self, ax, y='logReturn_decile', maxperiod_fwdreturns=20, title=''):
+    def draw_heatmap_signal_returns(self, ax, y='logReturn_decile', maxperiod_fwdreturns=20, title='', _pxhistory=None):
         """
             Draws a heatmap of a signal vs. forward returns.
             Parameters:
@@ -162,7 +235,11 @@ class Strategy:
             - y: Column name to use as y-axis data.
             - maxperiod_fwdreturns: Maximum number of periods to calculate forward returns for. Default is 20.
         """
-        heatmap = sa.bucketAndCalcSignalReturns(self.pxhistory, y, signal_rounding=1, maxperiod_fwdreturns=maxperiod_fwdreturns)
+        if not _pxhistory is None:
+            heatmap = sa.bucketAndCalcSignalReturns(_pxhistory, y, signal_rounding=1, maxperiod_fwdreturns=maxperiod_fwdreturns)
+
+        else:
+            heatmap = sa.bucketAndCalcSignalReturns(self.pxhistory, y, signal_rounding=1, maxperiod_fwdreturns=maxperiod_fwdreturns)
 
         # for the columns with 'fwdReturns' in the name, remove it 
         heatmap.columns = [col.replace('fwdReturns', '') for col in heatmap.columns]
@@ -298,13 +375,14 @@ class Strategy:
         """
         lineplot_n_periods_to_plot = kwargs.get('lineplot_n_periods_to_plot', 200)
         fig, ax = plt.subplots(2, 2, figsize=(20, 10))
+        plt.tight_layout()
         self.draw_lineplot(ax[0, 0], y=colname_signal, y_alt='close', n_periods_to_plot=lineplot_n_periods_to_plot)
         self.draw_distribution(ax[0, 1], y=colname_signal)
         self.draw_autocorrelation(ax[1, 0], y=colname_signal)
         self.draw_heatmap_signal_returns(ax[1, 1], y=colname_signal, maxperiod_fwdreturns=max_period_forward_returns)
         return fig
 
-    def plot_grid_signal_decile_returns(self, colname_y='logReturn_decile', maxperiod_fwdreturns=20):
+    def plot_grid_signal_decile_returns(self, colname_y='logReturn_decile', maxperiod_fwdreturns=20, decile_lookback = 252):
         """
         Plot a grid of bar plots showing some bucketed signal vs. mean forward returns over different periods. Works best with a signal bucketed in deciles. 
 
@@ -317,21 +395,16 @@ class Strategy:
         """
         self._calc_fwd_returns(maxperiod_fwdreturns=maxperiod_fwdreturns)
         # print the number of unique values for colname_y
-        if self.pxhistory[colname_y].nunique() > 30:
-            self._calc_deciles(colname_y)
-            colname_y = '%s_decile'%(colname_y)
+        # if self.pxhistory[colname_y].nunique() > 50:
+        colname_y_decile = '%s_decile'%(colname_y)
+        if not colname_y_decile in self.pxhistory.columns:
+            x, self.pxhistory[colname_y_decile] = indicators.compute_deciles_with_rank(self.pxhistory[colname_y].values, decile_lookback)
 
         num_columns = 5
         num_rows = maxperiod_fwdreturns // num_columns
         fig, ax = plt.subplots(num_rows, num_columns, figsize=(10, 5), sharey=True)
-        
-        # row, col = 0, 0
-        # i=5
-        # ntile_grouped = self.pxhistory.groupby('%s'%(colname_y)).agg({'close_fwdReturns%s'%(i): 'mean'})
-        # sns.barplot(x=ntile_grouped.index, y='close_fwdReturns%s'%(i), data=ntile_grouped, ax=ax[row, col])
-        # ax[row, col].set_title('FwdReturn %s'%(i))
+        plt.tight_layout()
 
-        
         for i in range(1, maxperiod_fwdreturns+1):
             if i > maxperiod_fwdreturns:
                 break
@@ -343,9 +416,12 @@ class Strategy:
             sns.barplot(x=ntile_grouped.index, y='close_fwdReturns%s'%(i), data=ntile_grouped, ax=ax[row, col])
             ax[row, col].set_title('FwdReturn %s'%(i))
 
+        # set the fig title to the colname 
+        fig.suptitle(colname_y, fontsize=14, fontweight='bold')
+        
         return fig
 
-    def plot_heatmap_grid(self, signal_col_name, lookback_periods=[]):
+    def plot_rolling_mean_heatmap_grid(self, signal_col_name, lookback_periods=[]):
         """
             Useful when determining an appropriate lookback period for a rolling-winddow based signal. Plots a grid of heatmaps for the specified lookback periods.
         """
@@ -363,7 +439,7 @@ class Strategy:
         
         # create the figure and axes
         fig, ax = plt.subplots(nrows=num_rows, ncols=num_columns, figsize=(10, 5))
-        
+        plt.tight_layout()
         import numpy as np
         if num_rows == 1:
             ax = np.array([ax])
@@ -379,4 +455,28 @@ class Strategy:
             self.draw_heatmap_signal_returns(ax[row, col], y='%s_%s'%(signal_col_name, lookback))
             # ax[row, col].set_title('%s_%s'%(signal_col_name, lp))
 
+        return fig
+    
+    def plot_heatmap_grid(self, colnames=[], max_fwdreturn_period=30): 
+        """
+            Plots a grid of heatmaps for the specified columns vs. forward returns. 
+        """
+        num_columns = 6
+        num_rows = len(colnames) // num_columns
+        if num_rows == 0: num_rows = 1
+
+        fig, ax = plt.subplots(nrows=num_rows, ncols=num_columns, figsize=(10, 5))
+        plt.tight_layout()
+        if num_rows == 1 and num_columns == 1:
+            ax = np.array([[ax]])  # Single subplot, make it 2D
+        elif num_rows == 1:
+            ax = np.expand_dims(ax, axis=0)  # Single row, make it 2D with one row
+        elif num_columns == 1:
+            ax = np.expand_dims(ax, axis=1)
+
+        for i, colname in enumerate(colnames):
+            row = i // num_columns
+            col = i % num_columns
+            self.draw_heatmap_signal_returns(ax[row, col], y=colname, maxperiod_fwdreturns=max_fwdreturn_period)
+        
         return fig
