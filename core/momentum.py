@@ -26,7 +26,7 @@ def calcMomoFactor(universe, lag=1, shift=1, lagmomo=False):
     # if lagmomo == False:
     #     returns.drop(columns=['lagmomo'], inplace=True)
 
-    return indicators.momenturm_factor(universe, 'close', lag=lag, shift=shift, lag_momo=lagmomo)
+    return indicators.momentum_factor(universe, 'close', lag=lag, shift=shift, lag_momo=lagmomo)
 
 """
     Returns correlation between momoperiod and fwdreturnperiod 
