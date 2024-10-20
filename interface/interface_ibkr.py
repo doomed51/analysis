@@ -35,6 +35,7 @@ def setupConnection():
         print('%s: [yellow]Connecting with IBKR...[/yellow]'%(datetime.datetime.now().strftime('%H:%M:%S')))
         ibkr = IB() 
         ibkr.connect('127.0.0.1', 7496, clientId = 10)
+        # ibkr.connectAsync('127.0.0.1', 7496, clientId = 10)
         print('%s: [green]  Success![/green]'%(datetime.datetime.now().strftime('%H:%M:%S')))
     except Exception as e:
         print('[red]  Could not connect with IBKR![/red]\n')
