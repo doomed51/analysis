@@ -36,16 +36,22 @@ def aggregate_by_month(history, targetCol):
         raise ValueError('interval must be 1day')
     
     # convert date column to datetime
-    history['date'] = pd.to_datetime(history['date'])
+    # history['date'] = pd.to_datetime(history['date'])
 
     # sort by date
-    history = history.sort_values(by='date')
+    # history = history.sort_values(by='date')
 
     # add month column
     history['month'] = history['date'].dt.month
+    history['year'] = history['date'].dt.year
 
+    # first sum within each year, month combo 
+    aggregate_by_month = history.groupby(['year', 'month']).agg({targetCol: 'sum'}).reset_index()
+    # print(aggregate_by_month.columns)
+    # print(aggregate_by_month.head(20))
+    # exit()
     # group by month and get mean and sd of volume
-    aggregate_by_month = history.groupby('month')[targetCol].agg(['mean', 'std']).reset_index()
+    aggregate_by_month = aggregate_by_month.groupby('month')[targetCol].agg(['mean', 'std']).reset_index()
 
     return aggregate_by_month
 
